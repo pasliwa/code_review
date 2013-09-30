@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+<h1>{{ type }} Changes</h1>
+
+    <ul>
+    {% for br in branches %}
+        <li>{{ br }} <a href="{{ url_for("merge_branch", branch=br) }}" class="btn btn-success btn-sm"></a> </li>
+    {% endfor %}
+    </ul>
+
+
+{% endblock %}
