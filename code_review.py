@@ -1,6 +1,7 @@
 import os
 from flask import Flask, redirect, url_for
 from flask.templating import render_template
+from hgapi import HgException
 from database import db_session
 import hgapi
 import shutil
@@ -21,14 +22,30 @@ def index():
 @app.route('/changes/new')
 def changes_new():
     branches = repo.get_branch_names()
-    branches.remove("default")
+    branches.remove("default") if "default" in branches else ""
     return render_template('changes.html', type="New", branches=branches)
 
 
 @app.route('/merge/<branch>')
-def merge_branch(branch):
-    return render_template('changes.html', type="Merging", branch=branch)
+def merge_with_default(branch):
+    return merge_branch(branch, "default")
 
+
+@app.route('/merge/<src>/<dst>')
+def merge_branch(src, dst):
+    msg = ""
+    e = ""
+    try:
+        repo.hg_update(src)
+        res2=repo.hg_commit("Closing branch {src}".format(src=src), user="me", close_branch=True)
+        res3=repo.hg_update(dst)
+        res4=repo.hg_merge(src)
+        res5=repo.hg_commit("Merge {src} with {dst}".format(src=src, dst=dst), user="me", close_branch=False)
+        msg = "Branch '{src}' was successfully merged with '{dst}'".format(src=src, dst=dst)
+    except HgException,e:
+        print "===" + str(e)
+    return render_template('changes.html', type="Merging", branch=src, exception=e, message=msg)
+    #return render_template('changes.html', type="Merging", src=src, dst=dst)
 
 
 @app.teardown_appcontext

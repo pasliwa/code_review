@@ -2,11 +2,16 @@
 
 {% block body %}
 
+
+{% include "messages.html" %}
+
+
+
 <h1>{{ type }} Changes</h1>
 
     <ul>
     {% for br in branches %}
-        <li>{{ br }} <a href="{{ url_for("merge_branch", branch=br) }}" class="btn btn-success btn-sm"></a> </li>
+        <li>{{ br }} <a href="{{ url_for("merge_with_default", branch=br) }}" class="btn btn-success btn-sm">merge with default</a> </li>
     {% endfor %}
     </ul>
 
