@@ -35,16 +35,18 @@ def merge_with_default(branch):
 def merge_branch(src, dst):
     msg = ""
     e = ""
+    diff = ""
     try:
+        diff = repo.hg_log(branch=src)
         repo.hg_update(src)
         res2=repo.hg_commit("Closing branch {src}".format(src=src), user="me", close_branch=True)
         res3=repo.hg_update(dst)
         res4=repo.hg_merge(src)
         res5=repo.hg_commit("Merge {src} with {dst}".format(src=src, dst=dst), user="me", close_branch=False)
-        msg = "Branch '{src}' was successfully merged with '{dst}'".format(src=src, dst=dst)
+        msg = "Branch '{src}' was successfully merged with '{dst}. <br/>Changes: <br><pre>{diff}</pre>'".format(src=src, dst=dst, diff=diff)
     except HgException,e:
         print "===" + str(e)
-    return render_template('changes.html', type="Merging", branch=src, exception=e, message=msg)
+    return render_template('changes.html', type="Merging", branch=src, exception=e, message=msg, diff=diff)
     #return render_template('changes.html', type="Merging", src=src, dst=dst)
 
 
