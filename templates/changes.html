@@ -10,9 +10,19 @@
 <h1>{{ type }} Changes</h1>
 
     <ul>
-    {% for br in branches %}
-        <li>{{ br }} <a href="{{ url_for("merge_with_default", branch=br) }}" class="btn btn-success btn-sm">merge with default</a> </li>
-    {% endfor %}
+        {% for br in branches %}
+            <li>{{ br }}
+                <form method="post" action="{{ url_for("merge_from_post") }}">
+                    <select name="dst">
+                        {% for pb in productBranches %}
+                            <option value="{{ pb }}">{{ pb }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="src" value="{{ br }}" />
+                    <button class="btn btn-default" type="submit">merge</button>
+                </form>
+            </li>
+        {% endfor %}
     </ul>
 
 

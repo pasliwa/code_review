@@ -1,5 +1,6 @@
 import os
 from flask import Flask, redirect, url_for
+from flask.globals import request
 from flask.templating import render_template
 from hgapi import HgException
 from database import db_session
@@ -11,7 +12,7 @@ app.config.from_object("config")
 
 currDir = os.path.dirname(__file__)
 repo = hgapi.Repo(os.path.join(currDir, "repo"))
-productBranches = ["iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003", "default"]
+productBranches = ["default", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003"]
 
 
 @app.route('/')
@@ -23,12 +24,23 @@ def index():
 def changes_new():
     branches = repo.get_branch_names()
     branches.remove("default") if "default" in branches else ""
-    return render_template('changes.html', type="New", branches=branches)
+    return render_template('changes.html', type="New", branches=branches, productBranches=productBranches)
+
+
+@app.route('/changes/latest')
+def changes_latest():
+    diff = repo.hg_log(branch="default")
+    return render_template('changes.html', type="New", diff=diff)
 
 
 @app.route('/merge/<branch>')
 def merge_with_default(branch):
     return merge_branch(branch, "default")
+
+
+@app.route('/merge', methods=['POST'])
+def merge_from_post():
+    return merge_branch(request.form['src'], request.form['dst'])
 
 
 @app.route('/merge/<src>/<dst>')
