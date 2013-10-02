@@ -2,8 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6381ce95-3308-49c1-a891-1dffae75616a" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/templates/changes.html" afterPath="$PROJECT_DIR$/templates/changes.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/templates/base.html" afterPath="$PROJECT_DIR$/templates/base.html" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/code_review.iml" afterPath="$PROJECT_DIR$/.idea/code_review.iml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/code_review.py" afterPath="$PROJECT_DIR$/code_review.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/config.py" afterPath="$PROJECT_DIR$/config.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="code_review.iws" />
@@ -16,7 +18,7 @@
   </component>
   <component name="ChangesViewManager" flattened_view="true" show_ignored="false" />
   <component name="CoverageDataManager">
-    <SUITE FILE_PATH="coverage/code_review$code_review.coverage" NAME="code_review Coverage Results" MODIFIED="1380624766549" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/code_review$code_review.coverage" NAME="code_review Coverage Results" MODIFIED="1380705550709" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
   </component>
   <component name="CreatePatchCommitExecutor">
     <option name="PATCH_PATH" value="" />
@@ -33,7 +35,7 @@
       <file leaf-file-name="code_review.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/code_review.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="49" column="0" selection-start="1301" selection-end="1301" vertical-scroll-proportion="0.33333334" vertical-offset="574" max-vertical-offset="1140">
+            <state line="61" column="28" selection-start="1901" selection-end="1901" vertical-scroll-proportion="0.61433446" vertical-offset="555" max-vertical-offset="1170">
               <folding>
                 <element signature="e#0#9#0" expanded="true" />
               </folding>
@@ -41,10 +43,55 @@
           </provider>
         </entry>
       </file>
+      <file leaf-file-name="config.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/config.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="4" column="31" selection-start="124" selection-end="131" vertical-scroll-proportion="0.0" vertical-offset="60" max-vertical-offset="165">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="codecollaborator.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/codecollaborator.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="19" column="26" selection-start="584" selection-end="584" vertical-scroll-proportion="0.0" vertical-offset="285" max-vertical-offset="480">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="subprocess.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file:///usr/lib/python2.7/subprocess.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="572" column="23" selection-start="18448" selection-end="18448" vertical-scroll-proportion="0.0" vertical-offset="8449" max-vertical-offset="24120">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="log.html" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/templates/log.html">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="8" column="0" selection-start="78" selection-end="78" vertical-scroll-proportion="0.0" vertical-offset="120" max-vertical-offset="300">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="hgapi.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file:///usr/local/lib/python2.7/dist-packages/hgapi/hgapi.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="278" column="8" selection-start="8680" selection-end="8680" vertical-scroll-proportion="0.0" vertical-offset="4009" max-vertical-offset="7800">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
       <file leaf-file-name="changes.html" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/templates/changes.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="20" column="71" selection-start="559" selection-end="559" vertical-scroll-proportion="-11.708333" vertical-offset="19" max-vertical-offset="510">
+            <state line="20" column="71" selection-start="559" selection-end="559" vertical-scroll-proportion="0.0" vertical-offset="19" max-vertical-offset="510">
               <folding />
             </state>
           </provider>
@@ -62,8 +109,23 @@
       <file leaf-file-name="base.html" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/templates/base.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="57" column="0" selection-start="2406" selection-end="2406" vertical-scroll-proportion="0.0" vertical-offset="553" max-vertical-offset="1170">
-              <folding />
+            <state line="72" column="0" selection-start="2897" selection-end="2897" vertical-scroll-proportion="0.0" vertical-offset="688" max-vertical-offset="1170">
+              <folding>
+                <marker date="1380628715973" expanded="true" signature="271:2895" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="299:1079" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="644:767" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="663:751" placeholder="{...}" />
+                <marker date="1380628715973" expanded="true" signature="1090:2887" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="1104:1415" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="1454:2503" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="1509:2433" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="1539:1886" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="1646:1824" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="2020:2400" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="2052:2390" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="2080:2380" placeholder="..." />
+                <marker date="1380628715973" expanded="true" signature="2216:2368" placeholder="..." />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -90,19 +152,21 @@
         <option value="$PROJECT_DIR$/templates/reviews.html" />
         <option value="$PROJECT_DIR$/models.py" />
         <option value="$PROJECT_DIR$/database.py" />
-        <option value="$PROJECT_DIR$/config.py" />
-        <option value="$PROJECT_DIR$/templates/base.html" />
         <option value="$PROJECT_DIR$/templates/messages.html" />
-        <option value="$PROJECT_DIR$/code_review.py" />
         <option value="$PROJECT_DIR$/templates/changes.html" />
+        <option value="$PROJECT_DIR$/templates/log.html" />
+        <option value="$PROJECT_DIR$/templates/base.html" />
+        <option value="$PROJECT_DIR$/config.py" />
+        <option value="$PROJECT_DIR$/codecollaborator.py" />
+        <option value="$PROJECT_DIR$/code_review.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
     <option name="x" value="64" />
     <option name="y" value="-4" />
-    <option name="width" value="1537" />
-    <option name="height" value="905" />
+    <option name="width" value="1617" />
+    <option name="height" value="1055" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <OptionsSetting value="true" id="Add" />
@@ -170,12 +234,12 @@
   <component name="PropertiesComponent">
     <property name="options.splitter.main.proportions" value="0.3" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="recentsLimit" value="5" />
     <property name="options.lastSelected" value="preferences.keymap" />
+    <property name="recentsLimit" value="5" />
     <property name="restartRequiresConfirmation" value="false" />
     <property name="FullScreen" value="false" />
-    <property name="options.splitter.details.proportions" value="0.2" />
     <property name="options.searchVisible" value="true" />
+    <property name="options.splitter.details.proportions" value="0.2" />
   </component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
@@ -272,6 +336,9 @@
       <option name="PARAMETERS" value="" />
       <method />
     </configuration>
+    <configuration default="true" type="JavascriptDebugType" factoryName="JavaScript Debug" singleton="true">
+      <method />
+    </configuration>
     <configuration default="true" type="tests" factoryName="Unittests">
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -293,9 +360,6 @@
       <option name="PUREUNITTEST" value="true" />
       <option name="PARAMS" value="" />
       <option name="USE_PARAM" value="false" />
-      <method />
-    </configuration>
-    <configuration default="true" type="JavascriptDebugType" factoryName="JavaScript Debug" singleton="true">
       <method />
     </configuration>
     <configuration default="true" type="tests" factoryName="Doctests">
@@ -390,7 +454,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="64" y="-4" width="1537" height="905" extended-state="6" />
+    <frame x="64" y="-4" width="1617" height="1055" extended-state="6" />
     <editor active="true" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
@@ -398,8 +462,8 @@
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.17864339" sideWeight="0.673712" order="0" side_tool="false" content_ui="combo" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32628798" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.18100701" sideWeight="0.6743674" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.32563257" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.27232635" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -423,40 +487,10 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="python-line">
-          <url>file://$PROJECT_DIR$/code_review.py</url>
-          <line>49</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-      </breakpoints>
-      <option name="time" value="7" />
+      <option name="time" value="10" />
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/templates/base.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="6" column="11" selection-start="137" selection-end="137" vertical-scroll-proportion="0.0" vertical-offset="90" max-vertical-offset="180">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/code_review.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="15" column="0" selection-start="261" selection-end="261" vertical-scroll-proportion="0.0" vertical-offset="225" max-vertical-offset="360">
-          <folding>
-            <element signature="e#0#9#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/templates/base.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="6" column="11" selection-start="137" selection-end="137" vertical-scroll-proportion="0.0" vertical-offset="90" max-vertical-offset="180">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/static/css/bootstrap.css">
       <provider selected="true" editor-type-id="text-editor">
         <state line="1079" column="12" selection-start="13971" selection-end="13971" vertical-scroll-proportion="0.4531722" vertical-offset="15885" max-vertical-offset="102150" />
@@ -467,11 +501,6 @@
         <state line="70" column="24" selection-start="2547" selection-end="2547" vertical-scroll-proportion="0.094104305" vertical-offset="967" max-vertical-offset="5730" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/config.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="2" column="25" selection-start="56" selection-end="56" vertical-scroll-proportion="0.047244094" vertical-offset="0" max-vertical-offset="635" />
-      </provider>
-    </entry>
     <entry file="file:///usr/local/lib/python2.7/dist-packages/hgapi/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="5" column="0" selection-start="128" selection-end="128" vertical-scroll-proportion="0.16778524" vertical-offset="0" max-vertical-offset="447" />
@@ -480,11 +509,6 @@
     <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="1142" column="26" selection-start="47666" selection-end="47666" vertical-scroll-proportion="0.57373273" vertical-offset="15891" max-vertical-offset="21570" />
-      </provider>
-    </entry>
-    <entry file="file:///usr/local/lib/python2.7/dist-packages/hgapi/hgapi.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="256" column="17" selection-start="7891" selection-end="7905" vertical-scroll-proportion="0.8309637" vertical-offset="3314" max-vertical-offset="7800" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/templates/reviews.html">
@@ -511,23 +535,73 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/templates/base.html">
+    <entry file="file://$PROJECT_DIR$/templates/changes.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="57" column="0" selection-start="2406" selection-end="2406" vertical-scroll-proportion="0.0" vertical-offset="553" max-vertical-offset="1170">
+        <state line="20" column="71" selection-start="559" selection-end="559" vertical-scroll-proportion="0.0" vertical-offset="19" max-vertical-offset="510">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/templates/changes.html">
+    <entry file="file:///usr/local/lib/python2.7/dist-packages/hgapi/hgapi.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="20" column="71" selection-start="559" selection-end="559" vertical-scroll-proportion="-11.708333" vertical-offset="19" max-vertical-offset="510">
+        <state line="278" column="8" selection-start="8680" selection-end="8680" vertical-scroll-proportion="0.0" vertical-offset="4009" max-vertical-offset="7800">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templates/log.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="8" column="0" selection-start="78" selection-end="78" vertical-scroll-proportion="0.0" vertical-offset="120" max-vertical-offset="300">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/templates/base.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="72" column="0" selection-start="2897" selection-end="2897" vertical-scroll-proportion="0.0" vertical-offset="688" max-vertical-offset="1170">
+          <folding>
+            <marker date="1380628715973" expanded="true" signature="271:2895" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="299:1079" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="644:767" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="663:751" placeholder="{...}" />
+            <marker date="1380628715973" expanded="true" signature="1090:2887" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="1104:1415" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="1454:2503" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="1509:2433" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="1539:1886" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="1646:1824" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="2020:2400" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="2052:2390" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="2080:2380" placeholder="..." />
+            <marker date="1380628715973" expanded="true" signature="2216:2368" placeholder="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="4" column="31" selection-start="124" selection-end="131" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="165">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file:///usr/lib/python2.7/subprocess.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="572" column="23" selection-start="18448" selection-end="18448" vertical-scroll-proportion="0.0" vertical-offset="8449" max-vertical-offset="24120">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/codecollaborator.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="19" column="26" selection-start="584" selection-end="584" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="480">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/code_review.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="49" column="0" selection-start="1301" selection-end="1301" vertical-scroll-proportion="0.33333334" vertical-offset="574" max-vertical-offset="1140">
+        <state line="61" column="28" selection-start="1901" selection-end="1901" vertical-scroll-proportion="0.61433446" vertical-offset="555" max-vertical-offset="1170">
           <folding>
             <element signature="e#0#9#0" expanded="true" />
           </folding>

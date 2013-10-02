@@ -1,4 +1,5 @@
 import os
+import subprocess
 from flask import Flask, redirect, url_for
 from flask.globals import request
 from flask.templating import render_template
@@ -29,8 +30,9 @@ def changes_new():
 
 @app.route('/changes/latest')
 def changes_latest():
-    diff = repo.hg_log(branch="default")
-    return render_template('changes.html', type="New", diff=diff)
+    branch="default"
+    log = repo.hg_log(branch=branch, limit=30)
+    return render_template('log.html', log=log, branch=branch)
 
 
 @app.route('/merge/<branch>')

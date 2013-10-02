@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+
+{% include "messages.html" %}
+
+
+
+<h1>Latest changes in {{ branch }} branch</h1>
+
+    <pre>{{ log }}</pre>
+
+
+{% endblock %}
