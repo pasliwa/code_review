@@ -4,6 +4,7 @@ from flask import Flask, redirect, url_for
 from flask.globals import request
 from flask.templating import render_template
 from hgapi import HgException
+from Repo2 import Repo2
 from database import db_session
 import hgapi
 import shutil
@@ -12,7 +13,7 @@ app = Flask(__name__)
 app.config.from_object("config")
 
 currDir = os.path.dirname(__file__)
-repo = hgapi.Repo(os.path.join(currDir, "repo"))
+repo = Repo2(os.path.join(currDir, "repo"))
 productBranches = ["default", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003"]
 
 
@@ -24,7 +25,9 @@ def index():
 @app.route('/changes/new')
 def changes_new():
     branches = repo.get_branch_names()
+    bookmarks=repo.hg_bookbarks()
     branches.remove("default") if "default" in branches else ""
+    branches=branches+bookmarks
     return render_template('changes.html', type="New", branches=branches, productBranches=productBranches)
 
 
@@ -53,12 +56,17 @@ def merge_branch(src, dst):
     try:
         diff = repo.hg_log(branch=src)
         repo.hg_update(src)
-        res2=repo.hg_commit("Closing branch {src}".format(src=src), user="me", close_branch=True)
-        res3=repo.hg_update(dst)
-        res4=repo.hg_merge(src)
-        res5=repo.hg_commit("Merge {src} with {dst}".format(src=src, dst=dst), user="me", close_branch=False)
+        branches = repo.get_branch_names()
+        bookmarks = repo.hg_bookbarks(True)
+        if src in branches:
+            res2 = repo.hg_commit("Closing branch {src}".format(src=src), user="me", close_branch=True)
+        res3 = repo.hg_update(dst)
+        res4 = repo.hg_merge(src)
+        res5 = repo.hg_commit("Merge {src} with {dst}".format(src=src, dst=dst), user="me", close_branch=False)
+        if src in bookmarks:
+            res6 = repo.hg_bookmark(src, delete=True)
         msg = "Branch '{src}' was successfully merged with '{dst}. <br/>Changes: <br><pre>{diff}</pre>'".format(src=src, dst=dst, diff=diff)
-    except HgException,e:
+    except HgException, e:
         print "===" + str(e)
     return render_template('changes.html', type="Merging", branch=src, exception=e, message=msg, diff=diff)
     #return render_template('changes.html', type="Merging", src=src, dst=dst)
