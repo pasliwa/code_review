@@ -33,7 +33,11 @@ def changes_new():
 
 @app.route('/changes/latest')
 def changes_latest():
-    branch="default"
+    return changes_latest_in_branch("default")
+
+
+@app.route('/changes/latest/<branch>')
+def changes_latest_in_branch(branch):
     log = repo.hg_log(branch=branch, limit=30)
     return render_template('log.html', log=log, branch=branch)
 
