@@ -2,12 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6381ce95-3308-49c1-a891-1dffae75616a" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Repo2.py" afterPath="$PROJECT_DIR$/Repo2.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/templates/changes.html" afterPath="$PROJECT_DIR$/templates/changes.html" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/codeStyleSettings.xml" afterPath="$PROJECT_DIR$/.idea/codeStyleSettings.xml" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/models.py" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/repo/newfeature" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/repo/newfeature_file1" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/repo/newfeature_file2" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/repo/pliczek.txt" afterPath="" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/database.py" afterPath="$PROJECT_DIR$/database.py.tmp" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/code_review.py" afterPath="$PROJECT_DIR$/code_review.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/database.py" afterPath="$PROJECT_DIR$/database.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/models.py" afterPath="$PROJECT_DIR$/models.py" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/config.py" afterPath="$PROJECT_DIR$/config.py" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
     </list>
     <ignored path="code_review.iws" />
@@ -20,7 +22,7 @@
   </component>
   <component name="ChangesViewManager" flattened_view="true" show_ignored="false" />
   <component name="CoverageDataManager">
-    <SUITE FILE_PATH="coverage/code_review$code_review.coverage" NAME="code_review Coverage Results" MODIFIED="1382365481838" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/code_review$code_review.coverage" NAME="code_review Coverage Results" MODIFIED="1382370130706" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
   </component>
   <component name="CreatePatchCommitExecutor">
     <option name="PATCH_PATH" value="" />
@@ -34,10 +36,10 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="code_review.py" pinned="false" current="false" current-in-tab="false">
+      <file leaf-file-name="code_review.py" pinned="false" current="true" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/code_review.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="7" column="40" selection-start="254" selection-end="254" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2190">
+            <state line="59" column="0" selection-start="1918" selection-end="1918" vertical-scroll-proportion="0.4133574" vertical-offset="656" max-vertical-offset="2820">
               <folding>
                 <element signature="e#0#9#0" expanded="true" />
               </folding>
@@ -45,60 +47,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="session.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file:///usr/share/pyshared/sqlalchemy/orm/session.py">
+      <file leaf-file-name="mapper.py" pinned="false" current="false" current-in-tab="false">
+        <entry file="file:///usr/share/pyshared/sqlalchemy/orm/mapper.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="718" column="0" selection-start="28123" selection-end="28123" vertical-scroll-proportion="0.0" vertical-offset="10346" max-vertical-offset="34575">
+            <state line="817" column="0" selection-start="31652" selection-end="31652" vertical-scroll-proportion="0.0" vertical-offset="11846" max-vertical-offset="34200">
               <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="pydevd.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="1138" column="0" selection-start="47511" selection-end="47511" vertical-scroll-proportion="0.0" vertical-offset="15896" max-vertical-offset="21570">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Jenkins.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Jenkins.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="10" column="0" selection-start="154" selection-end="154" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="795">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Repo2.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Repo2.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="28" column="64" selection-start="1063" selection-end="1063" vertical-scroll-proportion="0.0" vertical-offset="76" max-vertical-offset="810">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="models.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/models.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="27" column="51" selection-start="883" selection-end="890" vertical-scroll-proportion="0.0" vertical-offset="61" max-vertical-offset="615">
-              <folding>
-                <element signature="e#0#46#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="database.py" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/database.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="19" column="41" selection-start="748" selection-end="748" vertical-scroll-proportion="0.5144404" vertical-offset="0" max-vertical-offset="554">
-              <folding>
-                <element signature="e#0#36#0" expanded="true" />
-              </folding>
             </state>
           </provider>
         </entry>
@@ -125,16 +78,16 @@
         <option value="$PROJECT_DIR$/templates/reviews.html" />
         <option value="$PROJECT_DIR$/templates/messages.html" />
         <option value="$PROJECT_DIR$/templates/log.html" />
-        <option value="$PROJECT_DIR$/config.py" />
         <option value="$PROJECT_DIR$/codecollaborator.py" />
         <option value="/usr/local/lib/python2.7/dist-packages/hgapi/hgapi.py" />
         <option value="$PROJECT_DIR$/Repo2.py" />
         <option value="$PROJECT_DIR$/templates/changes.html" />
         <option value="$PROJECT_DIR$/templates/base.html" />
         <option value="$PROJECT_DIR$/Jenkins.py" />
+        <option value="$PROJECT_DIR$/database.py" />
+        <option value="$PROJECT_DIR$/config.py" />
         <option value="$PROJECT_DIR$/models.py" />
         <option value="$PROJECT_DIR$/code_review.py" />
-        <option value="$PROJECT_DIR$/database.py" />
       </list>
     </option>
   </component>
@@ -456,7 +409,7 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="64" y="-4" width="1617" height="1055" extended-state="6" />
-    <editor active="true" />
+    <editor active="false" />
     <layout>
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.32893288" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
@@ -465,7 +418,7 @@
       <window_info id="Database" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.26641172" sideWeight="0.6376812" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.16061185" sideWeight="0.6391639" order="0" side_tool="false" content_ui="combo" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.3608361" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
+      <window_info id="Debug" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.3608361" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.26952696" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -492,11 +445,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file:///usr/lib/python2.7/dist-packages/requests/compat.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="102" column="79" selection-start="2025" selection-end="2031" vertical-scroll-proportion="-6.029412" vertical-offset="1325" max-vertical-offset="1800" />
-      </provider>
-    </entry>
     <entry file="file:///usr/lib/python2.7/dist-packages/requests/utils.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="32" column="38" selection-start="744" selection-end="744" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="8655" />
@@ -551,57 +499,60 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
+    <entry file="file://$PROJECT_DIR$/database.py.tmp">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="1138" column="0" selection-start="47511" selection-end="47511" vertical-scroll-proportion="0.0" vertical-offset="15896" max-vertical-offset="21570">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Jenkins.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="10" column="0" selection-start="154" selection-end="154" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="855">
+        <state line="5" column="61" selection-start="174" selection-end="212" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="375">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Repo2.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="28" column="64" selection-start="1063" selection-end="1063" vertical-scroll-proportion="0.0" vertical-offset="166" max-vertical-offset="810">
+        <state line="25" column="23" selection-start="918" selection-end="918" vertical-scroll-proportion="0.51263535" vertical-offset="76" max-vertical-offset="810">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/models.py">
+    <entry file="file://$PROJECT_DIR$/Jenkins.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="27" column="51" selection-start="883" selection-end="890" vertical-scroll-proportion="0.0" vertical-offset="61" max-vertical-offset="615">
-          <folding>
-            <element signature="e#0#46#0" expanded="true" />
-          </folding>
+        <state line="10" column="0" selection-start="154" selection-end="154" vertical-scroll-proportion="0.16245487" vertical-offset="0" max-vertical-offset="795">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$APPLICATION_HOME_DIR$/helpers/pydev/pydevd.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="1138" column="0" selection-start="47511" selection-end="47511" vertical-scroll-proportion="0.33212996" vertical-offset="15896" max-vertical-offset="21570">
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file:///usr/share/pyshared/sqlalchemy/orm/session.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="718" column="0" selection-start="28123" selection-end="28123" vertical-scroll-proportion="0.0" vertical-offset="10346" max-vertical-offset="34575">
+        <state line="718" column="0" selection-start="28123" selection-end="28123" vertical-scroll-proportion="0.33212996" vertical-offset="10346" max-vertical-offset="34575">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="5" column="33" selection-start="176" selection-end="176" vertical-scroll-proportion="0.13537906" vertical-offset="0" max-vertical-offset="554">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file:///usr/share/pyshared/sqlalchemy/orm/mapper.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="817" column="0" selection-start="31652" selection-end="31652" vertical-scroll-proportion="0.0" vertical-offset="11846" max-vertical-offset="34200">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/code_review.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="7" column="40" selection-start="254" selection-end="254" vertical-scroll-proportion="0.0" vertical-offset="0" max-vertical-offset="2190">
+        <state line="59" column="0" selection-start="1918" selection-end="1918" vertical-scroll-proportion="0.4133574" vertical-offset="656" max-vertical-offset="2820">
           <folding>
             <element signature="e#0#9#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/database.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="19" column="41" selection-start="748" selection-end="748" vertical-scroll-proportion="0.5144404" vertical-offset="0" max-vertical-offset="554">
-          <folding>
-            <element signature="e#0#36#0" expanded="true" />
           </folding>
         </state>
       </provider>

@@ -1,12 +1,14 @@
 import os
+import datetime
 from flask import Flask, redirect, url_for
 from flask.globals import request
 from flask.templating import render_template
 from hgapi import HgException
 from Jenkins import Jenkins
 from Repo2 import Repo2
-from database import db_session, init_db
-
+#from database import db_session, init_db
+from flask.ext.sqlalchemy import SQLAlchemy
+#from models import Review, Build
 
 
 
@@ -22,11 +24,49 @@ from database import db_session, init_db
 #Content-Type: application/x-www-form-urlencoded
 #
 #json=%7B%22parameter%22%3A%5B%7B%22name%22%3A%22BRANCH%22%2C%22value%22%3A%22MASTER%22%7D%5D%7D
-from models import Review, Build
+#from models import Review, Build
+#from models import Review
 
 
 app = Flask(__name__)
 app.config.from_object("config")
+db = SQLAlchemy(app)
+
+
+
+class Review(db.Model):
+    __tablename__ = 'reviews'
+    id = db.Column(db.Integer, primary_key=True)
+    owner = db.Column(db.String(50))
+    owner_email = db.Column(db.String(120))
+    created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    title = db.Column(db.String(120))
+    sha1 = db.Column(db.String(40), index=True)
+    builds = db.relationship("Build")
+
+    def __init__(self, owner=None, owner_email=None, title=None, sha1=None):
+        self.owner = owner
+        self.owner_email = owner_email
+        self.title = title
+        self.sha1 = sha1
+
+
+class Build(db.Model):
+    __tablename__ = 'builds'
+    id = db.Column(db.Integer, primary_key=True)
+    review_id = db.Column(db.Integer, db.ForeignKey('reviews.id'))
+    build_number = db.Column(db.Integer)
+    build_url = db.Column(db.String(120))
+
+    def __init__(self, review_id = None, build_no = None, build_url = None):
+        self.review_id = review_id
+        self.build_number = build_no
+        self.build_url = build_url
+
+
+
+db.drop_all()
+db.create_all()
 
 currDir = os.path.dirname(__file__)
 repo = Repo2(os.path.join(currDir, "repo"))
@@ -34,13 +74,14 @@ productBranches = ["default", "master", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.1
 
 jenkins = Jenkins("http://pl-byd-srv01.emea.int.genesyslab.com:18080")
 
+
 #Build.query.filter(Build.review_id == 1).all()
-res = Review.query.filter(Review.id == 1).first()
-print dir(res.builds)
-res.builds.append(Build(None, "111", "sssss"))
-db_session.add(res)
-db_session.commit()
-init_db()
+#res = Review.query.filter(Review.id == 1).first()
+#print dir(res.builds)
+#res.builds.append(Build(None, "111", "sssss"))
+#db_session.add(res)
+#db_session.commit()
+#init_db()
 
 #u = User('admin', 'admin@localhost')
 #db_session.add(u)
@@ -66,13 +107,13 @@ def changes_new():
             h['src'] = h['bookmarks']
         sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
         count = Review.query.filter(Review.sha1 == sha1).count()
-        if (count < 1):
-            review = Review("dummy user", "dummy@email.com", h["desc"], sha1)
-            db_session.add(review)
-            db_session.commit()
-            b = Build(review.id, "aaa", "aaa")
-            db_session.add(b)
-            db_session.commit()
+        #if (count < 1):
+        #    review = Review("dummy user", "dummy@email.com", h["desc"], sha1)
+        #    db.session.add(review)
+        #    db.session.commit()
+            #b = Build(review.id, "aaa", "aaa")
+            #db.session.add(b)
+            #db.session.commit()
 
     return render_template('changes.html', type="New", heads=heads, productBranches=productBranches)
 
@@ -132,9 +173,10 @@ def merge_branch(src, dst):
     #return render_template('changes.html', type="Merging", src=src, dst=dst)
 
 
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    db_session.remove()
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
+
+
+
