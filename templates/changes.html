@@ -9,21 +9,49 @@
 
 <h1>{{ type }} Changes</h1>
 
-    <ul>
-        {% for br in branches %}
-            <li>{{ br }}
-                <form method="post" action="{{ url_for("merge_from_post") }}">
-                    <select name="dst">
-                        {% for pb in productBranches %}
-                            <option value="{{ pb }}">{{ pb }}</option>
-                        {% endfor %}
-                    </select>
-                    <input type="hidden" name="src" value="{{ br }}" />
-                    <button class="btn btn-default" type="submit">merge</button>
-                </form>
-            </li>
+    <table class="table table-hover">
+        <thead>
+        <tr>
+            <th>No.</th>
+            <th>Changeset</th>
+            <th>Branch</th>
+            <th>Bookmark</th>
+            <th>Destination branch</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        {% for br in heads %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ br.desc }}</td>
+                <td>{{ br.branches }}</td>
+                <td>{{ br.bookmarks }}</td>
+                <td>
+                    <form method="post" action="{{ url_for("merge_from_post") }}">
+                        <select name="dst">
+                            {% for pb in productBranches %}
+                                <option value="{{ pb }}">{{ pb }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="src" value="{{ br.src }}"/>
+                </td>
+                <td>
+                    <button class="btn btn-danger btn-sm" type="submit">merge</button>
+                    </form>
+                    <form method="post" action="{{ url_for("jenkins_build") }}">
+                        <input type="hidden" name="src" value="{{ br.src }}"/>
+                        <button class="btn btn-danger btn-sm" type="submit">build</button>
+                    </form>
+                </td>
+            </tr>
         {% endfor %}
-    </ul>
+        </tr>
+        </tbody>
+    </table>
+
+
 
 
 {% endblock %}
