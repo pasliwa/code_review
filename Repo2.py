@@ -5,7 +5,7 @@ from hgapi.hgapi import Repo
 
 class Repo2(Repo):
     def hg_bookbarks(self, namesOnly=True):
-        output=self.hg_command("bookmarks")
+        output = self.hg_command("bookmarks")
         res = {}
         reg_expr = "(?P<bookmark>\S+)\s+(?P<rev>\d+):(?P<changeset>\w+)"
         pattern = re.compile(reg_expr)
@@ -30,9 +30,9 @@ class Repo2(Repo):
             form of the node id.
         """
         res = []
-        template = "{rev}:::{desc|firstline}:::{bookmarks}:::{branches}\n"
+        template = "{rev}:::{desc|firstline}:::{bookmarks}:::{branches}:::{node}\n"
         output = self.hg_command("heads", "--template", template)
-        reg_expr = "(?P<rev>\d+):::(?P<desc>[\s\w\S]+):::(?P<bookmarks>[\s\w\S]{0,}):::(?P<branches>[\s\w\S]{0,})"
+        reg_expr = "(?P<rev>\d+):::(?P<desc>[\s\w\S]+):::(?P<bookmarks>[\s\w\S]{0,}):::(?P<branches>[\s\w\S]{0,}):::(?P<changeset>[\d\w]+)"
         pattern = re.compile(reg_expr)
         for row in output.strip().split('\n'):
             match = pattern.search(row)
@@ -43,7 +43,28 @@ class Repo2(Repo):
                 br = match.group("branches")
                 if br == "":
                     br = None
-                res.append({"rev": match.group("rev"), "desc": match.group("desc"), "bookmarks" : bm , "branches": br})
+                res.append({"rev": match.group("rev"), "desc": match.group("desc"), "bookmarks": bm, "branches": br,
+                            "changeset": match.group("changeset")})
         return res
 
+    def hg_head_changeset_info(self, changeset):
+        heads = self.hg_heads()
+        for h in heads:
+            if h["changeset"] == changeset:
+                return h
+        return None
+
+    def hg_head_branch_info(self, branch):
+        heads = self.hg_heads()
+        for h in heads:
+            if h["branches"] == branch:
+                return h
+        return None
+
+    def hg_head_bookmark_info(self, bookmark):
+        heads = self.hg_heads()
+        for h in heads:
+            if h["bookmarks"] == bookmark:
+                return h
+        return None
 

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+
+{% include "messages.html" %}
+
+
+
+
+
+    {% for r in reviews %}
+        <h2>Review for {{ r.title }} ({{ r.sha1 }})</h2>
+        <b>owner</b>: {{ r.owner }}<br/>
+        <b>owner_email</b>: {{ r.owner_email }}<br/>
+        <b>created_date</b>: {{ r.created_date }}<br/>
+        <b>title</b>: {{ r.title }}<br/>
+        <b>sha1</b>: {{ r.sha1 }}<br/>
+
+        <h3>Builds</h3>
+        {% for b in r.builds %}
+            <b>id</b>: {{ b.id }}<br/>
+            <b>build_number</b>: {{ b.build_number }}<br/>
+            <b>build_url</b>: {{ b.build_url }}<br/>
+        {% endfor %}
+
+    {% endfor %}
+
+
+
+{% endblock %}

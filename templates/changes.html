@@ -25,7 +25,7 @@
         {% for br in heads %}
             <tr>
                 <td>{{ loop.index }}</td>
-                <td>{{ br.desc }}</td>
+                <td>{{ br.desc }} <span class="">(<a href="{{ url_for("changeset_info", changeset=br.changeset) }}">{{ br.changeset }}</a>)</span></td>
                 <td>{{ br.branches }}</td>
                 <td>{{ br.bookmarks }}</td>
                 <td>

@@ -65,7 +65,7 @@ class Build(db.Model):
 
 
 
-db.drop_all()
+#db.drop_all()
 db.create_all()
 
 currDir = os.path.dirname(__file__)
@@ -107,14 +107,10 @@ def changes_new():
             h['src'] = h['bookmarks']
         sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
         count = Review.query.filter(Review.sha1 == sha1).count()
-        #if (count < 1):
-        #    review = Review("dummy user", "dummy@email.com", h["desc"], sha1)
-        #    db.session.add(review)
-        #    db.session.commit()
-            #b = Build(review.id, "aaa", "aaa")
-            #db.session.add(b)
-            #db.session.commit()
-
+        if (count < 1):
+            review = Review("dummy user", "dummy@email.com", h["desc"], sha1)
+            db.session.add(review)
+            db.session.commit()
     return render_template('changes.html', type="New", heads=heads, productBranches=productBranches)
 
 
@@ -141,9 +137,22 @@ def merge_from_post():
 
 @app.route('/build', methods=['POST'])
 def jenkins_build():
-    res = jenkins.run_job("iwd_8.5.000-REVIEW", "default")
+    buildNo = jenkins.run_job("iwd_8.5.000-REVIEW", request.form['src'])
+    if buildNo is not None:
+        info = repo.hg_head_bookmark_info(request.form['src'])
+        if info == None:
+            info = repo.hg_head_branch_info(request.form['src'])
+        review = Review.query.filter(Review.sha1 == info['changeset']).first()
+        build = Build(review.id, buildNo, "test")
+        db.session.add(build)
+        db.session.commit()
     return render_template('changes.html', type="Merging")
 
+
+@app.route('/info/<changeset>')
+def changeset_info(changeset):
+    reviews = Review.query.filter(Review.sha1 == changeset).all()
+    return render_template("info.html", reviews=reviews)
 
 @app.route('/merge/<src>/<dst>')
 def merge_branch(src, dst):
