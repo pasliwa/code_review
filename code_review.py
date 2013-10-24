@@ -1,5 +1,6 @@
 import os
 import datetime
+from sqlalchemy.sql.expression import or_
 from flask import Flask, redirect, url_for
 from flask.globals import request
 from flask.templating import render_template
@@ -26,6 +27,7 @@ from flask.ext.sqlalchemy import SQLAlchemy
 #json=%7B%22parameter%22%3A%5B%7B%22name%22%3A%22BRANCH%22%2C%22value%22%3A%22MASTER%22%7D%5D%7D
 #from models import Review, Build
 #from models import Review
+import config
 
 
 app = Flask(__name__)
@@ -57,11 +59,16 @@ class Build(db.Model):
     review_id = db.Column(db.Integer, db.ForeignKey('reviews.id'))
     build_number = db.Column(db.Integer)
     build_url = db.Column(db.String(120))
+    status = db.Column(db.String(20))
+    job_name = db.Column(db.String(30))
+    scheduled = db.Column(db.String(30))
 
-    def __init__(self, review_id = None, build_no = None, build_url = None):
+    def __init__(self, review_id = None, build_no = None, build_url = None, status = None, job_name = None):
         self.review_id = review_id
         self.build_number = build_no
         self.build_url = build_url
+        self.status = status
+        self.job_name = job_name
 
 
 
@@ -137,20 +144,21 @@ def merge_from_post():
 
 @app.route('/build', methods=['POST'])
 def jenkins_build():
-    buildNo = jenkins.run_job("iwd_8.5.000-REVIEW", request.form['src'])
-    if buildNo is not None:
+    build_info = jenkins.run_job(config.REVIEW_JOB_NAME, request.form['src'])
+    if build_info is not None:
         info = repo.hg_head_bookmark_info(request.form['src'])
         if info == None:
             info = repo.hg_head_branch_info(request.form['src'])
         review = Review.query.filter(Review.sha1 == info['changeset']).first()
-        build = Build(review.id, buildNo, "test")
+        build = Build(review.id, build_info["buildNo"], build_info["url"], None, config.REVIEW_JOB_NAME)
         db.session.add(build)
         db.session.commit()
-    return render_template('changes.html', type="Merging")
+    return redirect(url_for('changeset_info', changeset=info["changeset"]))
 
 
 @app.route('/info/<changeset>')
 def changeset_info(changeset):
+    update_build_status()
     reviews = Review.query.filter(Review.sha1 == changeset).all()
     return render_template("info.html", reviews=reviews)
 
@@ -182,6 +190,14 @@ def merge_branch(src, dst):
     #return render_template('changes.html', type="Merging", src=src, dst=dst)
 
 
+
+def update_build_status():
+    builds = Build.query.filter(or_(Build.status != "SUCCESS", Build.status == None)).all()
+    for b in builds:
+       build_info = jenkins.get_build_info(b.job_name, b.build_number)
+       b.status =  build_info["result"]
+       b.scheduled = build_info["id"]
+       db.session.commit()
 
 
 if __name__ == '__main__':

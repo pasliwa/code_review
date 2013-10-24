@@ -3,26 +3,65 @@
 {% block body %}
 
 
-{% include "messages.html" %}
+    {% include "messages.html" %}
 
 
 
 
 
     {% for r in reviews %}
-        <h2>Review for {{ r.title }} ({{ r.sha1 }})</h2>
-        <b>owner</b>: {{ r.owner }}<br/>
-        <b>owner_email</b>: {{ r.owner_email }}<br/>
-        <b>created_date</b>: {{ r.created_date }}<br/>
-        <b>title</b>: {{ r.title }}<br/>
-        <b>sha1</b>: {{ r.sha1 }}<br/>
 
-        <h3>Builds</h3>
-        {% for b in r.builds %}
-            <b>id</b>: {{ b.id }}<br/>
-            <b>build_number</b>: {{ b.build_number }}<br/>
-            <b>build_url</b>: {{ b.build_url }}<br/>
-        {% endfor %}
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Review for <b>{{ r.title }}</b> ({{ r.sha1 }})</h3>
+            </div>
+            <div class="panel-body">
+                <div><span class="col-lg-2 text-right">Title</span><span><b>{{ r.title }}</b></span></div>
+                <div><span class="col-lg-2 text-right">Owner</span><span>{{ r.owner }} (<a href="mailto:{{ r.owner_email }}">{{ r.owner_email }}</a>)</span></div>
+                <div><span class="col-lg-2 text-right">Created</span><span>{{ r.created_date }}</span></div>
+                <div><span class="col-lg-2 text-right">SHA1</span><span>{{ r.sha1 }}</span></div>
+            </div>
+        </div>
+
+        <div class="panel panel-success">
+            <div class="panel-heading">
+                <h3 class="panel-title">Builds</h3>
+            </div>
+
+            <div class="panel-body">
+                <table class="table table-hover table-condensed">
+                    <thead>
+                    <tr>
+                        <th>Build No</th>
+                        <th>Scheduled</th>
+                        <th>Url</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for b in r.builds %}
+                        <tr>
+                            <td>{{ b.build_number }}</td>
+                            <td>{{ b.scheduled }}</td>
+                            <td><a target="_blank" href="{{ b.build_url }}">{{ b.build_url }}</a> </td>
+                            <td>
+                                {% if b.status == "SUCCESS" %}
+                                    <span class="label label-success">
+                                {% elif b.status == "FAILURE" %}
+                                    <span class="label label-danger">
+                                {% else %}
+                                    <span class="label label-default">
+                                {% endif %}
+                                {{ b.status }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
 
     {% endfor %}
 
