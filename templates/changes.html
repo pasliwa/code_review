@@ -44,6 +44,10 @@
                         <input type="hidden" name="src" value="{{ br.src }}"/>
                         <button class="btn btn-danger btn-sm" type="submit">build</button>
                     </form>
+                    <form method="post" action="{{ url_for("inspect_diff") }}">
+                        <input type="hidden" name="changeset" value="{{ br.changeset }}"/>
+                        <button class="btn btn-danger btn-sm" type="submit">inspect</button>
+                    </form>
                 </td>
             </tr>
         {% endfor %}

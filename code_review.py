@@ -5,6 +5,7 @@ from flask import Flask, redirect, url_for
 from flask.globals import request
 from flask.templating import render_template
 from hgapi import HgException
+from CodeCollaborator import CodeCollaborator
 from Jenkins import Jenkins
 from Repo2 import Repo2
 #from database import db_session, init_db
@@ -135,6 +136,21 @@ def changes_latest_in_branch(branch):
 @app.route('/merge/<branch>')
 def merge_with_default(branch):
     return merge_branch(branch, "default")
+
+
+@app.route('/inspect',  methods=['POST'])
+def inspect_diff():
+    info=repo.hg_head_changeset_info(request.form['changeset'])
+    rev=info["rev"]
+    cc = CodeCollaborator()
+    reviewId=cc.create_empty_cc_review()
+    res, output = cc.upload_diff(reviewId, rev, repo.path)
+    if (res):
+        message="CodeCollaborator review #{reviewId} has been created".format(reviewId=reviewId)
+    else:
+        message="There was an error creating CodeCollaborator review. \n\n" + output
+    return render_template("info.html", message=message)
+
 
 
 @app.route('/merge', methods=['POST'])
