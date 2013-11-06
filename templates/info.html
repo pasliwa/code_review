@@ -27,7 +27,6 @@
             <div class="panel-heading">
                 <h3 class="panel-title">Builds</h3>
             </div>
-
             <div class="panel-body">
                 <table class="table table-hover table-condensed">
                     <thead>
@@ -60,7 +59,42 @@
                     </tbody>
                 </table>
             </div>
+        </div>
 
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <h3 class="panel-title">CodeCollaborator inspections</h3>
+            </div>
+            <div class="panel-body">
+                <table class="table table-hover table-condensed">
+                    <thead>
+                    <tr>
+                        <th>Inspection No</th>
+                        <th>Inspection URL</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for i in r.inspections %}
+                        <tr>
+                            <td>{{ i.inspection_number }}</td>
+                            <td><a target="_blank" href="{{ i.inspection_url }}">{{ i.inspection_url }}</a> </td>
+                            <td>
+                                {% if i.status == "SUCCESS" %}
+                                    <span class="label label-success">
+                                {% elif i.status == "FAILURE" %}
+                                    <span class="label label-danger">
+                                {% else %}
+                                    <span class="label label-default">
+                                {% endif %}
+                                {{ i.status }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
     {% endfor %}

@@ -46,6 +46,7 @@ class Review(db.Model):
     title = db.Column(db.String(120))
     sha1 = db.Column(db.String(40), index=True)
     builds = db.relationship("Build")
+    inspections = db.relationship("CodeInspection")
 
     def __init__(self, owner=None, owner_email=None, title=None, sha1=None):
         self.owner = owner
@@ -70,6 +71,22 @@ class Build(db.Model):
         self.build_url = build_url
         self.status = status
         self.job_name = job_name
+
+
+
+class CodeInspection(db.Model):
+    __tablename__ = 'inspections'
+    id = db.Column(db.Integer, primary_key=True)
+    review_id = db.Column(db.Integer, db.ForeignKey('reviews.id'))
+    inspection_number = db.Column(db.Integer)
+    inspection_url = db.Column(db.String(120))
+    status = db.Column(db.String(20))
+
+    def __init__(self, review_id = None, inspection_number = None, inspection_url = None, status = None):
+        self.review_id = review_id
+        self.inspection_number = inspection_number
+        self.inspection_url = inspection_url
+        self.status = status
 
 
 
@@ -143,13 +160,21 @@ def inspect_diff():
     info=repo.hg_head_changeset_info(request.form['changeset'])
     rev=info["rev"]
     cc = CodeCollaborator()
-    reviewId=cc.create_empty_cc_review()
-    res, output = cc.upload_diff(reviewId, rev, repo.path)
+    ccInspectionId=cc.create_empty_cc_review()
+    res, output = cc.upload_diff(ccInspectionId, rev, repo.path)
     if (res):
-        message="CodeCollaborator review #{reviewId} has been created".format(reviewId=reviewId)
+        review = Review.query.filter(Review.sha1 == request.form['changeset']).first()
+        inspection = CodeInspection()
+        inspection.inspection_number = ccInspectionId
+        inspection.inspection_url = config.CC_REVIEW_URL.format(reviewId=ccInspectionId)
+        inspection.review_id = review.id
+        inspection.status = 'NEW'
+        db.session.add(inspection)
+        db.session.commit()
+        message="CodeCollaborator review #{reviewId} has been created. View: {url}".format(reviewId=ccInspectionId, url=inspection.inspection_url)
     else:
         message="There was an error creating CodeCollaborator review. \n\n" + output
-    return render_template("info.html", message=message)
+    return redirect(url_for('changeset_info', changeset=request.form['changeset']))
 
 
 

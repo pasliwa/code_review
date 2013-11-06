@@ -24,8 +24,6 @@ class CodeCollaborator(object):
         return reviewId
 
     def upload_diff(self, reviewId, revision, repoPath):
-        curr = os.getcwd()
-        print os.getcwd()
         revision = int(revision)
         output = subprocess.check_output(
             "{cc} addhgdiffs {reviewId} -r {rev1} -r {rev2}".format(cc=config.CC_BIN, reviewId=reviewId,
