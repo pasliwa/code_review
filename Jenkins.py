@@ -15,10 +15,11 @@ class Jenkins(object):
         props = eval(resp.content)
         return props["nextBuildNumber"]
 
-    def run_job(self, jobName, branch):
+    def run_job(self, jobName, bookmark):
         buildNo = self.get_next_build_number(jobName)
         uuid = str(uuid4())
-        payload = urllib.urlencode({'json': {"parameter": [{"name": "BRANCH", "value": "MASTER"}, {"name": "REQUEST_ID", "value": uuid}]}})
+        # TODO : build actual branch
+        payload = urllib.urlencode({'json': {"parameter": [{"name": "BRANCH", "value": "default"}, {"name": "REQUEST_ID", "value": uuid}]}})
         headers = {'content-type': 'application/x-www-form-urlencoded'}
         resp = requests.post(self.url + "/job/" + jobName + "/build/api/json", data=payload, headers=headers)
         if resp.status_code == 201:

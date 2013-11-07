@@ -24,11 +24,6 @@ class Repo2(Repo):
         return self.hg_command(*cmd)
 
     def hg_heads(self):
-        """
-            Get a list with the node identifiers of all open heads.
-            If short is given and is not False, return the short
-            form of the node id.
-        """
         res = []
         template = "{rev}:::{desc|firstline}:::{bookmarks}:::{branches}:::{node}\n"
         output = self.hg_command("heads", "--template", template)
@@ -38,12 +33,8 @@ class Repo2(Repo):
             match = pattern.search(row)
             if match is not None:
                 bm = match.group("bookmarks")
-                if bm == "":
-                    bm = None;
-                br = match.group("branches")
-                if br == "":
-                    br = None
-                res.append({"rev": match.group("rev"), "desc": match.group("desc"), "bookmarks": bm, "branches": br,
+                if bm != "":
+                    res.append({"rev": match.group("rev"), "desc": match.group("desc"), "bookmarks": bm,
                             "changeset": match.group("changeset")})
         return res
 

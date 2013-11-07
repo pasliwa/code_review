@@ -45,14 +45,16 @@ class Review(db.Model):
     created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     title = db.Column(db.String(120))
     sha1 = db.Column(db.String(40), index=True)
+    bookmark = db.Column(db.String(120))
     builds = db.relationship("Build")
     inspections = db.relationship("CodeInspection")
 
-    def __init__(self, owner=None, owner_email=None, title=None, sha1=None):
+    def __init__(self, owner=None, owner_email=None, title=None, sha1=None, bookmark=None):
         self.owner = owner
         self.owner_email = owner_email
         self.title = title
         self.sha1 = sha1
+        self.bookmark = bookmark
 
 
 class Build(db.Model):
@@ -126,14 +128,11 @@ def changes_new():
     #branches=branches+bookmarks
     heads = repo.hg_heads()
     for h in heads:
-        if h['branches']:
-            h['src'] = h['branches']
-        else:
-            h['src'] = h['bookmarks']
+        h['src'] = h['bookmarks']
         sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
         count = Review.query.filter(Review.sha1 == sha1).count()
         if (count < 1):
-            review = Review("dummy user", "dummy@email.com", h["desc"], sha1)
+            review = Review("dummy user", "dummy@email.com", h["desc"], sha1, h["bookmarks"])
             db.session.add(review)
             db.session.commit()
     return render_template('changes.html', type="New", heads=heads, productBranches=productBranches)
@@ -150,9 +149,9 @@ def changes_latest_in_branch(branch):
     return render_template('log.html', log=log, branch=branch)
 
 
-@app.route('/merge/<branch>')
-def merge_with_default(branch):
-    return merge_branch(branch, "default")
+@app.route('/merge/<bookmark>')
+def merge_with_default(bookmark):
+    return merge_branch(bookmark, "default")
 
 
 @app.route('/inspect',  methods=['POST'])
@@ -188,8 +187,6 @@ def jenkins_build():
     build_info = jenkins.run_job(config.REVIEW_JOB_NAME, request.form['src'])
     if build_info is not None:
         info = repo.hg_head_bookmark_info(request.form['src'])
-        if info == None:
-            info = repo.hg_head_branch_info(request.form['src'])
         review = Review.query.filter(Review.sha1 == info['changeset']).first()
         build = Build(review.id, build_info["buildNo"], build_info["url"], None, config.REVIEW_JOB_NAME)
         db.session.add(build)
@@ -201,7 +198,7 @@ def jenkins_build():
 def changeset_info(changeset):
     update_build_status()
     reviews = Review.query.filter(Review.sha1 == changeset).all()
-    return render_template("info.html", reviews=reviews)
+    return render_template("info.html", reviews=reviews, productBranches=productBranches)
 
 @app.route('/merge/<src>/<dst>')
 def merge_branch(src, dst):
@@ -211,23 +208,20 @@ def merge_branch(src, dst):
     try:
         diff = repo.hg_log(branch=src)
         repo.hg_update(src)
-        branches = repo.get_branch_names()
         bookmarks = repo.hg_bookbarks(True)
         heads = repo.hg_heads()
-        if src in branches:
-            res2 = repo.hg_commit("Closing branch {src}".format(src=src), user="me", close_branch=True)
         res3 = repo.hg_update(dst)
         res4 = repo.hg_merge(src)
         for h in heads:
-            if h["branches"] == src or h["bookmarks"] == src:
+            if h["bookmarks"] == src:
                 title = h['desc']
-        res5 = repo.hg_commit("Merge '{desc}' ({src}) with {dst}".format(src=src, dst=dst, desc=title), user="me", close_branch=False)
+        res5 = repo.hg_commit("Merge '{desc}' ({src}) with {dst}".format(src=src, dst=dst, desc=title), user="me")
         if src in bookmarks:
             res6 = repo.hg_bookmark(src, delete=True)
-        msg = "'{desc}' in branch '{src}' was successfully merged with '{dst}. <br/>Changes: <br><pre>{diff}</pre>'".format(src=src, dst=dst, diff=diff, desc=title)
+        msg = "'{desc}' in bookmark '{src}' was successfully merged with '{dst}. <br/>Changes: <br><pre>{diff}</pre>'".format(src=src, dst=dst, diff=diff, desc=title)
     except HgException, e:
         print "===" + str(e)
-    return render_template('changes.html', type="Merging", branch=src, exception=e, message=msg, diff=diff)
+    return render_template('changes.html', type="Merging", exception=e, message=msg, diff=diff)
     #return render_template('changes.html', type="Merging", src=src, dst=dst)
 
 
