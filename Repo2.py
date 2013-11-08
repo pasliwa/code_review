@@ -25,9 +25,9 @@ class Repo2(Repo):
 
     def hg_heads(self):
         res = []
-        template = "{rev}:::{desc|firstline}:::{bookmarks}:::{branches}:::{node}\n"
+        template = "{rev}:::{desc|firstline}:::{bookmarks}:::{node}:::{author|person}:::{author|email}\n"
         output = self.hg_command("heads", "--template", template)
-        reg_expr = "(?P<rev>\d+):::(?P<desc>[\s\w\S]+):::(?P<bookmarks>[\s\w\S]{0,}):::(?P<branches>[\s\w\S]{0,}):::(?P<changeset>[\d\w]+)"
+        reg_expr = "(?P<rev>\d+):::(?P<desc>[\s\w\S]+):::(?P<bookmarks>[\s\w\S]{0,}):::(?P<changeset>[\d\w]+):::(?P<user>[\s\w\S]+):::(?P<email>[\s\w\S]{0,})"
         pattern = re.compile(reg_expr)
         for row in output.strip().split('\n'):
             match = pattern.search(row)
@@ -35,7 +35,8 @@ class Repo2(Repo):
                 bm = match.group("bookmarks")
                 if bm != "":
                     res.append({"rev": match.group("rev"), "desc": match.group("desc"), "bookmarks": bm,
-                            "changeset": match.group("changeset")})
+                                "changeset": match.group("changeset"), "author": match.group("user"),
+                                "email": match.group("email")})
         return res
 
     def hg_head_changeset_info(self, changeset):

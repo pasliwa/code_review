@@ -14,9 +14,8 @@
         <tr>
             <th>No.</th>
             <th>Changeset</th>
+            <th>Author</th>
             <th>Bookmark</th>
-            <th>Destination branch</th>
-            <th>Action</th>
         </tr>
         </thead>
         <tbody>
@@ -25,28 +24,8 @@
             <tr>
                 <td>{{ loop.index }}</td>
                 <td>{{ br.desc }} <span class="">(<a href="{{ url_for("changeset_info", changeset=br.changeset) }}">{{ br.changeset }}</a>)</span></td>
+                <td>{{ br.author }}</td>
                 <td>{{ br.bookmarks }}</td>
-                <td>
-                    <form method="post" action="{{ url_for("merge_from_post") }}">
-                        <select name="dst">
-                            {% for pb in productBranches %}
-                                <option value="{{ pb }}">{{ pb }}</option>
-                            {% endfor %}
-                        </select>
-                        <input type="hidden" name="src" value="{{ br.src }}"/>
-                </td>
-                <td>
-                    <button class="btn btn-danger btn-sm" type="submit">merge</button>
-                    </form>
-                    <form method="post" action="{{ url_for("jenkins_build") }}">
-                        <input type="hidden" name="src" value="{{ br.src }}"/>
-                        <button class="btn btn-danger btn-sm" type="submit">build</button>
-                    </form>
-                    <form method="post" action="{{ url_for("inspect_diff") }}">
-                        <input type="hidden" name="changeset" value="{{ br.changeset }}"/>
-                        <button class="btn btn-danger btn-sm" type="submit">inspect</button>
-                    </form>
-                </td>
             </tr>
         {% endfor %}
         </tr>

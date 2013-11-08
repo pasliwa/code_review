@@ -121,18 +121,13 @@ def index():
 
 @app.route('/changes/new')
 def changes_new():
-    #branches = repo.get_branch_names()
-    #heads = repo.hg_heads()
-    #bookmarks=repo.hg_bookbarks()
-    #branches.remove("default") if "default" in branches else ""
-    #branches=branches+bookmarks
     heads = repo.hg_heads()
     for h in heads:
         h['src'] = h['bookmarks']
         sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
         count = Review.query.filter(Review.sha1 == sha1).count()
         if (count < 1):
-            review = Review("dummy user", "dummy@email.com", h["desc"], sha1, h["bookmarks"])
+            review = Review(h["author"], h["email"], h["desc"], sha1, h["bookmarks"])
             db.session.add(review)
             db.session.commit()
     return render_template('changes.html', type="New", heads=heads, productBranches=productBranches)
