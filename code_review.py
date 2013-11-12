@@ -8,26 +8,7 @@ from hgapi import HgException
 from CodeCollaborator import CodeCollaborator
 from Jenkins import Jenkins
 from Repo2 import Repo2
-#from database import db_session, init_db
 from flask.ext.sqlalchemy import SQLAlchemy
-#from models import Review, Build
-
-
-
-# host: pl-byd-srv01.emea.int.genesyslab.com:18080/view/8.5/job/iwd_8.5.000-REVIEW/build/api/json
-# x-www-form-urlencoded
-# json       {"parameter":[{"name":"BRANCH","value":"MASTER"}]}
-# encoded post : j  son=%7B%22parameter%22%3A%5B%7B%22name%22%3A%22BRANCH%22%2C%22value%22%3A%22MASTER%22%7D%5D%7D
-
-#
-#POST /view/8.5/job/iwd_8.5.000-REVIEW/build/api/json HTTP/1.1
-#Host: pl-byd-srv01.emea.int.genesyslab.com:18080
-#Cache-Control: no-cache
-#Content-Type: application/x-www-form-urlencoded
-#
-#json=%7B%22parameter%22%3A%5B%7B%22name%22%3A%22BRANCH%22%2C%22value%22%3A%22MASTER%22%7D%5D%7D
-#from models import Review, Build
-#from models import Review
 import config
 
 
@@ -179,13 +160,12 @@ def merge_from_post():
 
 @app.route('/build', methods=['POST'])
 def jenkins_build():
-    build_info = jenkins.run_job(config.REVIEW_JOB_NAME, request.form['src'])
-    if build_info is not None:
-        info = repo.hg_head_bookmark_info(request.form['src'])
-        review = Review.query.filter(Review.sha1 == info['changeset']).first()
-        build = Build(review.id, build_info["buildNo"], build_info["url"], None, config.REVIEW_JOB_NAME)
-        db.session.add(build)
-        db.session.commit()
+    jenkins.schedule_job(config.REVIEW_JOB_NAME, request.form['src'])
+    info = repo.hg_head_bookmark_info(request.form['src'])
+    review = Review.query.filter(Review.sha1 == info['changeset']).first()
+    build = Build(review_id=review.id, status="SCHEDULED")
+    db.session.add(build)
+    db.session.commit()
     return redirect(url_for('changeset_info', changeset=info["changeset"]))
 
 
@@ -221,17 +201,40 @@ def merge_branch(src, dst):
 
 
 
+@app.route('/run_scheduled_jobs')
+def run_scheduled_jobs():
+
+    # CC reviews
+
+    # Jenkins builds
+    builds = Build.query.filter(Build.status == "SCHEDULED").all()
+    for b in builds:
+        review = Review.query.filter(Review.id == b.review_id).first()
+        build_info = jenkins.run_job(config.REVIEW_JOB_NAME, review.bookmark)
+        b.build_number = build_info["buildNo"]
+        b.build_url = build_info["url"]
+        b.scheduled = datetime.datetime.utcnow()
+        b.status = "RUNNING"
+        b.job_name = config.REVIEW_JOB_NAME
+        db.session.add(b)
+        db.session.commit()
+
+
+
+
 def update_build_status():
-    builds = Build.query.filter(or_(Build.status != "SUCCESS", Build.status == None)).all()
+    builds = Build.query.filter(or_(Build.status != "SUCCESS", Build.status == None, Build.status != "SCHEDULED")).all()
     for b in builds:
        build_info = jenkins.get_build_info(b.job_name, b.build_number)
+       if build_info == None:
+           continue
        b.status =  build_info["result"]
        b.scheduled = build_info["id"]
        db.session.commit()
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', threaded=True)
 
 
 

@@ -44,6 +44,8 @@ class Jenkins(object):
 
 
     def get_build_info(self, jobName, buildNo):
+        if jobName == None or buildNo == None:
+            return None
         resp = requests.get(self.url + "/job/" + jobName + "/" + str(buildNo) + "/api/python?pretty=true")
         props = eval(resp.content)
         return props
