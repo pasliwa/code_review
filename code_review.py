@@ -64,12 +64,14 @@ class CodeInspection(db.Model):
     inspection_number = db.Column(db.Integer)
     inspection_url = db.Column(db.String(120))
     status = db.Column(db.String(20))
+    revision = db.Column(db.Integer)
 
-    def __init__(self, review_id = None, inspection_number = None, inspection_url = None, status = None):
+    def __init__(self, review_id = None, inspection_number = None, inspection_url = None, status = None, revision = None):
         self.review_id = review_id
         self.inspection_number = inspection_number
         self.inspection_url = inspection_url
         self.status = status
+        self.revision = revision
 
 
 
@@ -134,21 +136,14 @@ def merge_with_default(bookmark):
 def inspect_diff():
     info=repo.hg_head_changeset_info(request.form['changeset'])
     rev=info["rev"]
-    cc = CodeCollaborator()
-    ccInspectionId=cc.create_empty_cc_review()
-    res, output = cc.upload_diff(ccInspectionId, rev, repo.path)
-    if (res):
-        review = Review.query.filter(Review.sha1 == request.form['changeset']).first()
-        inspection = CodeInspection()
-        inspection.inspection_number = ccInspectionId
-        inspection.inspection_url = config.CC_REVIEW_URL.format(reviewId=ccInspectionId)
-        inspection.review_id = review.id
-        inspection.status = 'NEW'
-        db.session.add(inspection)
-        db.session.commit()
-        message="CodeCollaborator review #{reviewId} has been created. View: {url}".format(reviewId=ccInspectionId, url=inspection.inspection_url)
-    else:
-        message="There was an error creating CodeCollaborator review. \n\n" + output
+    review = Review.query.filter(Review.sha1 == request.form['changeset']).first()
+    inspection = CodeInspection()
+    inspection.status = "SCHEDULED"
+    inspection.review_id = review.id
+    inspection.revision = rev
+    db.session.add(inspection)
+    db.session.commit()
+
     return redirect(url_for('changeset_info', changeset=request.form['changeset']))
 
 
@@ -160,7 +155,7 @@ def merge_from_post():
 
 @app.route('/build', methods=['POST'])
 def jenkins_build():
-    jenkins.schedule_job(config.REVIEW_JOB_NAME, request.form['src'])
+    #jenkins.schedule_job(config.REVIEW_JOB_NAME, request.form['src'])
     info = repo.hg_head_bookmark_info(request.form['src'])
     review = Review.query.filter(Review.sha1 == info['changeset']).first()
     build = Build(review_id=review.id, status="SCHEDULED")
@@ -205,6 +200,24 @@ def merge_branch(src, dst):
 def run_scheduled_jobs():
 
     # CC reviews
+    inspections = CodeInspection.query.filter(CodeInspection.status == "SCHEDULED").all()
+    for i in inspections:
+        cc = CodeCollaborator()
+        ccInspectionId=cc.create_empty_cc_review()
+        res, output = cc.upload_diff(ccInspectionId, i.revision, repo.path)
+        if (res):
+            i.inspection_number = ccInspectionId
+            i.inspection_url = config.CC_REVIEW_URL.format(reviewId=ccInspectionId)
+            i.status = 'NEW'
+            db.session.add(i)
+            db.session.commit()
+            message="CodeCollaborator review #{reviewId} has been created. View: {url}".format(reviewId=ccInspectionId, url=i.inspection_url)
+        else:
+            message="There was an error creating CodeCollaborator review. \n\n" + output
+
+
+    #cc = CodeCollaborator()
+
 
     # Jenkins builds
     builds = Build.query.filter(Build.status == "SCHEDULED").all()

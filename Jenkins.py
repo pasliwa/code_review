@@ -29,7 +29,7 @@ class Jenkins(object):
                 # Jenkins queues job and does not start them immediately
                 # lets give him some time to respond
                 time.sleep(counter)
-                resp = requests.get(self.url + "/job/" + jobName + "/" + str(buildNo) + "/api/python?delay=30", data=payload, headers=headers)
+                resp = requests.get(self.url + "/job/" + jobName + "/" + str(buildNo) + "/api/python", data=payload, headers=headers)
                 if resp.status_code != 404:
                     # build has started, make sure we got the right build number (possible race-condition)
                     props = eval(resp.content)
