@@ -25,18 +25,12 @@ class Repo2(Repo):
 
     def hg_heads(self):
         res = []
-        template = "{rev}:::{desc|firstline}:::{bookmarks}:::{node}:::{author|person}:::{author|email}\n"
+        template ="{rev}\n"
         output = self.hg_command("heads", "--template", template)
-        reg_expr = "(?P<rev>\d+):::(?P<desc>[\s\w\S]+):::(?P<bookmarks>[\s\w\S]{0,}):::(?P<changeset>[\d\w]+):::(?P<user>[\s\w\S]+):::(?P<email>[\s\w\S]{0,})"
-        pattern = re.compile(reg_expr)
-        for row in output.strip().split('\n'):
-            match = pattern.search(row)
-            if match is not None:
-                bm = match.group("bookmarks")
-                if bm != "":
-                    res.append({"rev": match.group("rev"), "desc": match.group("desc"), "bookmarks": bm,
-                                "changeset": match.group("changeset"), "author": match.group("user"),
-                                "email": match.group("email")})
+        for rev in output.strip().split('\n'):
+            info = self.hg_rev_info(rev)
+            if info["bookmarks"] is not None:
+                res.append(info)
         return res
 
     def hg_head_changeset_info(self, changeset):
@@ -59,4 +53,24 @@ class Repo2(Repo):
             if h["bookmarks"] == bookmark:
                 return h
         return None
+
+    def hg_rev_info(self, rev):
+        res = None
+        template = "{rev}:::{parents}:::{desc|firstline}:::{bookmarks}:::{node}:::{author|person}:::{author|email}\n"
+        output = self.hg_command("log", "--template", template, "-r", rev)
+        reg_expr = "(?P<rev>\d+):::((?P<rev_parent>(\d+)):([\s\w\S]+)){0,}:::(?P<desc>[\s\w\S]+):::(?P<bookmarks>[\s\w\S]{0,}):::(?P<changeset>[\d\w]+):::(?P<user>[\s\w\S]+):::(?P<email>[\s\w\S]{0,})"
+        pattern = re.compile(reg_expr)
+        for row in output.strip().split('\n'):
+            match = pattern.search(row)
+            print row
+            if match is not None:
+               return {
+                    "rev": match.group("rev"),
+                    "rev_parent": match.group("rev_parent"),
+                    "desc": match.group("desc"),
+                    "bookmarks": match.group("bookmarks"),
+                    "changeset": match.group("changeset"),
+                    "author": match.group("user"),
+                    "email": match.group("email")}
+        return res
 

@@ -4,18 +4,34 @@ from sqlalchemy.sql.expression import or_
 from flask import Flask, redirect, url_for
 from flask.globals import request
 from flask.templating import render_template
+import re
 from hgapi import HgException
-from CodeCollaborator import CodeCollaborator
 from Jenkins import Jenkins
 from Repo2 import Repo2
 from flask.ext.sqlalchemy import SQLAlchemy
 import config
+import subprocess
 
 
 app = Flask(__name__)
 app.config.from_object("config")
 db = SQLAlchemy(app)
 
+
+if "check_output" not in dir( subprocess ): # duck punch it in!
+    def f(*popenargs, **kwargs):
+        if 'stdout' in kwargs:
+            raise ValueError('stdout argument not allowed, it will be overridden.')
+        process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+        output, unused_err = process.communicate()
+        retcode = process.poll()
+        if retcode:
+            cmd = kwargs.get("args")
+            if cmd is None:
+                cmd = popenargs[0]
+            raise subprocess.CalledProcessError(retcode, cmd)
+        return output
+    subprocess.check_output = f
 
 
 class Review(db.Model):
@@ -56,6 +72,32 @@ class Build(db.Model):
         self.job_name = job_name
 
 
+class CodeCollaborator(object):
+    def create_empty_cc_review(self):
+        """
+
+        @rtype : String
+        """
+        print config.CC_BIN
+        output = subprocess.check_output(
+            "{cc} --no-browser --non-interactive admin review create".format(cc=config.CC_BIN), shell=True)
+        regex = re.compile("Review #([0-9]+)")
+        r = regex.search(output)
+        reviewId = r.groups()[0]
+        return reviewId
+
+    def upload_diff(self, reviewId, revision, repoPath):
+        info = repo.hg_rev_info(revision)
+        parent = info["rev_parent"]
+        # TODO: get parent revision, -1 doesn't work
+        output = subprocess.check_output(
+            "{cc} addhgdiffs {reviewId} -r {parent} -r {rev}".format(cc=config.CC_BIN, reviewId=reviewId,
+                                                                    parent=parent, rev=revision), cwd=repoPath, shell=True)
+        if "Changes successfully attached" in output:
+            return (True, output)
+        return (False, output)
+
+
 
 class CodeInspection(db.Model):
     __tablename__ = 'inspections'
@@ -80,7 +122,8 @@ db.create_all()
 
 currDir = os.path.dirname(__file__)
 repo = Repo2(os.path.join(currDir, "repo"))
-productBranches = ["default", "master", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003"]
+productBranches = ("default", "master", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003")
+ignoredBranches = ("test", "qatest/datamart", "iwd_history_nosql")
 
 jenkins = Jenkins("http://pl-byd-srv01.emea.int.genesyslab.com:18080")
 
@@ -104,7 +147,9 @@ def index():
 
 @app.route('/changes/new')
 def changes_new():
-    heads = repo.hg_heads()
+    temp = repo.hg_heads()
+    heads = []
+    map((lambda x: heads.append(x) if x["bookmarks"] not in productBranches + ignoredBranches else x), temp)
     for h in heads:
         h['src'] = h['bookmarks']
         sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
@@ -204,7 +249,7 @@ def run_scheduled_jobs():
     for i in inspections:
         cc = CodeCollaborator()
         ccInspectionId=cc.create_empty_cc_review()
-        res, output = cc.upload_diff(ccInspectionId, i.revision, repo.path)
+        res, output = cc.upload_diff(ccInspectionId, str(i.revision), repo.path)
         if (res):
             i.inspection_number = ccInspectionId
             i.inspection_url = config.CC_REVIEW_URL.format(reviewId=ccInspectionId)
@@ -214,9 +259,6 @@ def run_scheduled_jobs():
             message="CodeCollaborator review #{reviewId} has been created. View: {url}".format(reviewId=ccInspectionId, url=i.inspection_url)
         else:
             message="There was an error creating CodeCollaborator review. \n\n" + output
-
-
-    #cc = CodeCollaborator()
 
 
     # Jenkins builds
@@ -232,7 +274,7 @@ def run_scheduled_jobs():
         db.session.add(b)
         db.session.commit()
 
-
+    return redirect(url_for('index'))
 
 
 def update_build_status():
@@ -247,7 +289,7 @@ def update_build_status():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', threaded=True)
+    app.run(host='pl-byd-srv01.emea.int.genesyslab.com', threaded=True)
 
 
 
