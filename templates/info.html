@@ -9,11 +9,11 @@
 
 
 
-    {% for r in reviews %}
+    {% for r in review.changesets %}
 
         <div class="panel panel-primary">
             <div class="panel-heading">
-                <h3 class="panel-title">Review for <b>{{ r.title }}</b> ({{ r.sha1 }})</h3>
+                <h3 class="panel-title">Review for <b>{{ r.title }}</b> (rev {{ r.revision }})</h3>
             </div>
             <div class="panel-body">
                 <div><span class="col-lg-2 text-right">Title</span><span><b>{{ r.title }}</b></span></div>
@@ -22,6 +22,7 @@
                 <div><span class="col-lg-2 text-right">Created</span><span>{{ r.created_date }}</span></div>
                 <div><span class="col-lg-2 text-right">SHA1</span><span>{{ r.sha1 }}</span></div>
                 <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ r.bookmark }}</span></div>
+                <div><span class="col-lg-2 text-right">Revision</span><span>{{ r.revision }}</span></div>
             </div>
         </div>
 
@@ -31,7 +32,8 @@
             </div>
             <div class="panel-body">
                 <form method="post" action="{{ url_for("jenkins_build") }}">
-                    <input type="hidden" name="src" value="{{ r.bookmark }}"/>
+                    <input type="hidden" name="src" value="{{ r.revision }}"/>
+                    <input type="hidden" name="back_id" value="{{ review.id }}"/>
                     <button class="btn btn-sm btn-success" type="submit"><span class="glyphicon glyphicon-plus"></span>
                         Run Jenkins
                         build
@@ -76,7 +78,8 @@
             </div>
             <div class="panel-body">
                 <form method="post" action="{{ url_for("inspect_diff") }}">
-                    <input type="hidden" name="changeset" value="{{ r.sha1 }}"/>
+                    <input type="hidden" name="src" value="{{ r.revision }}"/>
+                    <input type="hidden" name="back_id" value="{{ review.id }}"/>
                     <button class="btn btn-sm btn-info" type="submit"><span class="glyphicon glyphicon-plus"></span> New
                         inspection
                     </button>
@@ -121,6 +124,7 @@
                 <form method="post" class="form-horizontal" action="{{ url_for("merge_from_post") }}">
                     <div class="form-group">
                         <label for="inputEmail3" class="col-sm-3 control-label">Merge this changeset with branch</label>
+                        <input type="hidden" name="src" value="{{ r.revision }}">
                         <div class="col-sm-2">
                             <select id="inputEmail3" class="form-control" name="dst">
                                 {% for pb in productBranches %}

@@ -1,16 +1,20 @@
 import os
 import datetime
-from sqlalchemy.sql.expression import or_
+from sqlalchemy.sql.expression import or_, desc
 from flask import Flask, redirect, url_for
 from flask.globals import request
 from flask.templating import render_template
 import re
 from hgapi import HgException
-from Jenkins import Jenkins
 from Repo2 import Repo2
 from flask.ext.sqlalchemy import SQLAlchemy
 import config
 import subprocess
+import json
+import requests
+import urllib
+from uuid import uuid4
+import time
 
 
 app = Flask(__name__)
@@ -34,38 +38,65 @@ if "check_output" not in dir( subprocess ): # duck punch it in!
     subprocess.check_output = f
 
 
-class Review(db.Model):
-    __tablename__ = 'reviews'
+class Changeset(db.Model):
+    __tablename__ = 'changeset'
     id = db.Column(db.Integer, primary_key=True)
+    review_id = db.Column(db.Integer, db.ForeignKey('review.id'))
     owner = db.Column(db.String(50))
     owner_email = db.Column(db.String(120))
     created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     title = db.Column(db.String(120))
     sha1 = db.Column(db.String(40), index=True)
+    revision = db.Column(db.Integer)
+    status = db.Column(db.String(20))
     bookmark = db.Column(db.String(120))
     builds = db.relationship("Build")
     inspections = db.relationship("CodeInspection")
 
-    def __init__(self, owner=None, owner_email=None, title=None, sha1=None, bookmark=None):
+    def __init__(self, owner=None, owner_email=None, title=None, sha1=None, bookmark=None, revision = None, status = None):
         self.owner = owner
         self.owner_email = owner_email
         self.title = title
         self.sha1 = sha1
         self.bookmark = bookmark
+        self.revision = revision
+        self.status = status
+
+
+
+
+class Review(db.Model):
+    __tablename__ = 'review'
+    id = db.Column(db.Integer, primary_key=True)
+    owner = db.Column(db.String(50))
+    owner_email = db.Column(db.String(120))
+    created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    title = db.Column(db.String(120))
+    bookmark = db.Column(db.String(120))
+    status = db.Column(db.String(20))
+    changesets = db.relationship("Changeset", order_by=desc("created_date"))
+
+    def __init__(self, owner=None, owner_email=None, title=None, sha1=None, bookmark=None, status = None):
+        self.owner = owner
+        self.owner_email = owner_email
+        self.title = title
+        self.sha1 = sha1
+        self.bookmark = bookmark
+        self.status = status
 
 
 class Build(db.Model):
     __tablename__ = 'builds'
     id = db.Column(db.Integer, primary_key=True)
-    review_id = db.Column(db.Integer, db.ForeignKey('reviews.id'))
+    changeset_id = db.Column(db.Integer, db.ForeignKey('changeset.id'))
     build_number = db.Column(db.Integer)
     build_url = db.Column(db.String(120))
     status = db.Column(db.String(20))
     job_name = db.Column(db.String(30))
     scheduled = db.Column(db.String(30))
 
-    def __init__(self, review_id = None, build_no = None, build_url = None, status = None, job_name = None):
-        self.review_id = review_id
+    def __init__(self, changeset_id = None, build_no = None, build_url = None, status = None, job_name = None):
+        self.changeset_id = changeset_id
         self.build_number = build_no
         self.build_url = build_url
         self.status = status
@@ -87,8 +118,7 @@ class CodeCollaborator(object):
         return reviewId
 
     def upload_diff(self, reviewId, revision, repoPath):
-        info = repo.hg_rev_info(revision)
-        parent = info["rev_parent"]
+        parent = repo.hg_parent(revision)
         # TODO: get parent revision, -1 doesn't work
         output = subprocess.check_output(
             "{cc} addhgdiffs {reviewId} -r {parent} -r {rev}".format(cc=config.CC_BIN, reviewId=reviewId,
@@ -102,18 +132,71 @@ class CodeCollaborator(object):
 class CodeInspection(db.Model):
     __tablename__ = 'inspections'
     id = db.Column(db.Integer, primary_key=True)
-    review_id = db.Column(db.Integer, db.ForeignKey('reviews.id'))
+    changeset_id = db.Column(db.Integer, db.ForeignKey('changeset.id'))
     inspection_number = db.Column(db.Integer)
     inspection_url = db.Column(db.String(120))
     status = db.Column(db.String(20))
     revision = db.Column(db.Integer)
 
-    def __init__(self, review_id = None, inspection_number = None, inspection_url = None, status = None, revision = None):
-        self.review_id = review_id
+    def __init__(self, changeset_id = None, inspection_number = None, inspection_url = None, status = None, revision = None):
+        self.changeset_id = changeset_id
         self.inspection_number = inspection_number
         self.inspection_url = inspection_url
         self.status = status
         self.revision = revision
+
+
+
+class Jenkins(object):
+    def __init__(self, url):
+        self.url = url
+
+
+    def get_next_build_number(self, jobName):
+        resp = requests.get(self.url + "/job/" + jobName + "/api/python?pretty=true")
+        props = eval(resp.content)
+        return props["nextBuildNumber"]
+
+    def run_job(self, jobName, rev):
+        buildNo = self.get_next_build_number(jobName)
+        uuid = str(uuid4())
+        info = repo.hg_rev_info(rev)
+        sha1 = info["changeset_short"]
+        payload = urllib.urlencode({'json': json.dumps({"parameter": [{"name": "BRANCH", "value": sha1}, {"name": "REQUEST_ID", "value": uuid}]})})
+        headers = {'content-type': 'application/x-www-form-urlencoded'}
+        resp = requests.post(self.url + "/job/" + jobName + "/build/api/json", data=payload, headers=headers)
+        if resp.status_code == 201:
+            counter = 1;
+            while (counter < 10):
+                counter = counter + 1
+                # Jenkins queues job and does not start them immediately
+                # lets give him some time to respond
+                time.sleep(counter)
+                resp = requests.get(self.url + "/job/" + jobName + "/" + str(buildNo) + "/api/python", data=payload, headers=headers)
+                if resp.status_code != 404:
+                    # build has started, make sure we got the right build number (possible race-condition)
+                    props = eval(resp.content)
+                    for a in props['actions']:
+                        if a.has_key("parameters"):
+                            for parameters in a['parameters']:
+                                if parameters['name'] == "REQUEST_ID" and parameters['value'] == uuid:
+                                    return {"buildNo": buildNo, "url": props["url"], "result" : None}
+                    return None
+        else:
+            return None
+
+
+    def get_build_info(self, jobName, buildNo):
+        if jobName == None or buildNo == None:
+            return None
+        resp = requests.get(self.url + "/job/" + jobName + "/" + str(buildNo) + "/api/python?pretty=true")
+        props = eval(resp.content)
+        return props
+
+    def get_build_result(self, jobName, buildNo):
+        res = self.get_build_info(jobName, buildNo)
+        return res['result'] if res.has_key("result") else None
+
 
 
 
@@ -122,7 +205,7 @@ db.create_all()
 
 currDir = os.path.dirname(__file__)
 repo = Repo2(os.path.join(currDir, "repo"))
-productBranches = ("default", "master", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003")
+productBranches = ("default", "master", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101-branch", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003")
 ignoredBranches = ("test", "qatest/datamart", "iwd_history_nosql")
 
 jenkins = Jenkins("http://pl-byd-srv01.emea.int.genesyslab.com:18080")
@@ -147,18 +230,47 @@ def index():
 
 @app.route('/changes/new')
 def changes_new():
+    # TODO: reading heads directly from repo is slow, do it periodicaly, save 2 db, present heads from db here
     temp = repo.hg_heads()
     heads = []
     map((lambda x: heads.append(x) if x["bookmarks"] not in productBranches + ignoredBranches else x), temp)
     for h in heads:
         h['src'] = h['bookmarks']
         sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
-        count = Review.query.filter(Review.sha1 == sha1).count()
+
+        #make sure changeset is in DB
+        count = Changeset.query.filter(Changeset.revision == h["rev"]).count()
         if (count < 1):
-            review = Review(h["author"], h["email"], h["desc"], sha1, h["bookmarks"])
+            changeset = Changeset(h["author"], h["email"], h["desc"], sha1, h["bookmarks"], h["rev"], "new")
+            db.session.add(changeset)
+            db.session.commit()
+
+        # try to find valid review for changeset by searching the commit tree 1 levels down
+        # TODO improvement - extract to function, possibly make it recursive
+        changeset = Changeset.query.filter(Changeset.revision == h["rev"]).first()
+        if (changeset.review_id is None):
+            parent = repo.hg_rev_info(changeset.revision)
+            rev_parent = parent["rev_parent"]
+            # look for review for parent
+            parent_changeset = Changeset.query.filter(Changeset.revision == rev_parent).first()
+            if (parent_changeset is not None and parent_changeset.review_id is not None):
+                parent_review = Review.query.filter(Review.id == parent_changeset.review_id).first()
+                if (parent_review.status == "OPEN"):
+                    changeset.review_id = parent_review.id
+                    db.session.add(changeset)
+                    db.session.commit()
+
+        # review for parent has not been found
+        if (changeset.review_id is None):
+            review = Review(owner=h["author"],owner_email=h["email"],title=h["desc"],sha1=sha1,bookmark=h["bookmarks"],status="OPEN")
             db.session.add(review)
             db.session.commit()
-    return render_template('changes.html', type="New", heads=heads, productBranches=productBranches)
+            changeset.review_id = review.id
+            db.session.add(changeset)
+            db.session.commit()
+
+    reviews = Review.query.filter(Review.status == "OPEN").order_by(desc(Review.created_date)).all()
+    return render_template('changes.html', type="New", reviews=reviews, productBranches=productBranches)
 
 
 @app.route('/changes/latest')
@@ -179,17 +291,16 @@ def merge_with_default(bookmark):
 
 @app.route('/inspect',  methods=['POST'])
 def inspect_diff():
-    info=repo.hg_head_changeset_info(request.form['changeset'])
+    info=repo.hg_rev_info(request.form['src'])
     rev=info["rev"]
-    review = Review.query.filter(Review.sha1 == request.form['changeset']).first()
+    changeset = Changeset.query.filter(Changeset.revision == request.form['src']).first()
     inspection = CodeInspection()
     inspection.status = "SCHEDULED"
-    inspection.review_id = review.id
+    inspection.changeset_id = changeset.id
     inspection.revision = rev
     db.session.add(inspection)
     db.session.commit()
-
-    return redirect(url_for('changeset_info', changeset=request.form['changeset']))
+    return redirect(url_for('changeset_info', review=request.form['back_id']))
 
 
 
@@ -201,19 +312,20 @@ def merge_from_post():
 @app.route('/build', methods=['POST'])
 def jenkins_build():
     #jenkins.schedule_job(config.REVIEW_JOB_NAME, request.form['src'])
-    info = repo.hg_head_bookmark_info(request.form['src'])
-    review = Review.query.filter(Review.sha1 == info['changeset']).first()
-    build = Build(review_id=review.id, status="SCHEDULED")
+    info = repo.hg_rev_info(request.form['src'])
+    changeset = Changeset.query.filter(Changeset.revision == info['rev']).first()
+    build = Build(changeset_id=changeset.id, status="SCHEDULED")
     db.session.add(build)
     db.session.commit()
-    return redirect(url_for('changeset_info', changeset=info["changeset"]))
+    return redirect(url_for('changeset_info', review=request.form['back_id']))
 
 
-@app.route('/info/<changeset>')
-def changeset_info(changeset):
-    update_build_status()
-    reviews = Review.query.filter(Review.sha1 == changeset).all()
-    return render_template("info.html", reviews=reviews, productBranches=productBranches)
+@app.route('/info/<review>')
+def changeset_info(review):
+    review = Review.query.filter(Review.id == review).first()
+    for c in review.changesets:
+        update_build_status(c.id)
+    return render_template("info.html", review=review, productBranches=productBranches)
 
 @app.route('/merge/<src>/<dst>')
 def merge_branch(src, dst):
@@ -221,18 +333,17 @@ def merge_branch(src, dst):
     e = ""
     diff = ""
     try:
-        diff = repo.hg_log(branch=src)
-        repo.hg_update(src)
+        #diff = repo.hg_log(branch=src)
+        repo.hg_update(src, clean=True)
         bookmarks = repo.hg_bookbarks(True)
         heads = repo.hg_heads()
         res3 = repo.hg_update(dst)
         res4 = repo.hg_merge(src)
-        for h in heads:
-            if h["bookmarks"] == src:
-                title = h['desc']
+        info = repo.hg_rev_info(src)
+        title = info['desc']
         res5 = repo.hg_commit("Merge '{desc}' ({src}) with {dst}".format(src=src, dst=dst, desc=title), user="me")
-        if src in bookmarks:
-            res6 = repo.hg_bookmark(src, delete=True)
+        if info["bookmarks"] in bookmarks:
+            res6 = repo.hg_bookmark(info["bookmarks"], delete=True)
         msg = "'{desc}' in bookmark '{src}' was successfully merged with '{dst}. <br/>Changes: <br><pre>{diff}</pre>'".format(src=src, dst=dst, diff=diff, desc=title)
     except HgException, e:
         print "===" + str(e)
@@ -248,6 +359,7 @@ def run_scheduled_jobs():
     inspections = CodeInspection.query.filter(CodeInspection.status == "SCHEDULED").all()
     for i in inspections:
         cc = CodeCollaborator()
+        # TODO - investigate how to send rework to CC instead of creating new review
         ccInspectionId=cc.create_empty_cc_review()
         res, output = cc.upload_diff(ccInspectionId, str(i.revision), repo.path)
         if (res):
@@ -264,8 +376,10 @@ def run_scheduled_jobs():
     # Jenkins builds
     builds = Build.query.filter(Build.status == "SCHEDULED").all()
     for b in builds:
-        review = Review.query.filter(Review.id == b.review_id).first()
-        build_info = jenkins.run_job(config.REVIEW_JOB_NAME, review.bookmark)
+        changeset = Changeset.query.filter(Changeset.id == b.changeset_id).first()
+        build_info = jenkins.run_job(config.REVIEW_JOB_NAME, changeset.revision)
+        if build_info is None:
+            continue
         b.build_number = build_info["buildNo"]
         b.build_url = build_info["url"]
         b.scheduled = datetime.datetime.utcnow()
@@ -277,15 +391,18 @@ def run_scheduled_jobs():
     return redirect(url_for('index'))
 
 
-def update_build_status():
-    builds = Build.query.filter(or_(Build.status != "SUCCESS", Build.status == None, Build.status != "SCHEDULED")).all()
+def update_build_status(changeset):
+    builds = Build.query.filter(Build.changeset_id == changeset).all()
     for b in builds:
        build_info = jenkins.get_build_info(b.job_name, b.build_number)
        if build_info == None:
            continue
        b.status =  build_info["result"]
        b.scheduled = build_info["id"]
+       db.session.add(b)
        db.session.commit()
+
+
 
 
 if __name__ == '__main__':

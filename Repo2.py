@@ -55,6 +55,7 @@ class Repo2(Repo):
         return None
 
     def hg_rev_info(self, rev):
+        rev = str(rev)
         res = None
         template = "{rev}:::{parents}:::{desc|firstline}:::{bookmarks}:::{node}:::{author|person}:::{author|email}\n"
         output = self.hg_command("log", "--template", template, "-r", rev)
@@ -63,14 +64,29 @@ class Repo2(Repo):
         for row in output.strip().split('\n'):
             match = pattern.search(row)
             print row
+            # The template keyword parents is empty when the only parent is the next node
             if match is not None:
                return {
                     "rev": match.group("rev"),
-                    "rev_parent": match.group("rev_parent"),
+                    "rev_parent": match.group("rev_parent") if match.group("rev_parent") is not None else str(int(match.group("rev"))-1),
                     "desc": match.group("desc"),
                     "bookmarks": match.group("bookmarks"),
                     "changeset": match.group("changeset"),
+                    "changeset_short": match.group("changeset")[:12],
                     "author": match.group("user"),
                     "email": match.group("email")}
+        return res
+
+    def hg_parent(self, rev):
+        # The template keyword parents is empty when the only parent is the next node
+        res = int(rev)-1
+        template = "{rev}\n"
+        output = self.hg_command("parents", "--template", template, "-r", rev)
+        reg_expr = "(?P<rev>\d+)"
+        pattern = re.compile(reg_expr)
+        for row in output.strip().split('\n'):
+            match = pattern.search(row)
+            if match is not None:
+               return match.group("rev")
         return res
 

@@ -15,17 +15,19 @@
             <th>No.</th>
             <th>Changeset</th>
             <th>Author</th>
+            <th>Created</th>
             <th>Bookmark</th>
         </tr>
         </thead>
         <tbody>
 
-        {% for br in heads %}
+        {% for r in reviews %}
             <tr>
                 <td>{{ loop.index }}</td>
-                <td>{{ br.desc }} <span class="">(<a href="{{ url_for("changeset_info", changeset=br.changeset) }}">{{ br.changeset }}</a>)</span></td>
-                <td>{{ br.author }}</td>
-                <td>{{ br.bookmarks }}</td>
+                <td><a href="{{ url_for("changeset_info", review=r.id) }}">{{ r.title }} </a></td>
+                <td>{{ r.owner }}</td>
+                <td>{{ r.created_date }}</td>
+                <td>{{ r.bookmark }}</td>
             </tr>
         {% endfor %}
         </tr>
