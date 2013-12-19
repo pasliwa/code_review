@@ -331,7 +331,6 @@ def changeset_info(review):
 def merge_branch(src, dst):
     msg = ""
     e = ""
-    diff = ""
     try:
         #diff = repo.hg_log(branch=src)
         repo.hg_update(src, clean=True)
@@ -344,10 +343,16 @@ def merge_branch(src, dst):
         res5 = repo.hg_commit("Merge '{desc}' ({src}) with {dst}".format(src=src, dst=dst, desc=title), user="me")
         if info["bookmarks"] in bookmarks:
             res6 = repo.hg_bookmark(info["bookmarks"], delete=True)
-        msg = "'{desc}' in bookmark '{src}' was successfully merged with '{dst}. <br/>Changes: <br><pre>{diff}</pre>'".format(src=src, dst=dst, diff=diff, desc=title)
+        msg = "'{desc}' in bookmark '{src}' was successfully merged with {dst} ".format(src=src, dst=dst, desc=title)
+        # close review
+        changeset = Changeset.query.filter(Changeset.revision == src).first()
+        review = Review.query.filter(Review.id == changeset.review_id).first()
+        review.status = "MERGED"
+        db.session.add(review)
+        db.session.commit()
     except HgException, e:
         print "===" + str(e)
-    return render_template('changes.html', type="Merging", exception=e, message=msg, diff=diff)
+    return render_template('changes.html', type="Merging", exception=e, message=msg)
     #return render_template('changes.html', type="Merging", src=src, dst=dst)
 
 
