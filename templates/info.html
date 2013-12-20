@@ -5,15 +5,35 @@
 
     {% include "messages.html" %}
 
-
-
-
-
-    {% for r in review.changesets %}
-
         <div class="panel panel-primary">
             <div class="panel-heading">
-                <h3 class="panel-title">Review for <b>{{ r.title }}</b> (rev {{ r.revision }})</h3>
+                <h3 class="panel-title">Review <b>{{ review.title }}</b></h3>
+            </div>
+            <div class="panel-body">
+                <div><span class="col-lg-2 text-right">Title</span><span><b>{{ review.title }}</b></span></div>
+                <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner }} (<a
+                        href="mailto:{{ review.owner_email }}">{{ review.owner_email }}</a>)</span></div>
+                <div><span class="col-lg-2 text-right">Created</span><span>{{ review.created_date }}</span></div>
+                <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ review.bookmark }}</span></div>
+                <div><span class="col-lg-2 text-right">Status</span><span>{{ review.status }}</span></div>
+            </div>
+        </div>
+
+
+    <!-- Nav tabs -->
+    <ul class="nav nav-tabs">
+        {% for r in review.changesets %}
+          <li class="{% if loop.first %} active {% endif %}"><a href="#patchset-{{ r.id }}" data-toggle="tab">Patchset {{ loop.revindex }}</a></li>
+        {% endfor %}
+    </ul>
+    <br/>
+    <!-- Tab panes -->
+    <div class="tab-content">
+    {% for r in review.changesets %}
+        <div class="tab-pane {% if loop.first %} active {% endif %}" id="patchset-{{ r.id }}">
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Changeset <b>{{ r.title }}</b> (rev {{ r.revision }})</h3>
             </div>
             <div class="panel-body">
                 <div><span class="col-lg-2 text-right">Title</span><span><b>{{ r.title }}</b></span></div>
@@ -139,9 +159,16 @@
                 </form>
             </div>
         </div>
-
+    </div>
     {% endfor %}
+    </div>
 
+<script>
+$(function() {
 
+    
+
+});
+</script>
 
 {% endblock %}
