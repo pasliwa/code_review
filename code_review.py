@@ -288,7 +288,7 @@ def changes_merged():
 
 @app.route('/changes/latest/<branch>')
 def changes_latest_in_branch(branch):
-    log = repo.hg_log(branch=branch, limit=30)
+    log = repo.hg_log(branch=branch, limit=50)
     return render_template('log.html', log=log, branch=branch)
 
 
