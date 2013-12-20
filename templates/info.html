@@ -14,8 +14,21 @@
                 <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner }} (<a
                         href="mailto:{{ review.owner_email }}">{{ review.owner_email }}</a>)</span></div>
                 <div><span class="col-lg-2 text-right">Created</span><span>{{ review.created_date }}</span></div>
-                <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ review.bookmark }}</span></div>
-                <div><span class="col-lg-2 text-right">Status</span><span>{{ review.status }}</span></div>
+                {% if review.close_date is not none %}
+                    <div><span class="col-lg-2 text-right">Closed</span><span>{{ review.close_date }}</span></div>
+                {% endif %}
+                <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ review.bookmark }} &nbsp;</span></div>
+                <div><span class="col-lg-2 text-right">Status</span>
+                    {% if review.status == "OPEN" %}
+                        <span class="label label-success">
+                    {% elif review.status == "MERGED" %}
+                        <span class="label label-default">
+                    {% else %}
+                        <span class="label">
+                    {% endif %}
+                    {{ review.status }}
+                    </span>
+                </div>
             </div>
         </div>
 
@@ -31,7 +44,7 @@
     <div class="tab-content">
     {% for r in review.changesets %}
         <div class="tab-pane {% if loop.first %} active {% endif %}" id="patchset-{{ r.id }}">
-        <div class="panel panel-primary">
+        <div class="panel panel-default">
             <div class="panel-heading">
                 <h3 class="panel-title">Changeset <b>{{ r.title }}</b> (rev {{ r.revision }})</h3>
             </div>
@@ -166,7 +179,7 @@
 <script>
 $(function() {
 
-    
+
 
 });
 </script>

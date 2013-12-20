@@ -71,6 +71,7 @@ class Review(db.Model):
     owner = db.Column(db.String(50))
     owner_email = db.Column(db.String(120))
     created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    close_date = db.Column(db.DateTime)
     title = db.Column(db.String(120))
     bookmark = db.Column(db.String(120))
     status = db.Column(db.String(20))
@@ -278,6 +279,13 @@ def changes_latest():
     return changes_latest_in_branch("default")
 
 
+@app.route('/changes/merged')
+def changes_merged():
+    reviews = Review.query.filter(Review.status == "MERGED").order_by(desc(Review.created_date)).limit(50).all()
+    return render_template('changes.html', type="Merged", reviews=reviews)
+
+
+
 @app.route('/changes/latest/<branch>')
 def changes_latest_in_branch(branch):
     log = repo.hg_log(branch=branch, limit=30)
@@ -348,6 +356,7 @@ def merge_branch(src, dst):
         changeset = Changeset.query.filter(Changeset.revision == src).first()
         review = Review.query.filter(Review.id == changeset.review_id).first()
         review.status = "MERGED"
+        review.close_date = datetime.datetime.utcnow()
         db.session.add(review)
         db.session.commit()
     except HgException, e:
