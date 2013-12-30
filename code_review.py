@@ -204,25 +204,10 @@ class Jenkins(object):
 #db.drop_all()
 db.create_all()
 
-currDir = os.path.dirname(__file__)
-repo = Repo2(os.path.join(currDir, "repo"))
-productBranches = ("default", "master", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101-branch", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003")
-ignoredBranches = ("test", "qatest/datamart", "iwd_history_nosql")
-
-jenkins = Jenkins("http://pl-byd-srv01.emea.int.genesyslab.com:18080")
+repo = Repo2(config.REPO_PATH)
+jenkins = Jenkins(config.JENKINS_HOST)
 
 
-#Build.query.filter(Build.review_id == 1).all()
-#res = Review.query.filter(Review.id == 1).first()
-#print dir(res.builds)
-#res.builds.append(Build(None, "111", "sssss"))
-#db_session.add(res)
-#db_session.commit()
-#init_db()
-
-#u = User('admin', 'admin@localhost')
-#db_session.add(u)
-#db_session.commit()
 
 @app.route('/')
 def index():
@@ -234,7 +219,7 @@ def changes_new():
     # TODO: reading heads directly from repo is slow, do it periodicaly, save 2 db, present heads from db here
     temp = repo.hg_heads()
     heads = []
-    map((lambda x: heads.append(x) if x["bookmarks"] not in productBranches + ignoredBranches else x), temp)
+    map((lambda x: heads.append(x) if x["bookmarks"] not in config.PRODUCT_BRANCHES + config.IGNORED_BRANCHES else x), temp)
     for h in heads:
         h['src'] = h['bookmarks']
         sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
@@ -271,7 +256,7 @@ def changes_new():
             db.session.commit()
 
     reviews = Review.query.filter(Review.status == "OPEN").order_by(desc(Review.created_date)).all()
-    return render_template('changes.html', type="New", reviews=reviews, productBranches=productBranches)
+    return render_template('changes.html', type="New", reviews=reviews, productBranches=config.PRODUCT_BRANCHES)
 
 
 @app.route('/changes/latest')
@@ -333,7 +318,7 @@ def changeset_info(review):
     review = Review.query.filter(Review.id == review).first()
     for c in review.changesets:
         update_build_status(c.id)
-    return render_template("info.html", review=review, productBranches=productBranches)
+    return render_template("info.html", review=review, productBranches=config.PRODUCT_BRANCHES)
 
 @app.route('/merge/<src>/<dst>')
 def merge_branch(src, dst):
