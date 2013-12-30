@@ -8,7 +8,6 @@ import re
 from hgapi import HgException
 from Repo2 import Repo2
 from flask.ext.sqlalchemy import SQLAlchemy
-import config
 import subprocess
 import json
 import requests
@@ -18,7 +17,7 @@ import time
 
 
 app = Flask(__name__)
-app.config.from_object("config")
+app.config.from_object("configDev")
 db = SQLAlchemy(app)
 
 
@@ -106,13 +105,8 @@ class Build(db.Model):
 
 class CodeCollaborator(object):
     def create_empty_cc_review(self):
-        """
-
-        @rtype : String
-        """
-        print config.CC_BIN
         output = subprocess.check_output(
-            "{cc} --no-browser --non-interactive admin review create".format(cc=config.CC_BIN), shell=True)
+            "{cc} --no-browser --non-interactive admin review create".format(cc=app.config["CC_BIN"]), shell=True)
         regex = re.compile("Review #([0-9]+)")
         r = regex.search(output)
         reviewId = r.groups()[0]
@@ -122,7 +116,7 @@ class CodeCollaborator(object):
         parent = repo.hg_parent(revision)
         # TODO: get parent revision, -1 doesn't work
         output = subprocess.check_output(
-            "{cc} addhgdiffs {reviewId} -r {parent} -r {rev}".format(cc=config.CC_BIN, reviewId=reviewId,
+            "{cc} addhgdiffs {reviewId} -r {parent} -r {rev}".format(cc=app.config["CC_BIN"], reviewId=reviewId,
                                                                     parent=parent, rev=revision), cwd=repoPath, shell=True)
         if "Changes successfully attached" in output:
             return (True, output)
@@ -204,8 +198,8 @@ class Jenkins(object):
 #db.drop_all()
 db.create_all()
 
-repo = Repo2(config.REPO_PATH)
-jenkins = Jenkins(config.JENKINS_HOST)
+repo = Repo2(app.config["REPO_PATH"])
+jenkins = Jenkins(app.config["JENKINS_HOST"])
 
 
 
@@ -219,7 +213,7 @@ def changes_new():
     # TODO: reading heads directly from repo is slow, do it periodicaly, save 2 db, present heads from db here
     temp = repo.hg_heads()
     heads = []
-    map((lambda x: heads.append(x) if x["bookmarks"] not in config.PRODUCT_BRANCHES + config.IGNORED_BRANCHES else x), temp)
+    map((lambda x: heads.append(x) if x["bookmarks"] not in app.config["PRODUCT_BRANCHES"] + app.config["IGNORED_BRANCHES"] else x), temp)
     for h in heads:
         h['src'] = h['bookmarks']
         sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
@@ -256,7 +250,7 @@ def changes_new():
             db.session.commit()
 
     reviews = Review.query.filter(Review.status == "OPEN").order_by(desc(Review.created_date)).all()
-    return render_template('changes.html', type="New", reviews=reviews, productBranches=config.PRODUCT_BRANCHES)
+    return render_template('changes.html', type="New", reviews=reviews, productBranches=app.config["PRODUCT_BRANCHES"])
 
 
 @app.route('/changes/latest')
@@ -318,7 +312,7 @@ def changeset_info(review):
     review = Review.query.filter(Review.id == review).first()
     for c in review.changesets:
         update_build_status(c.id)
-    return render_template("info.html", review=review, productBranches=config.PRODUCT_BRANCHES)
+    return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"])
 
 @app.route('/merge/<src>/<dst>')
 def merge_branch(src, dst):
@@ -363,7 +357,7 @@ def run_scheduled_jobs():
         res, output = cc.upload_diff(ccInspectionId, str(i.revision), repo.path)
         if (res):
             i.inspection_number = ccInspectionId
-            i.inspection_url = config.CC_REVIEW_URL.format(reviewId=ccInspectionId)
+            i.inspection_url = app.config["CC_REVIEW_URL"].format(reviewId=ccInspectionId)
             i.status = 'NEW'
             db.session.add(i)
             db.session.commit()
@@ -376,14 +370,14 @@ def run_scheduled_jobs():
     builds = Build.query.filter(Build.status == "SCHEDULED").all()
     for b in builds:
         changeset = Changeset.query.filter(Changeset.id == b.changeset_id).first()
-        build_info = jenkins.run_job(config.REVIEW_JOB_NAME, changeset.revision)
+        build_info = jenkins.run_job(app.config["REVIEW_JOB_NAME"], changeset.revision)
         if build_info is None:
             continue
         b.build_number = build_info["buildNo"]
         b.build_url = build_info["url"]
         b.scheduled = datetime.datetime.utcnow()
         b.status = "RUNNING"
-        b.job_name = config.REVIEW_JOB_NAME
+        b.job_name = app.config["REVIEW_JOB_NAME"]
         db.session.add(b)
         db.session.commit()
 
@@ -405,7 +399,7 @@ def update_build_status(changeset):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', threaded=True)
+    app.run(host=app.config["LISTEN_HOST"], threaded=app.config["ENABLE_THREADS"])
 
 
 

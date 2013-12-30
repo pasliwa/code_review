@@ -6,6 +6,8 @@ SQLALCHEMY_DATABASE_URI = "mysql://root:secret@135.39.68.11/review"
 
 # Flask settings
 PROPAGATE_EXCEPTIONS = True
+LISTEN_HOST = "0.0.0.0"
+ENABLE_THREADS = True
 
 
 # Code Collaborator settings
