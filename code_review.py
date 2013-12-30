@@ -405,7 +405,7 @@ def update_build_status(changeset):
 
 
 if __name__ == '__main__':
-    app.run(host='pl-byd-srv01.emea.int.genesyslab.com', threaded=True)
+    app.run(host='0.0.0.0', threaded=True)
 
 
 
