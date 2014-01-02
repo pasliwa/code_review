@@ -17,7 +17,7 @@ CC_REVIEW_URL="http://rd-w2k8.us.int.genesyslab.com:9090/go?page=ReviewDisplay&r
 
 
 # Jenkins settings
-JENKINS_HOST = "http://pl-byd-srv01.emea.int.genesyslab.com:18080"
+JENKINS_URL = "http://pl-byd-srv01.emea.int.genesyslab.com:18080"
 REVIEW_JOB_NAME = "iwd_8.5.000-REVIEW"
 
 

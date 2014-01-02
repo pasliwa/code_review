@@ -199,7 +199,7 @@ class Jenkins(object):
 db.create_all()
 
 repo = Repo2(app.config["REPO_PATH"])
-jenkins = Jenkins(app.config["JENKINS_HOST"])
+jenkins = Jenkins(app.config["JENKINS_URL"])
 
 
 
