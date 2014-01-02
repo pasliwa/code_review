@@ -38,7 +38,7 @@ if "check_output" not in dir( subprocess ): # duck punch it in!
 
 
 class Changeset(db.Model):
-    __tablename__ = 'changeset'
+    __tablename__ = 'changesets'
     id = db.Column(db.Integer, primary_key=True)
     review_id = db.Column(db.Integer, db.ForeignKey('review.id'))
     owner = db.Column(db.String(50))
@@ -46,19 +46,17 @@ class Changeset(db.Model):
     created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     title = db.Column(db.String(120))
     sha1 = db.Column(db.String(40), index=True)
-    revision = db.Column(db.Integer)
     status = db.Column(db.String(20))
     bookmark = db.Column(db.String(120))
     builds = db.relationship("Build")
     inspections = db.relationship("CodeInspection")
 
-    def __init__(self, owner=None, owner_email=None, title=None, sha1=None, bookmark=None, revision = None, status = None):
+    def __init__(self, owner=None, owner_email=None, title=None, sha1=None, bookmark=None, status=None):
         self.owner = owner
         self.owner_email = owner_email
         self.title = title
         self.sha1 = sha1
         self.bookmark = bookmark
-        self.revision = revision
         self.status = status
 
 
@@ -88,7 +86,7 @@ class Review(db.Model):
 class Build(db.Model):
     __tablename__ = 'builds'
     id = db.Column(db.Integer, primary_key=True)
-    changeset_id = db.Column(db.Integer, db.ForeignKey('changeset.id'))
+    changeset_id = db.Column(db.Integer, db.ForeignKey('changesets.id'))
     build_number = db.Column(db.Integer)
     build_url = db.Column(db.String(120))
     status = db.Column(db.String(20))
@@ -127,18 +125,18 @@ class CodeCollaborator(object):
 class CodeInspection(db.Model):
     __tablename__ = 'inspections'
     id = db.Column(db.Integer, primary_key=True)
-    changeset_id = db.Column(db.Integer, db.ForeignKey('changeset.id'))
+    changeset_id = db.Column(db.Integer, db.ForeignKey('changesets.id'))
     inspection_number = db.Column(db.Integer)
     inspection_url = db.Column(db.String(120))
     status = db.Column(db.String(20))
-    revision = db.Column(db.Integer)
+    sha1 = db.Column(db.String(40), index=True)
 
-    def __init__(self, changeset_id = None, inspection_number = None, inspection_url = None, status = None, revision = None):
+    def __init__(self, changeset_id = None, inspection_number = None, inspection_url = None, status = None, sha1 = None):
         self.changeset_id = changeset_id
         self.inspection_number = inspection_number
         self.inspection_url = inspection_url
         self.status = status
-        self.revision = revision
+        self.sha1 = sha1
 
 
 
@@ -219,20 +217,23 @@ def changes_new():
         sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
 
         #make sure changeset is in DB
-        count = Changeset.query.filter(Changeset.revision == h["rev"]).count()
+        count = Changeset.query.filter(Changeset.sha1 == h["changeset"]).count()
         if (count < 1):
-            changeset = Changeset(h["author"], h["email"], h["desc"], sha1, h["bookmarks"], h["rev"], "new")
+            changeset = Changeset(h["author"], h["email"], h["desc"], sha1, h["bookmarks"], "new")
             db.session.add(changeset)
             db.session.commit()
 
         # try to find valid review for changeset by searching the commit tree 1 levels down
         # TODO improvement - extract to function, possibly make it recursive
-        changeset = Changeset.query.filter(Changeset.revision == h["rev"]).first()
+        changeset = Changeset.query.filter(Changeset.sha1 == h["changeset"]).first()
         if (changeset.review_id is None):
-            parent = repo.hg_rev_info(changeset.revision)
+            parent = repo.hg_rev_info(changeset.sha1)
             rev_parent = parent["rev_parent"]
+            # get sha1 for parent revision
+            parent_info = repo.hg_rev_info(rev_parent)
+            parent_sha1 = parent_info["changeset"]
             # look for review for parent
-            parent_changeset = Changeset.query.filter(Changeset.revision == rev_parent).first()
+            parent_changeset = Changeset.query.filter(Changeset.sha1 == parent_sha1).first()
             if (parent_changeset is not None and parent_changeset.review_id is not None):
                 parent_review = Review.query.filter(Review.id == parent_changeset.review_id).first()
                 if (parent_review.status == "OPEN"):
@@ -242,7 +243,8 @@ def changes_new():
 
         # review for parent has not been found
         if (changeset.review_id is None):
-            review = Review(owner=h["author"],owner_email=h["email"],title=h["desc"],sha1=sha1,bookmark=h["bookmarks"],status="OPEN")
+            review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"], sha1=sha1,
+                            bookmark=h["bookmarks"], status="OPEN")
             db.session.add(review)
             db.session.commit()
             changeset.review_id = review.id
@@ -279,12 +281,11 @@ def merge_with_default(bookmark):
 @app.route('/inspect',  methods=['POST'])
 def inspect_diff():
     info=repo.hg_rev_info(request.form['src'])
-    rev=info["rev"]
-    changeset = Changeset.query.filter(Changeset.revision == request.form['src']).first()
+    changeset = Changeset.query.filter(Changeset.sha1 == request.form['src']).first()
     inspection = CodeInspection()
     inspection.status = "SCHEDULED"
     inspection.changeset_id = changeset.id
-    inspection.revision = rev
+    inspection.sha1 = info["changeset"]
     db.session.add(inspection)
     db.session.commit()
     return redirect(url_for('changeset_info', review=request.form['back_id']))
@@ -300,7 +301,7 @@ def merge_from_post():
 def jenkins_build():
     #jenkins.schedule_job(config.REVIEW_JOB_NAME, request.form['src'])
     info = repo.hg_rev_info(request.form['src'])
-    changeset = Changeset.query.filter(Changeset.revision == info['rev']).first()
+    changeset = Changeset.query.filter(Changeset.sha1 == info['changeset']).first()
     build = Build(changeset_id=changeset.id, status="SCHEDULED")
     db.session.add(build)
     db.session.commit()
@@ -354,7 +355,7 @@ def run_scheduled_jobs():
         cc = CodeCollaborator()
         # TODO - investigate how to send rework to CC instead of creating new review
         ccInspectionId=cc.create_empty_cc_review()
-        res, output = cc.upload_diff(ccInspectionId, str(i.revision), repo.path)
+        res, output = cc.upload_diff(ccInspectionId, str(i.sha1), repo.path)
         if (res):
             i.inspection_number = ccInspectionId
             i.inspection_url = app.config["CC_REVIEW_URL"].format(reviewId=ccInspectionId)
@@ -370,7 +371,7 @@ def run_scheduled_jobs():
     builds = Build.query.filter(Build.status == "SCHEDULED").all()
     for b in builds:
         changeset = Changeset.query.filter(Changeset.id == b.changeset_id).first()
-        build_info = jenkins.run_job(app.config["REVIEW_JOB_NAME"], changeset.revision)
+        build_info = jenkins.run_job(app.config["REVIEW_JOB_NAME"], changeset.sha1)
         if build_info is None:
             continue
         b.build_number = build_info["buildNo"]

@@ -78,15 +78,18 @@ class Repo2(Repo):
         return res
 
     def hg_parent(self, rev):
+        info = self.hg_rev_info(rev)
+        parent = self.hg_rev_info(info["rev_parent"])
+        return parent["changeset"]
         # The template keyword parents is empty when the only parent is the next node
-        res = int(rev)-1
-        template = "{rev}\n"
-        output = self.hg_command("parents", "--template", template, "-r", rev)
-        reg_expr = "(?P<rev>\d+)"
-        pattern = re.compile(reg_expr)
-        for row in output.strip().split('\n'):
-            match = pattern.search(row)
-            if match is not None:
-               return match.group("rev")
-        return res
+        #res = int(rev)-1
+        #template = "{rev}\n"
+        #output = self.hg_command("parents", "--template", template, "-r", rev)
+        #reg_expr = "(?P<rev>\d+)"
+        #pattern = re.compile(reg_expr)
+        #for row in output.strip().split('\n'):
+        #    match = pattern.search(row)
+        #    if match is not None:
+        #       return match.group("rev")
+        #return res
 

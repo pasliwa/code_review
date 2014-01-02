@@ -65,7 +65,7 @@
             </div>
             <div class="panel-body">
                 <form method="post" action="{{ url_for("jenkins_build") }}">
-                    <input type="hidden" name="src" value="{{ r.revision }}"/>
+                    <input type="hidden" name="src" value="{{ r.sha1 }}"/>
                     <input type="hidden" name="back_id" value="{{ review.id }}"/>
                     <button class="btn btn-sm btn-success" type="submit"><span class="glyphicon glyphicon-plus"></span>
                         Run Jenkins
@@ -111,7 +111,7 @@
             </div>
             <div class="panel-body">
                 <form method="post" action="{{ url_for("inspect_diff") }}">
-                    <input type="hidden" name="src" value="{{ r.revision }}"/>
+                    <input type="hidden" name="src" value="{{ r.sha1 }}"/>
                     <input type="hidden" name="back_id" value="{{ review.id }}"/>
                     <button class="btn btn-sm btn-info" type="submit"><span class="glyphicon glyphicon-plus"></span> New
                         inspection
