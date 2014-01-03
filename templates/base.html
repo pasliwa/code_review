@@ -59,6 +59,16 @@
               </ul>
           </li>
       </ul>
+      <ul class="nav navbar-nav navbar-right">
+          <li><p class="navbar-text">
+              {%  if user.is_authenticated() %}
+                Hello {{ user.email }} <span style="padding-right: 10px;"><a class='btn btn-xs btn-default' href='{{ url_for_security("logout") }}'>logout</a></span>
+              {% else %}
+                <span style="padding-right: 10px;"><a class='btn btn-xs btn-default' href='{{ url_for_security("login") }}'>login</a></span>
+              {% endif %}
+            </p>
+          </li>
+      </ul>
 
   </div><!-- /.navbar-collapse -->
 </nav>

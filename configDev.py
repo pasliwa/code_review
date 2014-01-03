@@ -8,6 +8,7 @@ SQLALCHEMY_DATABASE_URI = "mysql://root:secret@135.39.68.11/review"
 PROPAGATE_EXCEPTIONS = True
 LISTEN_HOST = "0.0.0.0"
 ENABLE_THREADS = True
+SECRET_KEY = "ChangeMeLater"
 
 
 # Code Collaborator settings
@@ -26,3 +27,22 @@ REVIEW_JOB_NAME = "iwd_8.5.000-REVIEW"
 REPO_PATH = "/home/jenkins/code_review/repo"
 PRODUCT_BRANCHES = ("default", "master", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101-branch", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003")
 IGNORED_BRANCHES = ("test", "qatest/datamart", "iwd_history_nosql")
+
+
+# Flask-Security
+SECURITY_PASSWORD_HASH = "sha512_crypt"
+SECURITY_PASSWORD_SALT = "changeme"
+SECURITY_EMAIL_SENDER = "jenkins@pl-byd-srv01.emea.int.genesyslab.com"
+CSRF_ENABLED = False
+
+SECURITY_FORGOT_PASSWORD_TEMPLATE = "security/forgot_password.html"
+SECURITY_LOGIN_USER_TEMPLATE = "security/login_user.html"
+SECURITY_REGISTER_USER_TEMPLATE = "security/register_user.html"
+SECURITY_RESET_PASSWORD_TEMPLATE = "security/reset_password.html"
+SECURITY_SEND_CONFIRMATION_TEMPLATE = "security/send_confirmation.html"
+SECURITY_SEND_LOGIN_TEMPLATE = "security/send_login.html"
+
+SECURITY_CONFIRMABLE = False
+SECURITY_REGISTERABLE = True
+SECURITY_RECOVERABLE = True
+SECURITY_CHANGEABLE = True

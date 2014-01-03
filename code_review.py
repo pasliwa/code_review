@@ -1,3 +1,8 @@
+from flask.ext.security.decorators import roles_required
+from flask.ext.security.signals import user_registered
+from flask.ext.security.utils import encrypt_password
+from flask_security.core import current_user
+from flask.ext.login import current_user
 import os
 import datetime
 from sqlalchemy.sql.expression import or_, desc
@@ -14,7 +19,8 @@ import requests
 import urllib
 from uuid import uuid4
 import time
-
+from flask.ext.security import Security, SQLAlchemyUserDatastore, UserMixin, RoleMixin, login_required
+from flask_mail import Mail
 
 app = Flask(__name__)
 app.config.from_object("configDev")
@@ -192,12 +198,51 @@ class Jenkins(object):
 
 
 
+# Define models
+roles_users = db.Table('roles_users',
+        db.Column('user_id', db.Integer(), db.ForeignKey('user.id')),
+        db.Column('role_id', db.Integer(), db.ForeignKey('role.id')))
+
+class Role(db.Model, RoleMixin):
+    id = db.Column(db.Integer(), primary_key=True)
+    name = db.Column(db.String(80), unique=True)
+    description = db.Column(db.String(255))
+
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True)
+    password = db.Column(db.String(255))
+    active = db.Column(db.Boolean())
+    confirmed_at = db.Column(db.DateTime())
+    roles = db.relationship('Role', secondary=roles_users,
+                            backref=db.backref('users', lazy='dynamic'))
+
+
+# Setup Flask-Security
+user_datastore = SQLAlchemyUserDatastore(db, User, Role)
+security = Security(app, user_datastore)
+
+mail = Mail(app)
+
+
 
 #db.drop_all()
-db.create_all()
+#db.create_all()
+
+# Create a user to test with
+@app.before_first_request
+def create_user():
+    db.create_all()
+    #user_datastore.create_user(email='roman.szalla@genesyslab.com', password='test')
+    db.session.commit()
+
+
+
 
 repo = Repo2(app.config["REPO_PATH"])
 jenkins = Jenkins(app.config["JENKINS_URL"])
+
+
 
 
 
@@ -207,7 +252,11 @@ def index():
 
 
 @app.route('/changes/new')
+#@login_required
+#@roles_required('admin')
 def changes_new():
+    #user = current_user
+    #yyy=user.is_anonymous()
     # TODO: reading heads directly from repo is slow, do it periodicaly, save 2 db, present heads from db here
     temp = repo.hg_heads()
     heads = []
@@ -385,6 +434,14 @@ def run_scheduled_jobs():
     return redirect(url_for('index'))
 
 
+def new_user_registered(sender, **extra):
+    user = extra["user"]
+    user_datastore.add_role_to_user()
+    xxx = 1;
+
+user_registered.connect(new_user_registered, app)
+
+
 def update_build_status(changeset):
     builds = Build.query.filter(Build.changeset_id == changeset).all()
     for b in builds:
@@ -397,6 +454,23 @@ def update_build_status(changeset):
        db.session.commit()
 
 
+@app.route('/init_users')
+def init_users():
+    admin_role = user_datastore.create_role(name="admin", description="Administrator");
+    user_role = user_datastore.create_role(name="user", description="User");
+    admin = user_datastore.create_user(email="roman.szalla@genesyslab.com", password=encrypt_password("password"))
+    user_datastore.add_role_to_user(admin, admin_role)
+    admin = user_datastore.create_user(email="maciej.malycha@genesyslab.com", password=encrypt_password("password"))
+    user_datastore.add_role_to_user(admin, admin_role)
+    db.session.commit()
+    return redirect(url_for('changes_new'))
+
+
+
+@app.context_processor
+def inject_user():
+    x=1
+    return dict(user=current_user)
 
 
 if __name__ == '__main__':
