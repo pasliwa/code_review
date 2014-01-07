@@ -3,6 +3,8 @@ from flask.ext.security.signals import user_registered
 from flask.ext.security.utils import encrypt_password
 from flask_security.core import current_user
 from flask.ext.login import current_user
+import logging
+import logging.handlers
 import os
 import datetime
 from sqlalchemy.sql.expression import or_, desc
@@ -22,9 +24,40 @@ import time
 from flask.ext.security import Security, SQLAlchemyUserDatastore, UserMixin, RoleMixin, login_required
 from flask_mail import Mail
 
+
 app = Flask(__name__)
 app.config.from_object("configDev")
 db = SQLAlchemy(app)
+
+ADMINS = ['roman.szalla@genesys.com']
+if not app.debug:
+    import logging
+    from logging.handlers import SMTPHandler, RotatingFileHandler
+
+    mail_handler = SMTPHandler('127.0.0.1',
+                               'jenkins@pl-byd-srv01.emea.int.genesyslab.com',
+                               ADMINS, 'Code Review  application failed')
+    mail_handler.setLevel(logging.ERROR)
+    mail_handler.setFormatter(logging.Formatter('''
+    Message type:       %(levelname)s
+    Location:           %(pathname)s:%(lineno)d
+    Module:             %(module)s
+    Function:           %(funcName)s
+    Time:               %(asctime)s
+
+    Message:
+
+    %(message)s
+    '''))
+    app.logger.addHandler(mail_handler)
+
+    here = os.path.dirname(__file__)
+    file_handler = RotatingFileHandler(os.path.join(here, "review.log"), maxBytes=104857600, backupCount=30)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s '
+        '[in %(pathname)s:%(lineno)d]'
+    ))
+    app.logger.addHandler(file_handler)
 
 
 if "check_output" not in dir( subprocess ): # duck punch it in!
