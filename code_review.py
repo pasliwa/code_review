@@ -7,6 +7,7 @@ import logging
 import logging.handlers
 import os
 import datetime
+from rlcompleter import get_class_members
 from sqlalchemy.sql.expression import or_, desc
 from flask import Flask, redirect, url_for
 from flask.globals import request
@@ -29,35 +30,7 @@ app = Flask(__name__)
 app.config.from_object("configDev")
 db = SQLAlchemy(app)
 
-ADMINS = ['roman.szalla@genesys.com']
-if not app.debug:
-    import logging
-    from logging.handlers import SMTPHandler, RotatingFileHandler
 
-    mail_handler = SMTPHandler('127.0.0.1',
-                               'jenkins@pl-byd-srv01.emea.int.genesyslab.com',
-                               ADMINS, 'Code Review  application failed')
-    mail_handler.setLevel(logging.ERROR)
-    mail_handler.setFormatter(logging.Formatter('''
-    Message type:       %(levelname)s
-    Location:           %(pathname)s:%(lineno)d
-    Module:             %(module)s
-    Function:           %(funcName)s
-    Time:               %(asctime)s
-
-    Message:
-
-    %(message)s
-    '''))
-    app.logger.addHandler(mail_handler)
-
-    here = os.path.dirname(__file__)
-    file_handler = RotatingFileHandler(os.path.join(here, "review.log"), maxBytes=104857600, backupCount=30)
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s %(levelname)s: %(message)s '
-        '[in %(pathname)s:%(lineno)d]'
-    ))
-    app.logger.addHandler(file_handler)
 
 
 if "check_output" not in dir( subprocess ): # duck punch it in!
@@ -98,6 +71,10 @@ class Changeset(db.Model):
         self.bookmark = bookmark
         self.status = status
 
+    def __str__(self):
+        return  str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))
+
+
 
 
 
@@ -121,6 +98,10 @@ class Review(db.Model):
         self.bookmark = bookmark
         self.status = status
 
+    def __str__(self):
+        return  str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))
+
+
 
 class Build(db.Model):
     __tablename__ = 'builds'
@@ -138,6 +119,9 @@ class Build(db.Model):
         self.build_url = build_url
         self.status = status
         self.job_name = job_name
+
+    def __str__(self):
+        return  str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))
 
 
 class CodeCollaborator(object):
@@ -176,6 +160,9 @@ class CodeInspection(db.Model):
         self.inspection_url = inspection_url
         self.status = status
         self.sha1 = sha1
+
+    def __str__(self):
+        return  str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))
 
 
 
@@ -258,7 +245,6 @@ security = Security(app, user_datastore)
 mail = Mail(app)
 
 
-
 #db.drop_all()
 #db.create_all()
 
@@ -333,6 +319,8 @@ def changes_new():
             db.session.add(changeset)
             db.session.commit()
 
+        app.logger.info(changeset)
+
     reviews = Review.query.filter(Review.status == "OPEN").order_by(desc(Review.created_date)).all()
     return render_template('changes.html', type="New", reviews=reviews, productBranches=app.config["PRODUCT_BRANCHES"])
 
@@ -395,6 +383,9 @@ def changeset_info(review):
     review = Review.query.filter(Review.id == review).first()
     for c in review.changesets:
         update_build_status(c.id)
+    app.logger.debug("debug" + str(review))
+    app.logger.info("info" + str(review))
+    app.logger.error("error" + str(review))
     return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"])
 
 @app.route('/merge/<src>/<dst>')
@@ -507,6 +498,44 @@ def inject_user():
 
 
 if __name__ == '__main__':
+    ADMINS = ['roman.szalla@genesys.com']
+
+    import logging
+    from logging.handlers import SMTPHandler, RotatingFileHandler
+
+    mail_handler = SMTPHandler('127.0.0.1',
+                               'jenkins@pl-byd-srv01.emea.int.genesyslab.com',
+                               ADMINS, 'Code Review  application failed')
+    mail_handler.setLevel(logging.ERROR)
+    mail_handler.setFormatter(logging.Formatter('''
+    Message type:       %(levelname)s
+    Location:           %(pathname)s:%(lineno)d
+    Module:             %(module)s
+    Function:           %(funcName)s
+    Time:               %(asctime)s
+
+    Message:
+
+    %(message)s
+    '''))
+    #app.logger.addHandler(mail_handler)
+
+    here = os.path.dirname(__file__)
+    file_handler = RotatingFileHandler(os.path.join(here, "code_review.log"), maxBytes=104857600, backupCount=30)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s '
+        '[in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.DEBUG)
+
+    # don't change this!
+    app.logger.setLevel(logging.DEBUG)
+    app.logger.addHandler(file_handler)
+    app.logger.addHandler(mail_handler)
+
+    app.logger.debug("DEBUG MSG")
+    app.logger.error("ERROR MSG")
+
     app.run(host=app.config["LISTEN_HOST"], threaded=app.config["ENABLE_THREADS"])
 
 
