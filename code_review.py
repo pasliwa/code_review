@@ -165,7 +165,6 @@ class CodeInspection(db.Model):
         return  str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))
 
 
-
 class Jenkins(object):
     def __init__(self, url):
         self.url = url
@@ -174,6 +173,7 @@ class Jenkins(object):
     def get_next_build_number(self, jobName):
         resp = requests.get(self.url + "/job/" + jobName + "/api/python?pretty=true")
         props = eval(resp.content)
+        app.logger.debug("Next build number for " + jobName + " is " + props["nextBuildNumber"])
         return props["nextBuildNumber"]
 
     def run_job(self, jobName, rev):
@@ -181,9 +181,13 @@ class Jenkins(object):
         uuid = str(uuid4())
         info = repo.hg_rev_info(rev)
         sha1 = info["changeset_short"]
-        payload = urllib.urlencode({'json': json.dumps({"parameter": [{"name": "BRANCH", "value": sha1}, {"name": "REQUEST_ID", "value": uuid}]})})
+        payload = urllib.urlencode({
+            'json': json.dumps(
+                {"parameter": [{"name": "BRANCH", "value": sha1}, {"name": "REQUEST_ID", "value": uuid}]})})
         headers = {'content-type': 'application/x-www-form-urlencoded'}
         resp = requests.post(self.url + "/job/" + jobName + "/build/api/json", data=payload, headers=headers)
+        app.logger.debug(
+            "Scheduling Jenkins job for " + jobName + " using revision " + rev + " Expected build number is " + buildNo)
         if resp.status_code == 201:
             counter = 1;
             while (counter < 10):
@@ -191,7 +195,8 @@ class Jenkins(object):
                 # Jenkins queues job and does not start them immediately
                 # lets give him some time to respond
                 time.sleep(counter)
-                resp = requests.get(self.url + "/job/" + jobName + "/" + str(buildNo) + "/api/python", data=payload, headers=headers)
+                resp = requests.get(self.url + "/job/" + jobName + "/" + str(buildNo) + "/api/python", data=payload,
+                                    headers=headers)
                 if resp.status_code != 404:
                     # build has started, make sure we got the right build number (possible race-condition)
                     props = eval(resp.content)
@@ -199,9 +204,16 @@ class Jenkins(object):
                         if a.has_key("parameters"):
                             for parameters in a['parameters']:
                                 if parameters['name'] == "REQUEST_ID" and parameters['value'] == uuid:
-                                    return {"buildNo": buildNo, "url": props["url"], "result" : None}
+                                    app.logger.info(
+                                        "Successfully scheduled Jenkins job for " + jobName + " using revision " + rev + " url: " +
+                                        props["url"])
+                                    return {"buildNo": buildNo, "url": props["url"], "result": None}
+                    app.logger.error(
+                        "Failed job verification, possible race-condition occured. REQUEST_ID: " + uuid + " jobname: " + jobName + " rev: " + rev + " expected build number: " + buildNo)
                     return None
         else:
+            app.logger.error(
+                "There was an error scheduling Jenkins job for " + jobName + " using revision " + rev + " Response status code: " + resp.status_code + " , resp content: " + resp.content)
             return None
 
 
@@ -290,6 +302,7 @@ def changes_new():
             changeset = Changeset(h["author"], h["email"], h["desc"], sha1, h["bookmarks"], "new")
             db.session.add(changeset)
             db.session.commit()
+            app.logger.info("Added new changeset: " + str(changeset))
 
         # try to find valid review for changeset by searching the commit tree 1 levels down
         # TODO improvement - extract to function, possibly make it recursive
@@ -306,6 +319,9 @@ def changes_new():
                 parent_review = Review.query.filter(Review.id == parent_changeset.review_id).first()
                 if (parent_review.status == "OPEN"):
                     changeset.review_id = parent_review.id
+                    app.logger.info(
+                        "Attaching review id " + str(parent_review.id) + " to changeset id " + str(changeset.id) + " found by parent")
+                    app.logger.debug("review: " + str(parent_review) + ", changeset: " + str(changeset))
                     db.session.add(changeset)
                     db.session.commit()
 
@@ -318,6 +334,7 @@ def changes_new():
             changeset.review_id = review.id
             db.session.add(changeset)
             db.session.commit()
+            app.logger.info("Created new review for changeset id:" + str(changeset.id) + ", review: " + str(review))
 
         app.logger.info(changeset)
 
@@ -358,6 +375,7 @@ def inspect_diff():
     inspection.sha1 = info["changeset"]
     db.session.add(inspection)
     db.session.commit()
+    app.logger.info("Code Collaborator review for changeset id " + str(changeset.id) + " has been added to queue. Changeset: " + str(changeset))
     return redirect(url_for('changeset_info', review=request.form['back_id']))
 
 
@@ -375,6 +393,7 @@ def jenkins_build():
     build = Build(changeset_id=changeset.id, status="SCHEDULED")
     db.session.add(build)
     db.session.commit()
+    app.logger.info("Jenkins build for changeset id " + str(changeset.id) + " has been added to queue. Changeset: " + str(changeset) + " , build: " + str(build))
     return redirect(url_for('changeset_info', review=request.form['back_id']))
 
 
@@ -383,13 +402,11 @@ def changeset_info(review):
     review = Review.query.filter(Review.id == review).first()
     for c in review.changesets:
         update_build_status(c.id)
-    app.logger.debug("debug" + str(review))
-    app.logger.info("info" + str(review))
-    app.logger.error("error" + str(review))
     return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"])
 
 @app.route('/merge/<src>/<dst>')
 def merge_branch(src, dst):
+    # TODO add logging after refactoring of this function
     msg = ""
     e = ""
     try:
@@ -421,13 +438,16 @@ def merge_branch(src, dst):
 
 @app.route('/run_scheduled_jobs')
 def run_scheduled_jobs():
-
+    # TODO : add support for flashing messages
     # CC reviews
     inspections = CodeInspection.query.filter(CodeInspection.status == "SCHEDULED").all()
+    app.logger.debug("Code Collaborator reviews to be sent to CC server : " + str(inspections))
     for i in inspections:
+        app.logger.debug("Processing inspection: " + str(i))
         cc = CodeCollaborator()
         # TODO - investigate how to send rework to CC instead of creating new review
         ccInspectionId=cc.create_empty_cc_review()
+        app.logger.debug("Got new CodeCollaborator review id: " + str(ccInspectionId))
         res, output = cc.upload_diff(ccInspectionId, str(i.sha1), repo.path)
         if (res):
             i.inspection_number = ccInspectionId
@@ -435,17 +455,19 @@ def run_scheduled_jobs():
             i.status = 'NEW'
             db.session.add(i)
             db.session.commit()
-            message="CodeCollaborator review #{reviewId} has been created. View: {url}".format(reviewId=ccInspectionId, url=i.inspection_url)
+            app.logger.info("New CC review has been created: " + str(i))
         else:
-            message="There was an error creating CodeCollaborator review. \n\n" + output
+            app.logger.error("There was an error creating CodeCollaborator review, inspection: " + str(i) + " , command output: " + output)
 
 
     # Jenkins builds
     builds = Build.query.filter(Build.status == "SCHEDULED").all()
+    app.logger.debug("Builds to be sent to Jenkins: " + str(builds))
     for b in builds:
         changeset = Changeset.query.filter(Changeset.id == b.changeset_id).first()
         build_info = jenkins.run_job(app.config["REVIEW_JOB_NAME"], changeset.sha1)
         if build_info is None:
+            app.logger.error("Unable to submit scheduled Jenkins job. Name: " + app.config["REVIEW_JOB_NAME"] + " , changeset: " + str(changeset))
             continue
         b.build_number = build_info["buildNo"]
         b.build_url = build_info["url"]
@@ -454,6 +476,7 @@ def run_scheduled_jobs():
         b.job_name = app.config["REVIEW_JOB_NAME"]
         db.session.add(b)
         db.session.commit()
+        app.logger.info("Build id " + str(b.id) + " has been sent to Jenkins.")
 
     return redirect(url_for('index'))
 
