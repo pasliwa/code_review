@@ -5,7 +5,7 @@ SQLALCHEMY_DATABASE_URI = "mysql://root:secret@135.39.68.11/review"
 
 
 # Flask settings
-PROPAGATE_EXCEPTIONS = True
+PROPAGATE_EXCEPTIONS = False
 LISTEN_HOST = "0.0.0.0"
 ENABLE_THREADS = True
 SECRET_KEY = "ChangeMeLater"

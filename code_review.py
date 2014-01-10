@@ -551,8 +551,12 @@ def init_users():
 
 @app.context_processor
 def inject_user():
-    x=1
     return dict(user=current_user)
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(error)
+    return "500 error. Administrator has been notified about this error." , 500
 
 
 if __name__ == '__main__':
