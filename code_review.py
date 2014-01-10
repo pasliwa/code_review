@@ -88,15 +88,17 @@ class Review(db.Model):
     title = db.Column(db.String(120))
     bookmark = db.Column(db.String(120))
     status = db.Column(db.String(20))
+    target = db.Column(db.String(20))
     changesets = db.relationship("Changeset", order_by=desc("created_date"))
 
-    def __init__(self, owner=None, owner_email=None, title=None, sha1=None, bookmark=None, status = None):
+    def __init__(self, owner=None, owner_email=None, title=None, sha1=None, bookmark=None, status = None, target = None):
         self.owner = owner
         self.owner_email = owner_email
         self.title = title
         self.sha1 = sha1
         self.bookmark = bookmark
         self.status = status
+        self.target = target
 
     def __str__(self):
         return  str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))
@@ -432,9 +434,13 @@ def jenkins_build():
     return redirect(url_for('changeset_info', review=request.form['back_id']))
 
 
-@app.route('/info/<review>')
+@app.route('/info/<review>', methods=['POST', 'GET'])
 def changeset_info(review):
     review = Review.query.filter(Review.id == review).first()
+    if request.method == 'POST':
+        review.target = request.form['target']
+        db.session.add(review)
+        db.session.commit()
     for c in review.changesets:
         update_build_status(c.id)
     return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"])

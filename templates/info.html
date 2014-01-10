@@ -29,6 +29,26 @@
                     {{ review.status }}
                     </span>
                 </div>
+                <br/>
+                <div><span class="col-lg-2 text-right">Target branch</span><span>
+                    <form method="post" action="{{ url_for("changeset_info", review=review.id) }}">
+
+
+                        <div class="form-group">
+                            <div class="col-sm-2">
+                                <select id="inputEmail4" class="form-control" name="target">
+                                    {% for pb in productBranches %}
+                                        <option {% if review.target == pb %}selected{% endif %} value="{{ pb }}">{{ pb }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <button class="btn btn-sm btn-info" type="submit"><span
+                                    class="glyphicon glyphicon-save"></span>
+                               Save
+                            </button>
+                        </div>
+                    </form>
+                </span></div>
             </div>
         </div>
 
@@ -67,16 +87,9 @@
                 <form method="post" action="{{ url_for("jenkins_build") }}">
                     <input type="hidden" name="src" value="{{ r.sha1 }}"/>
                     <input type="hidden" name="back_id" value="{{ review.id }}"/>
+                    <input type="hidden" name="release" value="{{ review.target }}"/>
                     <div class="form-group">
-
                         <input type="hidden" name="src" value="{{ r.revision }}">
-                        <div class="col-sm-2">
-                            <select id="inputEmail4" class="form-control" name="release">
-                                {% for pb in productBranches %}
-                                    <option value="{{ pb }}">{{ pb }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
                         <button class="btn btn-sm btn-success" type="submit"><span class="glyphicon glyphicon-plus"></span>
                             Run Jenkins
                             build
@@ -172,7 +185,7 @@
                         <div class="col-sm-2">
                             <select id="inputEmail3" class="form-control" name="dst">
                                 {% for pb in productBranches %}
-                                    <option value="{{ pb }}">{{ pb }}</option>
+                                    <option {% if review.target == pb %}selected{% endif %} value="{{ pb }}">{{ pb }}</option>
                                 {% endfor %}
                             </select>
                         </div>
