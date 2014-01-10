@@ -205,7 +205,7 @@ class Jenkins(object):
     def get_next_build_number(self, jobName):
         resp = requests.get(self.url + "/job/" + jobName + "/api/python?pretty=true")
         props = eval(resp.content)
-        app.logger.debug("Next build number for " + jobName + " is " + props["nextBuildNumber"])
+        app.logger.debug("Next build number for " + jobName + " is " + str(props["nextBuildNumber"]))
         return props["nextBuildNumber"]
 
     def run_job(self, jobName, rev):
@@ -219,7 +219,7 @@ class Jenkins(object):
         headers = {'content-type': 'application/x-www-form-urlencoded'}
         resp = requests.post(self.url + "/job/" + jobName + "/build/api/json", data=payload, headers=headers)
         app.logger.debug(
-            "Scheduling Jenkins job for " + jobName + " using revision " + rev + " Expected build number is " + buildNo)
+            "Scheduling Jenkins job for " + jobName + " using revision " + rev + " Expected build number is " + str(buildNo))
         if resp.status_code == 201:
             counter = 1;
             while (counter < 10):
@@ -241,7 +241,7 @@ class Jenkins(object):
                                         props["url"])
                                     return {"buildNo": buildNo, "url": props["url"], "result": None}
                     app.logger.error(
-                        "Failed job verification, possible race-condition occured. REQUEST_ID: " + uuid + " jobname: " + jobName + " rev: " + rev + " expected build number: " + buildNo)
+                        "Failed job verification, possible race-condition occured. REQUEST_ID: " + uuid + " jobname: " + jobName + " rev: " + rev + " expected build number: " + str(buildNo))
                     return None
         else:
             app.logger.error(
@@ -423,10 +423,12 @@ def jenkins_build():
     #jenkins.schedule_job(config.REVIEW_JOB_NAME, request.form['src'])
     info = repo.hg_rev_info(request.form['src'])
     changeset = Changeset.query.filter(Changeset.sha1 == info['changeset']).first()
-    build = Build(changeset_id=changeset.id, status="SCHEDULED")
+    build = Build(changeset_id=changeset.id, status="SCHEDULED", job_name=request.form['release'] + "-REVIEW")
     db.session.add(build)
     db.session.commit()
-    app.logger.info("Jenkins build for changeset id " + str(changeset.id) + " has been added to queue. Changeset: " + str(changeset) + " , build: " + str(build))
+    app.logger.info(
+        "Jenkins build for changeset id " + str(changeset.id) + " has been added to queue. Changeset: " + str(
+            changeset) + " , build: " + str(build))
     return redirect(url_for('changeset_info', review=request.form['back_id']))
 
 
@@ -499,7 +501,7 @@ def run_scheduled_jobs():
     app.logger.debug("Builds to be sent to Jenkins: " + str(builds))
     for b in builds:
         changeset = Changeset.query.filter(Changeset.id == b.changeset_id).first()
-        build_info = jenkins.run_job(app.config["REVIEW_JOB_NAME"], changeset.sha1)
+        build_info = jenkins.run_job(b.job_name, changeset.sha1)
         if build_info is None:
             app.logger.error("Unable to submit scheduled Jenkins job. Name: " + app.config["REVIEW_JOB_NAME"] + " , changeset: " + str(changeset))
             continue
@@ -507,7 +509,7 @@ def run_scheduled_jobs():
         b.build_url = build_info["url"]
         b.scheduled = datetime.datetime.utcnow()
         b.status = "RUNNING"
-        b.job_name = app.config["REVIEW_JOB_NAME"]
+        #b.job_name = app.config["REVIEW_JOB_NAME"]
         db.session.add(b)
         db.session.commit()
         app.logger.info("Build id " + str(b.id) + " has been sent to Jenkins.")
