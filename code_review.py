@@ -8,7 +8,7 @@ import logging.handlers
 import os
 import datetime
 from rlcompleter import get_class_members
-from sqlalchemy.sql.expression import or_, desc
+from sqlalchemy.sql.expression import or_, desc, asc
 from flask import Flask, redirect, url_for
 from flask.globals import request
 from flask.templating import render_template
@@ -476,7 +476,6 @@ def merge_branch(src, dst):
     #return render_template('changes.html', type="Merging", src=src, dst=dst)
 
 
-
 @app.route('/run_scheduled_jobs')
 def run_scheduled_jobs():
     # TODO : add support for flashing messages
@@ -488,8 +487,17 @@ def run_scheduled_jobs():
         cc = CodeCollaborator()
         # TODO - investigate how to send rework to CC instead of creating new review
         changeset = Changeset.query.filter(Changeset.id == i.changeset_id).first()
-        ccInspectionId=cc.create_review(changeset)
-        app.logger.debug("Got new CodeCollaborator review id: " + str(ccInspectionId))
+
+        # check if this is a rework
+        inspection = find_origin_inspection(changeset)
+        if inspection == None or inspection.inspection_number == None:
+            ccInspectionId = cc.create_review(changeset)
+            app.logger.debug("Got new CodeCollaborator review id: " + str(ccInspectionId))
+        else:
+            ccInspectionId = inspection.inspection_number
+            app.logger.debug("Rework for CC review " + str(ccInspectionId))
+
+
         res, output = cc.upload_diff(ccInspectionId, str(i.sha1), repo.path)
         if (res):
             i.inspection_number = ccInspectionId
@@ -543,9 +551,19 @@ def update_build_status(changeset):
        db.session.commit()
 
 
+def find_origin_inspection(changeset):
+    review = Review.query.filter(Review.id == changeset.review_id).first()
+    changesets = review.changesets
+    ids = []
+    map((lambda x: ids.append(x.id) if x.id else x), changesets)
+    inspection = CodeInspection.query.filter(CodeInspection.changeset_id.in_(ids)).order_by(asc(CodeInspection.id)).first()
+    return inspection
+
+
+
 @app.route('/init_users')
 def init_users():
-    admin_role = user_datastore.create_role(name="admin", description="Administrator");
+    admin_role = user_datastore.create_role(name="admin", description="Administrator")
     user_role = user_datastore.create_role(name="user", description="User");
     admin = user_datastore.create_user(email="roman.szalla@genesyslab.com", password=encrypt_password("password"), cc_login = "roman.szalla")
     user_datastore.add_role_to_user(admin, admin_role)
