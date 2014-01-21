@@ -178,17 +178,10 @@
             </div>
             <div class="panel-body">
                 {# merge #}
-                <form method="post" class="form-horizontal" action="{{ url_for("merge_from_post") }}">
+                <form method="post" class="form-horizontal" action="{{ url_for("merge_branch") }}">
                     <div class="form-group">
-                        <label for="inputEmail3" class="col-sm-3 control-label">Merge this changeset with branch</label>
-                        <input type="hidden" name="src" value="{{ r.revision }}">
-                        <div class="col-sm-2">
-                            <select id="inputEmail3" class="form-control" name="dst">
-                                {% for pb in productBranches %}
-                                    <option {% if review.target == pb %}selected{% endif %} value="{{ pb }}">{{ pb }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                        <label for="inputEmail3" class="col-sm-4 control-label">Merge this changeset with "{{ review.target }}" branch</label>
+                        <input type="hidden" name="sha1" value="{{ r.sha1 }}">
                         <button class="btn btn-danger btn-sm" type="submit"><span
                                 class="glyphicon glyphicon-check"></span> merge
                         </button>

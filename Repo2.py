@@ -23,6 +23,9 @@ class Repo2(Repo):
             cmd.append("--delete")
         return self.hg_command(*cmd)
 
+    def hg_bookmark_move(self, sha1, bookmark):
+        return self.hg_command("bookmark", "-f", "-r", sha1, bookmark)
+
     def hg_heads(self):
         res = []
         template ="{rev}\n"
@@ -92,4 +95,7 @@ class Repo2(Repo):
         #    if match is not None:
         #       return match.group("rev")
         #return res
+
+    def hg_merge(self, reference):
+        return self.hg_command("merge", "--tool", "internal:fail", reference)
 
