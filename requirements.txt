@@ -3,4 +3,4 @@ SQLAlchemy==0.8.2
 Flask-SQLAlchemy==1.0
 Requests==1.2.3
 MySQL-python==1.2.3
-Flask-Security==1.6.9
+Flask-Security==1.7.1

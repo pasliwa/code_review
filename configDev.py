@@ -1,7 +1,7 @@
 # Database settings
 DB_USER = "root"
 DB_PWD = "secret"
-SQLALCHEMY_DATABASE_URI = "mysql://root:secret@135.39.68.11/review"
+SQLALCHEMY_DATABASE_URI = "mysql://review:ChangeMe@pl-byd-srv01.emea.int.genesyslab.com/review"
 
 
 # Flask settings
