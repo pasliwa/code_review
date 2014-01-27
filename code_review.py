@@ -10,7 +10,7 @@ import datetime
 from rlcompleter import get_class_members
 import shutil
 from sqlalchemy.sql.expression import or_, desc, asc
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, flash
 from flask.globals import request
 from flask.templating import render_template
 import re
@@ -417,6 +417,7 @@ def inspect_diff():
     db.session.add(inspection)
     db.session.commit()
     app.logger.info("Code Collaborator review for changeset id " + str(changeset.id) + " has been added to queue. Changeset: " + str(changeset))
+    flash("Code Collaborator review has been scheduled for processing", "notice")
     return redirect(url_for('changeset_info', review=request.form['back_id']))
 
 
@@ -434,6 +435,7 @@ def jenkins_build():
     app.logger.info(
         "Jenkins build for changeset id " + str(changeset.id) + " has been added to queue. Changeset: " + str(
             changeset) + " , build: " + str(build))
+    flash("Jenkins build has been scheduled for processing", "notice")
     return redirect(url_for('changeset_info', review=request.form['back_id']))
 
 
@@ -444,6 +446,7 @@ def changeset_info(review):
         review.target = request.form['target']
         db.session.add(review)
         db.session.commit()
+        flash("Target branch has been set to <b>{b}</b>".format(b=review.target), "notice")
     for c in review.changesets:
         update_build_status(c.id)
     return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"])
@@ -480,14 +483,17 @@ def merge_branch():
     if "abort: nothing to merge" in output:
         result = repo.hg_bookmark_move(sha1, bookmark)
         app.logger.info(result)
+        flash("Changeset has been merged", "notice")
     elif "use 'hg resolve' to retry unresolved" in output:
         result = repo.hg_update(bookmark, clean=True)
         app.logger.info(result)
+        flash("There is merge conflict: <br/><pre>" + result + "</pre>", "error")
         # TODO - send mail that there is conflict
         error = True
     elif "abort: merging with a working directory ancestor has no effect" in output:
         result = repo.hg_bookmark_move(sha1, bookmark)
         app.logger.info(result)
+        flash("Changeset has been merged", "notice")
 
     # TODO - mail admins on every commit
     # TODO - mail owner with merge result
@@ -497,6 +503,7 @@ def merge_branch():
         review.close_date = datetime.datetime.utcnow()
         db.session.add(review)
         db.session.commit()
+        flash("Review has been closed", "notice")
 
     return redirect(url_for('index'))
 
@@ -608,6 +615,7 @@ def init_users():
     admin = user_datastore.create_user(email="maciej.malycha@genesyslab.com", password=encrypt_password("password"), cc_login = "maciej")
     user_datastore.add_role_to_user(admin, admin_role)
     db.session.commit()
+    flash("Users has been populated", "notice")
     return redirect(url_for('changes_new'))
 
 
