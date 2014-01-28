@@ -32,7 +32,7 @@ IGNORED_BRANCHES = ("test", "qatest/datamart", "iwd_history_nosql")
 # Flask-Security
 SECURITY_PASSWORD_HASH = "sha512_crypt"
 SECURITY_PASSWORD_SALT = "changeme"
-SECURITY_EMAIL_SENDER = "jenkins@pl-byd-srv01.emea.int.genesyslab.com"
+SECURITY_EMAIL_SENDER = "Code Review <jenkins@pl-byd-srv01.emea.int.genesyslab.com>"
 CSRF_ENABLED = False
 
 SECURITY_FORGOT_PASSWORD_TEMPLATE = "security/forgot_password.html"
@@ -46,3 +46,4 @@ SECURITY_CONFIRMABLE = False
 SECURITY_REGISTERABLE = True
 SECURITY_RECOVERABLE = True
 SECURITY_CHANGEABLE = True
+

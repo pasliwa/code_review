@@ -24,7 +24,7 @@ import urllib
 from uuid import uuid4
 import time
 from flask.ext.security import Security, SQLAlchemyUserDatastore, UserMixin, RoleMixin, login_required
-from flask_mail import Mail
+from flask_mail import Mail, Message
 
 
 app = Flask(__name__)
@@ -466,6 +466,8 @@ def merge_branch():
     else:
         bookmark = review.target
 
+    link = url_for("changeset_info", review=review.id, _external=True)
+
     repo_sync()
 
     app.logger.info("Merging {sha1} into {target}".format(sha1 = sha1, target = review.target))
@@ -479,6 +481,7 @@ def merge_branch():
     app.logger.info("Merge result: {output}".format(output=output))
 
     error = False
+    subject = "Successful merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
 
     if "abort: nothing to merge" in output:
         result = repo.hg_bookmark_move(sha1, bookmark)
@@ -488,15 +491,24 @@ def merge_branch():
         result = repo.hg_update(bookmark, clean=True)
         app.logger.info(result)
         flash("There is merge conflict: <br/><pre>" + result + "</pre>", "error")
-        # TODO - send mail that there is conflict
+        subject = "Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
         error = True
     elif "abort: merging with a working directory ancestor has no effect" in output:
         result = repo.hg_bookmark_move(sha1, bookmark)
         app.logger.info(result)
         flash("Changeset has been merged", "notice")
 
-    # TODO - mail admins on every commit
-    # TODO - mail owner with merge result
+    html = subject + "<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(link=link, sha1=changeset.sha1, owner=changeset.owner)
+
+    recpts = get_admin_emails()
+    recpts.append(changeset.owner_email)
+    recpts = list(set(recpts))
+
+    msg = Message(subject,
+                  sender=app.config["SECURITY_EMAIL_SENDER"],
+                  recipients=recpts)
+    msg.html = html
+    mail.send(msg)
 
     if not error:
         review.status = "MERGED"
@@ -613,7 +625,8 @@ def init_users():
     admin = user_datastore.create_user(email="roman.szalla@genesyslab.com", password=encrypt_password("password"), cc_login = "roman.szalla")
     user_datastore.add_role_to_user(admin, admin_role)
     admin = user_datastore.create_user(email="maciej.malycha@genesyslab.com", password=encrypt_password("password"), cc_login = "maciej")
-    user_datastore.add_role_to_user(admin, admin_role)
+    # dont spam maciej when testing
+    #user_datastore.add_role_to_user(admin, admin_role)
     db.session.commit()
     flash("Users has been populated", "notice")
     return redirect(url_for('changes_new'))
@@ -670,8 +683,16 @@ def internal_error(error):
     return "500 error. Administrator has been notified about this error." , 500
 
 
+def get_admin_emails():
+    admins =  []
+    adms = User.query.join(User.roles).filter(Role.name == "admin").all()
+    for a in adms:
+        admins.append(a.email)
+    return admins
+
+
 if __name__ == '__main__':
-    ADMINS = ['roman.szalla@genesys.com']
+    ADMINS = get_admin_emails()
 
     import logging
     from logging.handlers import SMTPHandler, RotatingFileHandler
