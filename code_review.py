@@ -41,8 +41,8 @@ db = SQLAlchemy(app)
 
 
 class SearchForm(Form):
-    title = TextField('title', validators=[Optional()])
-    author = TextField('author', validators=[Optional()])
+    title = TextField('title', description="title", validators=[Optional()])
+    author = TextField('author', description="author", validators=[Optional()])
 
 
 class Pagination(object):
