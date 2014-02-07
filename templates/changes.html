@@ -6,6 +6,13 @@
 {% include "messages.html" %}
 
 
+<form method="GET" action="{{ url_for("changes_new") }}">
+    {# {{ form.hidden_tag() }}  #}
+    {{ form.title.label }} {{ form.title(size=20) }}
+    {{ form.author.label }} {{ form.author(size=20) }}
+    <input type="submit" value="Filter">
+</form>
+
 
 <h1>{{ type }} Changes</h1>
 
@@ -34,7 +41,8 @@
         </tbody>
     </table>
 
-    auth: {{ auth }}
+    {% from "_helpers.html" import render_pagination %}
+    {{ render_pagination(pagination) }}
 
 
 

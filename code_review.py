@@ -9,7 +9,8 @@ import os
 import datetime
 from rlcompleter import get_class_members
 import shutil
-from sqlalchemy.sql.expression import or_, desc, asc
+import sqlalchemy
+from sqlalchemy.sql.expression import or_, desc, asc, and_
 from flask import Flask, redirect, url_for, flash
 from flask.globals import request
 from flask.templating import render_template
@@ -25,12 +26,51 @@ from uuid import uuid4
 import time
 from flask.ext.security import Security, SQLAlchemyUserDatastore, UserMixin, RoleMixin, login_required
 from flask_mail import Mail, Message
-
+from math import ceil
+from flask_wtf import Form
+from wtforms import TextField
+from wtforms.validators import DataRequired, Optional, Email
 
 app = Flask(__name__)
 app.config.from_object("configDev")
 db = SQLAlchemy(app)
 
+
+
+
+
+
+class SearchForm(Form):
+    title = TextField('title', validators=[Optional()])
+    author = TextField('author', validators=[Optional()])
+
+
+class Pagination(object):
+    def __init__(self, page, per_page, total_count):
+        self.page = page
+        self.per_page = per_page
+        self.total_count = total_count
+    @property
+    def pages(self):
+        return int(ceil(self.total_count / float(self.per_page)))
+    @property
+    def has_prev(self):
+        return self.page > 1
+    @property
+    def has_next(self):
+        return self.page < self.pages
+    def iter_pages(self, left_edge=2, left_current=2,
+                   right_current=5, right_edge=2):
+        last = 0
+        for num in xrange(1, self.pages + 1):
+            if num <= left_edge or \
+               (num > self.page - left_current - 1 and \
+                num < self.page + right_current) or \
+               num > self.pages - right_edge:
+                if last + 1 != num:
+                    yield None
+                yield num
+                last = num
 
 
 
@@ -48,6 +88,13 @@ if "check_output" not in dir( subprocess ): # duck punch it in!
             raise subprocess.CalledProcessError(retcode, cmd)
         return output
     subprocess.check_output = f
+
+def url_for_other_page(page):
+    #args = request.view_args.copy()
+    args = dict(request.view_args.items() + request.args.to_dict().items())
+    args['page'] = page
+    return url_for(request.endpoint, **args)
+app.jinja_env.globals['url_for_other_page'] = url_for_other_page
 
 
 class Changeset(db.Model):
@@ -323,67 +370,24 @@ def index():
     return redirect(url_for('changes_new'))
 
 
-@app.route('/changes/new')
+@app.route('/changes/new', methods=['GET', 'POST'], defaults={'page': 1})
+@app.route('/changes/new/<int:page>')
 #@login_required
 #@roles_required('admin')
-def changes_new():
-
-    #repo_clone("http://pl-byd-srv01.emea.int.genesyslab.com/hg/iwd8/")
-
-    #user = current_user
-    #yyy=user.is_anonymous()
-    # TODO: reading heads directly from repo is slow, do it periodicaly, save 2 db, present heads from db here
-    temp = repo.hg_heads()
-    heads = []
-    map((lambda x: heads.append(x) if x["bookmarks"] not in app.config["IGNORED_BRANCHES"] else x), temp)
-    for h in heads:
-        h['src'] = h['bookmarks']
-        sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
-
-        #make sure changeset is in DB
-        count = Changeset.query.filter(Changeset.sha1 == h["changeset"]).count()
-        if (count < 1):
-            changeset = Changeset(h["author"], h["email"], h["desc"], sha1, h["bookmarks"], "new")
-            db.session.add(changeset)
-            db.session.commit()
-            app.logger.info("Added new changeset: " + str(changeset))
-
-        # try to find valid review for changeset by searching the commit tree 1 levels down
-        # TODO improvement - extract to function, possibly make it recursive
-        changeset = Changeset.query.filter(Changeset.sha1 == h["changeset"]).first()
-        if (changeset.review_id is None):
-            parent = repo.hg_rev_info(changeset.sha1)
-            rev_parent = parent["rev_parent"]
-            # get sha1 for parent revision
-            parent_info = repo.hg_rev_info(rev_parent)
-            parent_sha1 = parent_info["changeset"]
-            # look for review for parent
-            parent_changeset = Changeset.query.filter(Changeset.sha1 == parent_sha1).first()
-            if (parent_changeset is not None and parent_changeset.review_id is not None):
-                parent_review = Review.query.filter(Review.id == parent_changeset.review_id).first()
-                if (parent_review.status == "OPEN"):
-                    changeset.review_id = parent_review.id
-                    app.logger.info(
-                        "Attaching review id " + str(parent_review.id) + " to changeset id " + str(changeset.id) + " found by parent")
-                    app.logger.debug("review: " + str(parent_review) + ", changeset: " + str(changeset))
-                    db.session.add(changeset)
-                    db.session.commit()
-
-        # review for parent has not been found
-        if (changeset.review_id is None):
-            review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"], sha1=sha1,
-                            bookmark=h["bookmarks"], status="OPEN", target="iwd-8.5.000")
-            db.session.add(review)
-            db.session.commit()
-            changeset.review_id = review.id
-            db.session.add(changeset)
-            db.session.commit()
-            app.logger.info("Created new review for changeset id:" + str(changeset.id) + ", review: " + str(review))
-
-        app.logger.info(changeset)
-
-    reviews = Review.query.filter(Review.status == "OPEN").order_by(desc(Review.created_date)).all()
-    return render_template('changes.html', type="New", reviews=reviews, productBranches=app.config["PRODUCT_BRANCHES"])
+def changes_new(page):
+    form = SearchForm()
+    f = Review.query.filter(Review.status == "OPEN")
+    author = request.args.get('author', None)
+    title = request.args.get('title', None)
+    if author:
+       f = f.filter((Review.owner.contains(author)))
+    if title:
+       f = f.filter((Review.title.contains(title)))
+    query = f.order_by(desc(Review.created_date)).paginate(page, app.config["PER_PAGE"], False)
+    total = query.total
+    reviews = query.items
+    pagination = Pagination(page, app.config["PER_PAGE"], total)
+    return render_template('changes.html', type="New", reviews=reviews, productBranches=app.config["PRODUCT_BRANCHES"], form=form, pagination=pagination)
 
 
 @app.route('/changes/latest')
@@ -393,14 +397,14 @@ def changes_latest():
 
 @app.route('/changes/merged')
 def changes_merged():
-    reviews = Review.query.filter(Review.status == "MERGED").order_by(desc(Review.created_date)).limit(50).all()
+    reviews = Review.query.filter(Review.status == "MERGED").order_by(desc(Review.created_date)).limit(200).all()
     return render_template('changes.html', type="Merged", reviews=reviews)
 
 
 
 @app.route('/changes/latest/<branch>')
 def changes_latest_in_branch(branch):
-    log = repo.hg_log(branch=branch, limit=50)
+    log = repo.hg_log(branch=branch, limit=200)
     return render_template('log.html', log=log, branch=branch)
 
 
@@ -671,6 +675,58 @@ def repo_sync():
     return redirect(url_for('changes_new'))
 
 
+@app.route('/repo_scan')
+def repo_scan():
+
+    temp = repo.hg_heads()
+    heads = []
+    map((lambda x: heads.append(x) if x["bookmarks"] not in app.config["IGNORED_BRANCHES"] else x), temp)
+    for h in heads:
+        h['src'] = h['bookmarks']
+        sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
+
+        #make sure changeset is in DB
+        count = Changeset.query.filter(Changeset.sha1 == h["changeset"]).count()
+        if (count < 1):
+            changeset = Changeset(h["author"], h["email"], h["desc"], sha1, h["bookmarks"], "new")
+            db.session.add(changeset)
+            db.session.commit()
+            app.logger.info("Added new changeset: " + str(changeset))
+
+        # try to find valid review for changeset by searching the commit tree 1 levels down
+        # TODO improvement - extract to function, possibly make it recursive
+        changeset = Changeset.query.filter(Changeset.sha1 == h["changeset"]).first()
+        if (changeset.review_id is None):
+            parent = repo.hg_rev_info(changeset.sha1)
+            rev_parent = parent["rev_parent"]
+            # get sha1 for parent revision
+            parent_info = repo.hg_rev_info(rev_parent)
+            parent_sha1 = parent_info["changeset"]
+            # look for review for parent
+            parent_changeset = Changeset.query.filter(Changeset.sha1 == parent_sha1).first()
+            if (parent_changeset is not None and parent_changeset.review_id is not None):
+                parent_review = Review.query.filter(Review.id == parent_changeset.review_id).first()
+                if (parent_review.status == "OPEN"):
+                    changeset.review_id = parent_review.id
+                    app.logger.info(
+                        "Attaching review id " + str(parent_review.id) + " to changeset id " + str(changeset.id) + " found by parent")
+                    app.logger.debug("review: " + str(parent_review) + ", changeset: " + str(changeset))
+                    db.session.add(changeset)
+                    db.session.commit()
+
+        # review for parent has not been found
+        if (changeset.review_id is None):
+            review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"], sha1=sha1,
+                            bookmark=h["bookmarks"], status="OPEN", target="iwd-8.5.000")
+            db.session.add(review)
+            db.session.commit()
+            changeset.review_id = review.id
+            db.session.add(changeset)
+            db.session.commit()
+            app.logger.info("Created new review for changeset id:" + str(changeset.id) + ", review: " + str(review))
+
+        app.logger.info(changeset)
+    return redirect(url_for('changes_new'))
 
 
 @app.context_processor
