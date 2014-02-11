@@ -6,7 +6,7 @@
 {% include "messages.html" %}
 
 
-<form class="form-inline" role="form" method="GET" action="{{ url_for("changes_new") }}">
+<form class="form-inline" role="form" method="GET" action="{% if mode == "merged" %}{{ url_for("changes_merged") }} {% else %}{{ url_for("changes_new") }}{% endif %}">
     {# {{ form.hidden_tag() }}  #}
     <div class="form-group">
         <label class="sr-only" for="title">Author</label>

@@ -372,7 +372,7 @@ def index():
 
 @app.route('/changes/new', methods=['GET', 'POST'], defaults={'page': 1})
 @app.route('/changes/new/<int:page>')
-#@login_required
+@login_required
 #@roles_required('admin')
 def changes_new(page):
     form = SearchForm()
@@ -390,27 +390,27 @@ def changes_new(page):
     return render_template('changes.html', type="New", reviews=reviews, productBranches=app.config["PRODUCT_BRANCHES"], form=form, pagination=pagination)
 
 
-@app.route('/changes/latest')
-def changes_latest():
-    return changes_latest_in_branch("default")
+@app.route('/changes/merged', methods=['GET', 'POST'], defaults={'page': 1})
+@app.route('/changes/merged/<int:page>')
+def changes_merged(page):
+    form = SearchForm()
+    f = Review.query.filter(Review.status == "MERGED")
+    author = request.args.get('author', None)
+    title = request.args.get('title', None)
+    if author:
+       f = f.filter((Review.owner.contains(author)))
+    if title:
+       f = f.filter((Review.title.contains(title)))
+    query = f.order_by(desc(Review.created_date)).paginate(page, app.config["PER_PAGE"], False)
+    total = query.total
+    reviews = query.items
+    pagination = Pagination(page, app.config["PER_PAGE"], total)
+    return render_template('changes.html', type="Merged", reviews=reviews, form=form, pagination=pagination, mode="merged")
 
 
-@app.route('/changes/merged')
-def changes_merged():
-    reviews = Review.query.filter(Review.status == "MERGED").order_by(desc(Review.created_date)).limit(200).all()
-    return render_template('changes.html', type="Merged", reviews=reviews)
-
-
-
-@app.route('/changes/latest/<branch>')
-def changes_latest_in_branch(branch):
-    log = repo.hg_log(branch=branch, limit=200)
-    return render_template('log.html', log=log, branch=branch)
-
-
-#@login_required
-#@roles_required('user')
 @app.route('/inspect',  methods=['POST'])
+@login_required
+@roles_required('user')
 def inspect_diff():
     info=repo.hg_rev_info(request.form['src'])
     changeset = Changeset.query.filter(Changeset.sha1 == request.form['src']).first()
@@ -426,9 +426,9 @@ def inspect_diff():
 
 
 
-#@login_required
-#@roles_required('user')
 @app.route('/build', methods=['POST'])
+@login_required
+@roles_required('user')
 def jenkins_build():
     #jenkins.schedule_job(config.REVIEW_JOB_NAME, request.form['src'])
     info = repo.hg_rev_info(request.form['src'])
@@ -457,9 +457,10 @@ def changeset_info(review):
 
 
 
-#@login_required
-#@roles_required('admin')
+
 @app.route('/merge', methods=['POST'])
+@login_required
+@roles_required('admin')
 def merge_branch():
     sha1 = request.form['sha1']
     changeset = Changeset.query.filter(Changeset.sha1 == sha1).first()
@@ -628,6 +629,7 @@ def init_users():
     user_role = user_datastore.create_role(name="user", description="User");
     admin = user_datastore.create_user(email="roman.szalla@genesyslab.com", password=encrypt_password("password"), cc_login = "roman.szalla")
     user_datastore.add_role_to_user(admin, admin_role)
+    # user_datastore.add_role_to_user(admin, admin_role)
     admin = user_datastore.create_user(email="maciej.malycha@genesyslab.com", password=encrypt_password("password"), cc_login = "maciej")
     # dont spam maciej when testing
     #user_datastore.add_role_to_user(admin, admin_role)

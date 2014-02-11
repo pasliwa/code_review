@@ -9,7 +9,7 @@ PROPAGATE_EXCEPTIONS = True     # change to False to get email notifications upo
 LISTEN_HOST = "0.0.0.0"
 ENABLE_THREADS = True
 SECRET_KEY = "ChangeMeLater"
-PER_PAGE = 1
+PER_PAGE = 10
 
 
 # Code Collaborator settings

@@ -52,15 +52,6 @@
                     <ul class="dropdown-menu">
                         <li><a href="{{ url_for("changes_new") }}">New</a></li>
                         <li><a href="{{ url_for("changes_merged") }}">Merged</a></li>
-                        <li><a href="{{ url_for("changes_latest") }}">Latest in repo</a></li>
-                    </ul>
-                </li>
-                <li class="dropdown">
-                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">History <b class="caret"></b></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="{{ url_for("changes_latest_in_branch", branch="default") }}">Default</a></li>
-                        <li><a href="{{ url_for("changes_latest_in_branch", branch="iwd-8.1.101") }}">iwd-8.1.101</a>
-                        </li>
                     </ul>
                 </li>
             </ul>
