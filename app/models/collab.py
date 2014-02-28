@@ -1,11 +1,9 @@
-
 import subprocess, re
 from app import app, repo, User
-from app.models.Review import Review
+from app.model import Review
 
 
 class CodeCollaborator(object):
-
     def __init__(self):
         pass
 
@@ -53,7 +51,8 @@ class CodeCollaborator(object):
         # TODO: get parent revision, -1 doesn't work
         output = subprocess.check_output(
             "{cc} addhgdiffs {reviewId} -r {parent} -r {rev}".format(cc=app.config["CC_BIN"], reviewId=reviewId,
-                                                                    parent=parent, rev=revision), cwd=repoPath, shell=True)
+                                                                     parent=parent, rev=revision), cwd=repoPath,
+            shell=True)
         if "Changes successfully attached" in output:
             return (True, output)
         return (False, output)

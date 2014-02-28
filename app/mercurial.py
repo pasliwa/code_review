@@ -28,7 +28,7 @@ class Repo2(Repo):
 
     def hg_heads(self):
         res = []
-        template ="{rev}\n"
+        template = "{rev}\n"
         output = self.hg_command("heads", "--template", template)
         for rev in output.strip().split('\n'):
             info = self.hg_rev_info(rev)
@@ -69,9 +69,10 @@ class Repo2(Repo):
             print row
             # The template keyword parents is empty when the only parent is the next node
             if match is not None:
-               return {
+                return {
                     "rev": match.group("rev"),
-                    "rev_parent": match.group("rev_parent") if match.group("rev_parent") is not None else str(int(match.group("rev"))-1),
+                    "rev_parent": match.group("rev_parent") if match.group("rev_parent") is not None else str(
+                        int(match.group("rev")) - 1),
                     "desc": match.group("desc"),
                     "bookmarks": match.group("bookmarks"),
                     "changeset": match.group("changeset"),

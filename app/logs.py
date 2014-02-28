@@ -1,12 +1,12 @@
 import os
+import logging
+import logging.handlers
+from logging.handlers import SMTPHandler, RotatingFileHandler
+
 from app import app
 from app.utils import get_admin_emails
 
 ADMINS = get_admin_emails()
-
-import logging
-import logging.handlers
-from logging.handlers import SMTPHandler, RotatingFileHandler
 
 mail_handler = SMTPHandler('127.0.0.1',
                            'jenkins@pl-byd-srv01.emea.int.genesyslab.com',

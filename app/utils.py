@@ -2,24 +2,23 @@ import os
 import shutil
 from sqlalchemy import asc
 from app import jenkins, db, User, Role, app, repo
-from app.models.Build import Build
-from app.models.CodeInspection import CodeInspection
-from app.models.Review import Review
+from app.model import Build
+from app.model import CodeInspection
+from app.model import Review
 
 
 def update_build_status(changeset):
     builds = Build.query.filter(Build.changeset_id == changeset).all()
     for b in builds:
-       build_info = jenkins.get_build_info(b.job_name, b.build_number)
-       if build_info == None:
-           continue
-       b.status =  build_info["result"]
-       if build_info["building"] == True:
-           b.status = "RUNNING"
-       b.scheduled = build_info["id"]
-       db.session.add(b)
-       db.session.commit()
-
+        build_info = jenkins.get_build_info(b.job_name, b.build_number)
+        if build_info == None:
+            continue
+        b.status = build_info["result"]
+        if build_info["building"] == True:
+            b.status = "RUNNING"
+        b.scheduled = build_info["id"]
+        db.session.add(b)
+        db.session.commit()
 
 
 def find_origin_inspection(changeset):
@@ -27,13 +26,13 @@ def find_origin_inspection(changeset):
     changesets = review.changesets
     ids = []
     map((lambda x: ids.append(x.id) if x.id else x), changesets)
-    inspection = CodeInspection.query.filter(CodeInspection.changeset_id.in_(ids)).order_by(asc(CodeInspection.id)).first()
+    inspection = CodeInspection.query.filter(CodeInspection.changeset_id.in_(ids)).order_by(
+        asc(CodeInspection.id)).first()
     return inspection
 
 
-
 def get_admin_emails():
-    admins =  []
+    admins = []
     try:
         adms = User.query.join(User.roles).filter(Role.name == "admin").all()
         for a in adms:
@@ -41,7 +40,6 @@ def get_admin_emails():
     except Exception:
         pass
     return admins
-
 
 
 def repo_clone(url):

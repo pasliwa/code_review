@@ -1,10 +1,9 @@
-
-
 import json
 import requests
 import urllib
 from uuid import uuid4
 import time
+
 
 class Jenkins(object):
     def __init__(self, url, app, repo):
@@ -22,7 +21,7 @@ class Jenkins(object):
     def run_job(self, jobName, rev):
         buildNo = self.get_next_build_number(jobName)
         uuid = str(uuid4())
-        info =  self.repo.hg_rev_info(rev)
+        info = self.repo.hg_rev_info(rev)
         sha1 = info["changeset_short"]
         payload = urllib.urlencode({
             'json': json.dumps(
@@ -30,7 +29,8 @@ class Jenkins(object):
         headers = {'content-type': 'application/x-www-form-urlencoded'}
         resp = requests.post(self.url + "/job/" + jobName + "/build/api/json", data=payload, headers=headers)
         self.app.logger.debug(
-            "Scheduling Jenkins job for " + jobName + " using revision " + rev + " Expected build number is " + str(buildNo))
+            "Scheduling Jenkins job for " + jobName + " using revision " + rev + " Expected build number is " + str(
+                buildNo))
         if resp.status_code == 201:
             counter = 1;
             while (counter < 10):
@@ -52,7 +52,8 @@ class Jenkins(object):
                                         props["url"])
                                     return {"buildNo": buildNo, "url": props["url"], "result": None}
                     self.app.logger.error(
-                        "Failed job verification, possible race-condition occurred. REQUEST_ID: " + uuid + " jobname: " + jobName + " rev: " + rev + " expected build number: " + str(buildNo))
+                        "Failed job verification, possible race-condition occurred. REQUEST_ID: " + uuid + " jobname: " + jobName + " rev: " + rev + " expected build number: " + str(
+                            buildNo))
                     return None
         else:
             self.app.logger.error(
