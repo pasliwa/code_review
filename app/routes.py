@@ -2,22 +2,22 @@ from flask import render_template, flash, redirect, url_for
 from flask.ext.login import current_user
 from flask.ext.mail import Message
 from flask.globals import request
-from flask.ext.security import Security, SQLAlchemyUserDatastore, UserMixin, RoleMixin, login_required, roles_required, \
+from flask.ext.security import login_required, roles_required, \
     user_registered
 import re
-from sqlalchemy.sql.expression import or_, desc, asc, and_
+from sqlalchemy.sql.expression import desc
 import datetime
 
 from app import app, db, repo, jenkins, mail, user_datastore
 from app.hgapi.hgapi import HgException
 from app.model import Build
 from app.model import Changeset
-from app.models.collab import CodeCollaborator
+from app.collab import CodeCollaborator
 from app.model import CodeInspection
-from app.enhance import Pagination
+from app.view import Pagination
 from app.model import Review
 from app.utils import update_build_status, find_origin_inspection, get_admin_emails, repo_clone
-from forms2 import SearchForm
+from view import SearchForm
 
 
 @app.context_processor

@@ -3,6 +3,25 @@ from app import app, repo, User
 from app.model import Review
 
 
+# subprocess.check_output was introduced in 2.7 see
+# http://docs.python.org/library/subprocess.html#subprocess.check_output
+if "check_output" not in dir(subprocess):  # duck punch it in!
+    def f(*popenargs, **kwargs):
+        if 'stdout' in kwargs:
+            raise ValueError('stdout argument not allowed, it will be overridden.')
+        process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+        output, unused_err = process.communicate()
+        retcode = process.poll()
+        if retcode:
+            cmd = kwargs.get("args")
+            if cmd is None:
+                cmd = popenargs[0]
+            raise subprocess.CalledProcessError(retcode, cmd)
+        return output
+
+    subprocess.check_output = f
+
+
 class CodeCollaborator(object):
     def __init__(self):
         pass
@@ -56,4 +75,5 @@ class CodeCollaborator(object):
         if "Changes successfully attached" in output:
             return (True, output)
         return (False, output)
+
 

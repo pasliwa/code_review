@@ -14,13 +14,13 @@ user_datastore = SQLAlchemyUserDatastore(db, User, Role)
 security = Security(app, user_datastore)
 mail = Mail(app)
 
-from app.models.jenkins import Jenkins
+from app.jenkins import Jenkins
 from mercurial import Repo2
 
 repo = Repo2(app.config["REPO_PATH"])
 jenkins = Jenkins(app.config["JENKINS_URL"], app, repo)
 
-from app import enhance
+from app import view
 from app import utils
 from app import routes
 from app import logs
