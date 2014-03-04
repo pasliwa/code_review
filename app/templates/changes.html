@@ -5,19 +5,20 @@
 
 {% include "messages.html" %}
 
-
-<form class="form-inline" role="form" method="GET" action="{% if mode == "merged" %}{{ url_for("changes_merged") }} {% else %}{{ url_for("changes_new") }}{% endif %}">
-    {# {{ form.hidden_tag() }}  #}
-    <div class="form-group">
-        <label class="sr-only" for="title">Author</label>
-        <input type="text" class="form-control" name="title" id="title" value="{{ request.args.get('title', "") }}" placeholder="{{form.title.description}}">
-    </div>
-    <div class="form-group">
-        <label class="sr-only" for="author">Author</label>
-        <input type="text" class="form-control" name="author" id="author" value="{{ request.args.get('author', "") }}" placeholder="{{form.author.description}}">
-    </div>
-    <button type="submit" class="btn btn-default">Filter</button>
-</form>
+{% if form %}
+    <form class="form-inline" role="form" method="GET" action="{% if mode == "merged" %}{{ url_for("changes_merged") }} {% else %}{{ url_for("changes_active") }}{% endif %}">
+        {# {{ form.hidden_tag() }}  #}
+        <div class="form-group">
+            <label class="sr-only" for="title">Author</label>
+            <input type="text" class="form-control" name="title" id="title" value="{{ request.args.get('title', "") }}" placeholder="{{form.title.description}}">
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="author">Author</label>
+            <input type="text" class="form-control" name="author" id="author" value="{{ request.args.get('author', "") }}" placeholder="{{form.author.description}}">
+        </div>
+        <button type="submit" class="btn btn-default">Filter</button>
+    </form>
+{% endif %}
 
 
 <h1>{{ type|title }} changes</h1>
@@ -30,6 +31,10 @@
             <th>Author</th>
             <th>Created</th>
             <th>Bookmark</th>
+            <th>Target Branch</th>
+            {% if typew == "new" %}
+                <th>Actions</th>
+            {% endif %}
         </tr>
         </thead>
         <tbody>
@@ -37,10 +42,31 @@
         {% for r in reviews %}
             <tr>
                 <td>{{ loop.index }}</td>
-                <td><a href="{{ url_for("changeset_info", review=r.id) }}">{{ r.title }} </a></td>
+                <td>
+                    {% if type == "new" %}
+                       {{ r.title }}
+                    {% else %}
+                        <a href="{{ url_for("changeset_info", review=r.id) }}">{{ r.title }} </a>
+                    {% endif %}
+                </td>
                 <td>{{ r.owner }}</td>
                 <td>{{ r.created_date }}</td>
                 <td>{{ r.bookmark }}</td>
+                <td>{{ r.target }}</td>
+                {% if type == "new" %}
+                    <td>
+                        <form method="post" action="{{ url_for("changes_new") }}">
+                            <button class="btn btn-success btn-xs" type="submit"><span class="glyphicon glyphicon-play"></span> Start review</button>
+                            <input type="hidden" name="action" value="start">
+                            <input type="hidden" name="sha1" value="{{ r.sha1 }}">
+                        </form>
+                        <form method="post" action="{{ url_for("changes_new") }}">
+                            <button class="btn btn-danger btn-xs" type="submit"><span class="glyphicon glyphicon-trash"></span> Abandon</button>
+                            <input type="hidden" name="action" value="abandon">
+                            <input type="hidden" name="sha1" value="{{ r.sha1 }}">
+                        </form>
+                    </td>
+                {% endif %}
             </tr>
         {% endfor %}
         </tr>

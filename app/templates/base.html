@@ -48,6 +48,7 @@
         <div class="collapse navbar-collapse navbar-ex1-collapse">
             <ul class="nav navbar-nav">
                  <li class="{% if type == "new" %}active{% endif %}"><a href="{{ url_for("changes_new") }}">New</a></li>
+                 <li class="{% if type == "active" %}active{% endif %}"><a href="{{ url_for("changes_active") }}">Active</a></li>
                  <li class="{% if type == "merged" %}active{% endif %}"><a href="{{ url_for("changes_merged") }}">Merged</a></li>
             </ul>
             <ul class="nav navbar-nav navbar-right">

@@ -16,7 +16,7 @@ from app.collab import CodeCollaborator
 from app.model import CodeInspection
 from app.view import Pagination
 from app.model import Review
-from app.utils import update_build_status, find_origin_inspection, get_admin_emails, repo_clone
+from app.utils import update_build_status, find_origin_inspection, get_admin_emails, repo_clone, get_reviews
 from view import SearchForm
 
 
@@ -36,46 +36,75 @@ user_registered.connect(new_user_registered, app)
 
 @app.route('/')
 def index():
-    return redirect(url_for('changes_new'))
+    return redirect(url_for('changes_active'))
 
 
-@app.route('/changes/new', methods=['GET', 'POST'], defaults={'page': 1})
-@app.route('/changes/new/<int:page>')
+@app.route('/changes/new', methods=['GET', 'POST'])
 @login_required
-#@roles_required('admin')
-def changes_new(page):
-    form = SearchForm()
-    f = Review.query.filter(Review.status == "OPEN")
-    author = request.args.get('author', None)
-    title = request.args.get('title', None)
-    if author:
-        f = f.filter((Review.owner.contains(author)))
-    if title:
-        f = f.filter((Review.title.contains(title)))
-    query = f.order_by(desc(Review.created_date)).paginate(page, app.config["PER_PAGE"], False)
-    total = query.total
-    reviews = query.items
-    pagination = Pagination(page, app.config["PER_PAGE"], total)
+def changes_new():
+    if (request.method == "POST"):
+        action = request.form['action']
+
+        if action == "start":
+            info = repo.hg_rev_info(request.form['sha1'])
+            review = Review(owner=info["author"], owner_email=info["email"], title=info["desc"],
+                            bookmark=info["bookmarks"], status="ACTIVE", target="iwd-8.5.000")
+            db.session.add(review)
+            db.session.commit()
+            changeset = Changeset(info["author"], info["email"], info["desc"], request.form['sha1'], info["bookmarks"],
+                                  "ACTIVE")
+            changeset.review_id = review.id
+            db.session.add(changeset)
+            db.session.commit()
+            return redirect(url_for('changeset_info', review=review.id))
+
+        if action == "abandon":
+            info = repo.hg_rev_info(request.form['sha1'])
+            changeset = Changeset(info["author"], info["email"], info["desc"], request.form['sha1'], info["bookmarks"],
+                                  "ABANDONED")
+            db.session.add(changeset)
+            db.session.commit()
+            return redirect(url_for('changes_new'))
+
+    temp = repo.hg_heads()
+    heads, new, reviews = [], [], []
+    map((lambda x: heads.append(x) if x["bookmarks"] not in app.config["IGNORED_BRANCHES"] else x), temp)
+    for h in heads:
+        h['src'] = h['bookmarks']
+        sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
+        count = Changeset.query.filter(Changeset.sha1 == h["changeset"]).count()
+        if (count < 1):
+            new.append(h)
+
+    for h in new:
+        review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"],
+                        bookmark=h["bookmarks"], status="NEW", target="iwd-8.5.000")
+        review.id = 0
+        review.sha1 = h["changeset"]
+        reviews.append(review)
+
+    pagination = Pagination(1, 1, 1)
+
     return render_template('changes.html', type="new", reviews=reviews, productBranches=app.config["PRODUCT_BRANCHES"],
-                           form=form, pagination=pagination)
+                           pagination=pagination)
+
+
+@app.route('/changes/active', methods=['GET', 'POST'], defaults={'page': 1})
+@app.route('/changes/active/<int:page>')
+@login_required
+def changes_active(page):
+    form = SearchForm()
+    data = get_reviews("OPEN", page, request)
+    return render_template('changes.html', type="active", reviews=data["r"], productBranches=app.config["PRODUCT_BRANCHES"],
+                           form=form, pagination=data["p"])
 
 
 @app.route('/changes/merged', methods=['GET', 'POST'], defaults={'page': 1})
 @app.route('/changes/merged/<int:page>')
 def changes_merged(page):
     form = SearchForm()
-    f = Review.query.filter(Review.status == "MERGED")
-    author = request.args.get('author', None)
-    title = request.args.get('title', None)
-    if author:
-        f = f.filter((Review.owner.contains(author)))
-    if title:
-        f = f.filter((Review.title.contains(title)))
-    query = f.order_by(desc(Review.created_date)).paginate(page, app.config["PER_PAGE"], False)
-    total = query.total
-    reviews = query.items
-    pagination = Pagination(page, app.config["PER_PAGE"], total)
-    return render_template('changes.html', type="merged", reviews=reviews, form=form, pagination=pagination)
+    data = get_reviews("MERGED", page, request)
+    return render_template('changes.html', type="merged", reviews=data["r"], form=form, pagination=data["p"])
 
 
 @app.route('/inspect', methods=['POST'])
@@ -308,7 +337,7 @@ def repo_scan():
             app.logger.info("Created new review for changeset id:" + str(changeset.id) + ", review: " + str(review))
 
         app.logger.info(changeset)
-    return redirect(url_for('changes_new'))
+    return redirect(url_for('changes_active'))
 
 
 #@login_required
@@ -339,6 +368,6 @@ def repo_sync():
     except HgException as e:
         if "no changes found" in e:
             app.logger.info("No new changes locally so there is nothing to push")
-    return redirect(url_for('changes_new'))
+    return redirect(url_for('changes_active'))
 
 

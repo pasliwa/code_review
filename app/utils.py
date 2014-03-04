@@ -1,10 +1,12 @@
 import os
 import shutil
 from sqlalchemy import asc
+from sqlalchemy.sql import desc
 from app import jenkins, db, User, Role, app, repo
 from app.model import Build
 from app.model import CodeInspection
 from app.model import Review
+from app.view import SearchForm, Pagination
 
 
 def update_build_status(changeset):
@@ -51,3 +53,18 @@ def repo_clone(url):
     repo.hg_clone(url, path)
     repo.hg_update("null", True)
     print("HG clone finished")
+
+
+def get_reviews(status, page, request):
+    f = Review.query.filter(Review.status == status)
+    author = request.args.get('author', None)
+    title = request.args.get('title', None)
+    if author:
+        f = f.filter((Review.owner.contains(author)))
+    if title:
+        f = f.filter((Review.title.contains(title)))
+    query = f.order_by(desc(Review.created_date)).paginate(page, app.config["PER_PAGE"], False)
+    total = query.total
+    reviews = query.items
+    pagination = Pagination(page, app.config["PER_PAGE"], total)
+    return {"r": reviews, "p": pagination}

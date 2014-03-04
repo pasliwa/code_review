@@ -59,7 +59,7 @@ class Changeset(db.Model):
     created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     title = db.Column(db.String(120))
     sha1 = db.Column(db.String(40), index=True)
-    status = db.Column(db.String(20))
+    status = db.Column(db.String(20)) # ACTIVE, ABANDONED
     bookmark = db.Column(db.String(120))
     builds = db.relationship("Build")
     inspections = db.relationship("CodeInspection")
@@ -105,15 +105,14 @@ class Review(db.Model):
     close_date = db.Column(db.DateTime)
     title = db.Column(db.String(120))
     bookmark = db.Column(db.String(120))
-    status = db.Column(db.String(20))
+    status = db.Column(db.String(20))   # ACTIVE, MERGED, ABANDONED
     target = db.Column(db.String(20))
     changesets = db.relationship("Changeset", order_by=desc("created_date"))
 
-    def __init__(self, owner=None, owner_email=None, title=None, sha1=None, bookmark=None, status=None, target=None):
+    def __init__(self, owner=None, owner_email=None, title=None, bookmark=None, status=None, target=None):
         self.owner = owner
         self.owner_email = owner_email
         self.title = title
-        self.sha1 = sha1
         self.bookmark = bookmark
         self.status = status
         self.target = target
