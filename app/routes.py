@@ -103,7 +103,6 @@ def inspect_diff():
 @login_required
 @roles_required('user')
 def jenkins_build():
-    #jenkins.schedule_job(config.REVIEW_JOB_NAME, request.form['src'])
     info = repo.hg_rev_info(request.form['src'])
     changeset = Changeset.query.filter(Changeset.sha1 == info['changeset']).first()
     build = Build(changeset_id=changeset.id, status="SCHEDULED", job_name=request.form['release'] + "-REVIEW")
@@ -246,14 +245,12 @@ def run_scheduled_jobs():
         changeset = Changeset.query.filter(Changeset.id == b.changeset_id).first()
         build_info = jenkins.run_job(b.job_name, changeset.sha1)
         if build_info is None:
-            app.logger.error("Unable to submit scheduled Jenkins job. Name: " + app.config[
-                "REVIEW_JOB_NAME"] + " , changeset: " + str(changeset))
+            app.logger.error("Unable to submit scheduled Jenkins job. Name: " + b.job_name + " , changeset: " + str(changeset))
             continue
         b.build_number = build_info["buildNo"]
         b.build_url = build_info["url"]
         b.scheduled = datetime.datetime.utcnow()
         b.status = "RUNNING"
-        #b.job_name = app.config["REVIEW_JOB_NAME"]
         db.session.add(b)
         db.session.commit()
         app.logger.info("Build id " + str(b.id) + " has been sent to Jenkins.")
@@ -344,26 +341,5 @@ def repo_sync():
         if "no changes found" in e:
             app.logger.info("No new changes locally so there is nothing to push")
     return redirect(url_for('changes_new'))
-
-
-#@login_required
-#@roles_required('admin')
-@app.route('/init_repo')
-def init_repo():
-    repo_clone("http://pl-byd-srv01.emea.int.genesyslab.com/hg/iwd8")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -47,5 +47,7 @@ def repo_clone(url):
     if os.path.exists(path):
         shutil.rmtree(path)
     os.mkdir(path)
+    print("HG clone repo '{repo}' into '{path}'".format(repo=url, path=path))
     repo.hg_clone(url, path)
     repo.hg_update("null", True)
+    print("HG clone finished")

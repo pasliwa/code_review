@@ -27,15 +27,15 @@ CC_REVIEW_URL = "http://rd-w2k8.us.int.genesyslab.com:9090/go?page=ReviewDisplay
 
 # Jenkins settings
 JENKINS_URL = "http://pl-byd-srv01.emea.int.genesyslab.com:18080"
-REVIEW_JOB_NAME = "iwd_8.5.000-REVIEW"
-
 
 
 # Mercurial settings
 REPO_PATH = "/home/jenkins/code_review/app/repo"
+HG_PROD = "http://pl-byd-srv01.emea.int.genesyslab.com/hg/iwd8"
 PRODUCT_BRANCHES = (
 "iwd-8.5.000", "master", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003")
 IGNORED_BRANCHES = ("test", "qatest/datamart", "iwd_history_nosql")
+
 
 
 # Flask-Security
