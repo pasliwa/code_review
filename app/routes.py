@@ -56,7 +56,7 @@ def changes_new(page):
     total = query.total
     reviews = query.items
     pagination = Pagination(page, app.config["PER_PAGE"], total)
-    return render_template('changes.html', type="New", reviews=reviews, productBranches=app.config["PRODUCT_BRANCHES"],
+    return render_template('changes.html', type="new", reviews=reviews, productBranches=app.config["PRODUCT_BRANCHES"],
                            form=form, pagination=pagination)
 
 
@@ -75,8 +75,7 @@ def changes_merged(page):
     total = query.total
     reviews = query.items
     pagination = Pagination(page, app.config["PER_PAGE"], total)
-    return render_template('changes.html', type="Merged", reviews=reviews, form=form, pagination=pagination,
-                           mode="merged")
+    return render_template('changes.html', type="merged", reviews=reviews, form=form, pagination=pagination)
 
 
 @app.route('/inspect', methods=['POST'])
