@@ -1,9 +1,9 @@
 import os
 import shutil
 from sqlalchemy import asc
-from sqlalchemy.sql import desc
+from sqlalchemy.sql import desc, and_
 from app import jenkins, db, User, Role, app, repo
-from app.model import Build
+from app.model import Build, Changeset
 from app.model import CodeInspection
 from app.model import Review
 from app.view import SearchForm, Pagination
@@ -68,3 +68,35 @@ def get_reviews(status, page, request):
     reviews = query.items
     pagination = Pagination(page, app.config["PER_PAGE"], total)
     return {"r": reviews, "p": pagination}
+
+
+def get_new():
+    temp = repo.hg_heads()
+    heads, new, reviews = [], [], []
+
+    # remove all official bookmarks
+    map((lambda x: heads.append(x) if x["bookmarks"] not in app.config["IGNORED_BRANCHES"] + app.config[
+        "PRODUCT_BRANCHES"] else x), temp)
+
+    for h in heads:
+        h['src'] = h['bookmarks']
+        sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
+        count = Changeset.query.filter(Changeset.sha1 == h["changeset"]).count()
+        # make sure changeset is not part of any review
+        if (count < 1):
+            # make sure changeset is not direct ancestor of changeset that is already in an active review
+            parent_rev = repo.hg_parent(sha1)
+            parent = repo.hg_rev_info(parent_rev)
+            count = Changeset.query.filter(
+                and_(Changeset.sha1 == parent["changeset"], Changeset.review_id != None)).count()
+            if (count < 1):
+                new.append(h)
+
+    for h in new:
+        review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"],
+                        bookmark=h["bookmarks"], status="NEW", target="iwd-8.5.000")
+        review.id = 0
+        review.sha1 = h["changeset"]
+        reviews.append(review)
+
+    return reviews

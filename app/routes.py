@@ -16,7 +16,7 @@ from app.collab import CodeCollaborator
 from app.model import CodeInspection
 from app.view import Pagination
 from app.model import Review
-from app.utils import update_build_status, find_origin_inspection, get_admin_emails, repo_clone, get_reviews
+from app.utils import update_build_status, find_origin_inspection, get_admin_emails, repo_clone, get_reviews, get_new
 from view import SearchForm
 
 
@@ -66,23 +66,7 @@ def changes_new():
             db.session.commit()
             return redirect(url_for('changes_new'))
 
-    temp = repo.hg_heads()
-    heads, new, reviews = [], [], []
-    map((lambda x: heads.append(x) if x["bookmarks"] not in app.config["IGNORED_BRANCHES"] else x), temp)
-    for h in heads:
-        h['src'] = h['bookmarks']
-        sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
-        count = Changeset.query.filter(Changeset.sha1 == h["changeset"]).count()
-        if (count < 1):
-            new.append(h)
-
-    for h in new:
-        review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"],
-                        bookmark=h["bookmarks"], status="NEW", target="iwd-8.5.000")
-        review.id = 0
-        review.sha1 = h["changeset"]
-        reviews.append(review)
-
+    reviews = get_new()
     pagination = Pagination(1, 1, 1)
 
     return render_template('changes.html', type="new", reviews=reviews, productBranches=app.config["PRODUCT_BRANCHES"],
