@@ -94,7 +94,7 @@ def changes_new():
 @login_required
 def changes_active(page):
     form = SearchForm()
-    data = get_reviews("OPEN", page, request)
+    data = get_reviews("ACTIVE", page, request)
     return render_template('changes.html', type="active", reviews=data["r"], productBranches=app.config["PRODUCT_BRANCHES"],
                            form=form, pagination=data["p"])
 
@@ -147,10 +147,19 @@ def jenkins_build():
 def changeset_info(review):
     review = Review.query.filter(Review.id == review).first()
     if request.method == 'POST':
-        review.target = request.form['target']
-        db.session.add(review)
-        db.session.commit()
-        flash("Target branch has been set to <b>{b}</b>".format(b=review.target), "notice")
+        if request.form["action"] == "abandon":
+            review.status = "ABANDONED"
+            db.session.add(review)
+            for c in review.changesets:
+                c.status = "ABANDONED"
+                db.session.add(c)
+            db.session.commit()
+            flash("Review has been abandoned", "notice")
+        if request.form["action"] == "target":
+            review.target = request.form['target']
+            db.session.add(review)
+            db.session.commit()
+            flash("Target branch has been set to <b>{b}</b>".format(b=review.target), "notice")
     for c in review.changesets:
         update_build_status(c.id)
     return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"])

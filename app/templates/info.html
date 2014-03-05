@@ -19,15 +19,16 @@
                 {% endif %}
                 <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ review.bookmark }} &nbsp;</span></div>
                 <div><span class="col-lg-2 text-right">Status</span>
-                    {% if review.status == "OPEN" %}
+                    {% if review.status == "ACTIVE" %}
                         <span class="label label-success">
                     {% elif review.status == "MERGED" %}
                         <span class="label label-default">
                     {% else %}
-                        <span class="label">
+                        <span class="label label-info">
                     {% endif %}
                     {{ review.status }}
                     </span>
+
                 </div>
                 <br/>
                 <div><span class="col-lg-2 text-right">Target branch</span><span>
@@ -42,6 +43,7 @@
                                     {% endfor %}
                                 </select>
                             </div>
+                            <input type="hidden" name="action" value="target">
                             <button class="btn btn-sm btn-info" type="submit"><span
                                     class="glyphicon glyphicon-save"></span>
                                Save
@@ -73,9 +75,10 @@
                 <div><span class="col-lg-2 text-right">Owner</span><span>{{ r.owner }} (<a
                         href="mailto:{{ r.owner_email }}">{{ r.owner_email }}</a>)</span></div>
                 <div><span class="col-lg-2 text-right">Created</span><span>{{ r.created_date }}</span></div>
-                <div><span class="col-lg-2 text-right">SHA1</span><span>{{ r.sha1 }}</span></div>
-                <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ r.bookmark }}</span></div>
-                <div><span class="col-lg-2 text-right">Revision</span><span>{{ r.revision }}</span></div>
+                <div><span class="col-lg-2 text-right">SHA1</span><span>{{ r.sha1 }}&nbsp;</span></div>
+                <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ r.bookmark }}&nbsp;</span></div>
+                <div><span class="col-lg-2 text-right">Revision</span><span>{{ r.revision }}&nbsp;</span></div>
+                <div><span class="col-lg-2 text-right">Status</span><span>{{ r.status }}&nbsp;</span> </div>
             </div>
         </div>
 
@@ -178,15 +181,32 @@
             </div>
             <div class="panel-body">
                 {# merge #}
-                <form method="post" class="form-horizontal" action="{{ url_for("merge_branch") }}">
-                    <div class="form-group">
-                        <label for="inputEmail3" class="col-sm-4 control-label">Merge this changeset with "{{ review.target }}" branch</label>
-                        <input type="hidden" name="sha1" value="{{ r.sha1 }}">
-                        <button class="btn btn-danger btn-sm" type="submit"><span
-                                class="glyphicon glyphicon-check"></span> merge
-                        </button>
-                    </div>
-                </form>
+                <div>
+                    <form method="post" class="form-horizontal" action="{{ url_for("merge_branch") }}">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Merge this changeset with "{{ review.target }}"
+                                branch</label>
+                            <input type="hidden" name="sha1" value="{{ r.sha1 }}">
+                            <button class="btn btn-danger btn-sm" type="submit"><span
+                                    class="glyphicon glyphicon-check"></span> merge
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div>
+                    <form class="form-horizontal" method="post"
+                          action="{{ url_for("changeset_info", review=review.id) }}">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Abandon this review</label>
+                            <button class="btn btn-danger btn-sm confirmation-needed"
+                                    data-question="Are you sure you want to ABANDON this review?" type="submit"><span
+                                    class="glyphicon glyphicon-trash"></span> Abandon
+                            </button>
+                            <input type="hidden" name="action" value="abandon">
+                            <input type="hidden" name="sha1" value="{{ r.sha1 }}">
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
