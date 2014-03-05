@@ -5,7 +5,7 @@ from flask.globals import request
 from flask.ext.security import login_required, roles_required, \
     user_registered
 import re
-from sqlalchemy.sql.expression import desc
+from sqlalchemy.sql.expression import desc, and_
 import datetime
 
 from app import app, db, repo, jenkins, mail, user_datastore
@@ -144,15 +144,24 @@ def changeset_info(review):
             db.session.add(review)
             db.session.commit()
             flash("Target branch has been set to <b>{b}</b>".format(b=review.target), "notice")
+        if request.form["action"] == "abandon_changeset":
+            changeset = Changeset.query.filter(Changeset.sha1 == request.form["sha1"]).first()
+            if changeset is None:
+                info = repo.hg_rev_info(request.form["sha1"])
+                changeset = Changeset(info["author"], info["email"], info["desc"], info["changeset"], info["bookmarks"])
+                changeset.review_id = review.id
+            changeset.status = "ABANDONED"
+            db.session.add(changeset)
+            db.session.commit()
+            flash("Changeset '{title}' (SHA1: {sha1}) has been abandoned".format(title=changeset.title,
+                                                                                 sha1=changeset.sha1), "notice")
 
-
-    descendants, heads = [], []
-    newset_changeset = Changeset.query.filter(Review.id == review.id).order_by(desc(Changeset.created_date)).first()
+    descendants, heads, dec_heads = [], [], []
+    newset_changeset = Changeset.query.filter(and_(Review.id == review.id, Changeset.status == "ACTIVE")).order_by(desc(Changeset.created_date)).first()
 
     decs = repo.hg_log(identifier="descendants({sha1})".format(sha1=newset_changeset.sha1), template="{node}\n")
     for row in decs.strip().split('\n'):
-        if row is not "\n":
-            descendants.append(row)
+        descendants.append(row)
 
     temp = repo.hg_heads()
     map((lambda x: heads.append(x["changeset"]) if x["rev"] is not None else x), temp)
@@ -160,11 +169,14 @@ def changeset_info(review):
     descendants = set(descendants)
     heads = set(heads)
 
-    dec_heads = descendants.intersection(heads)
+    common = descendants.intersection(heads)
+    for c in common:
+        info = repo.hg_rev_info(c)
+        dec_heads.append(info)
 
     for c in review.changesets:
         update_build_status(c.id)
-    return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"])
+    return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"], descendants=dec_heads)
 
 
 @app.route('/merge', methods=['POST'])

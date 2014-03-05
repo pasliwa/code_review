@@ -55,6 +55,53 @@
         </div>
 
 
+<table class="table table-hover">
+    <thead>
+        <th>No.</th>
+        <th>Title</th>
+        <th>SHA1</th>
+        <th>Created</th>
+        <th>Status</th>
+        <th>Build</th>
+    </thead>
+    <tbody>
+        {% for c in review.changesets %}
+        <tr>
+            <td>{{ c.id }}</td>
+            <td>{{ c.title }}</td>
+            <td><code>{{ c.sha1 }}</code></td>
+            <td>{{ c.created_date }}</td>
+            <td>{{ c.status }}</td>
+            <td>{% if c.builds|length > 0 %} {{ c.builds[-1].status }} {% endif %}</td>
+        </tr>
+        {% endfor %}
+        {% for c in descendants %}
+        <tr>
+            <td></td>
+            <td>{{ c.desc }}</td>
+            <td><code>{{ c.changeset }}</code></td>
+            <td>
+                <form method="post" action="{{ url_for("changeset_info", review=review.id) }}">
+                    <input type="hidden" name="action" value="rework">
+                    <input type="hidden" name="sha1" value="{{ c.changeset }}">
+                    <button type="submit" class="btn btn-success btn-sm"><span class="glyphicon glyphicon-plus-sign"></span> Add as rework</button>
+                </form>
+            </td>
+            <td>
+                <form method="post" action="{{ url_for("changeset_info", review=review.id) }}">
+                    <input type="hidden" name="action" value="abandon_changeset">
+                    <input type="hidden" name="sha1" value="{{ c.changeset }}">
+                    <button type="submit" class="btn btn-danger btn-sm confirmation-needed" data-question="Are you sure you want to ABANDON this changeset?"><span class="glyphicon glyphicon-trash"></span> Abandon</button>
+                </form>
+            </td>
+            <td></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+
+
     <!-- Nav tabs -->
     <ul class="nav nav-tabs">
         {% for r in review.changesets %}
@@ -75,7 +122,7 @@
                 <div><span class="col-lg-2 text-right">Owner</span><span>{{ r.owner }} (<a
                         href="mailto:{{ r.owner_email }}">{{ r.owner_email }}</a>)</span></div>
                 <div><span class="col-lg-2 text-right">Created</span><span>{{ r.created_date }}</span></div>
-                <div><span class="col-lg-2 text-right">SHA1</span><span>{{ r.sha1 }}&nbsp;</span></div>
+                <div><span class="col-lg-2 text-right">SHA1</span><span><code>{{ r.sha1 }}</code>&nbsp;</span></div>
                 <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ r.bookmark }}&nbsp;</span></div>
                 <div><span class="col-lg-2 text-right">Revision</span><span>{{ r.revision }}&nbsp;</span></div>
                 <div><span class="col-lg-2 text-right">Status</span><span>{{ r.status }}&nbsp;</span> </div>
