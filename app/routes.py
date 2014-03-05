@@ -144,6 +144,24 @@ def changeset_info(review):
             db.session.add(review)
             db.session.commit()
             flash("Target branch has been set to <b>{b}</b>".format(b=review.target), "notice")
+
+
+    descendants, heads = [], []
+    newset_changeset = Changeset.query.filter(Review.id == review.id).order_by(desc(Changeset.created_date)).first()
+
+    decs = repo.hg_log(identifier="descendants({sha1})".format(sha1=newset_changeset.sha1), template="{node}\n")
+    for row in decs.strip().split('\n'):
+        if row is not "\n":
+            descendants.append(row)
+
+    temp = repo.hg_heads()
+    map((lambda x: heads.append(x["changeset"]) if x["rev"] is not None else x), temp)
+
+    descendants = set(descendants)
+    heads = set(heads)
+
+    dec_heads = descendants.intersection(heads)
+
     for c in review.changesets:
         update_build_status(c.id)
     return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"])
