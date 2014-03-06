@@ -174,9 +174,17 @@ def changeset_info(review):
         info = repo.hg_rev_info(c)
         dec_heads.append(info)
 
+    # filter out all changesets that are already in db
+    final = []
+    for c in dec_heads:
+        cs = Changeset.query.filter(Changeset.sha1 == c["changeset"]).first()
+        if (cs is None):
+            final.append(c)
+
+
     for c in review.changesets:
         update_build_status(c.id)
-    return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"], descendants=dec_heads)
+    return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"], descendants=final)
 
 
 @app.route('/merge', methods=['POST'])
