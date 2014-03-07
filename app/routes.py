@@ -56,7 +56,7 @@ def changes_new():
             changeset.review_id = review.id
             db.session.add(changeset)
             db.session.commit()
-            return redirect(url_for('changeset_info', review=review.id))
+            return redirect(url_for('review_info', review=review.id))
 
         if action == "abandon":
             info = repo.hg_rev_info(request.form['sha1'])
@@ -79,7 +79,8 @@ def changes_new():
 def changes_active(page):
     form = SearchForm()
     data = get_reviews("ACTIVE", page, request)
-    return render_template('changes.html', type="active", reviews=data["r"], productBranches=app.config["PRODUCT_BRANCHES"],
+    return render_template('changes.html', type="active", reviews=data["r"],
+                           productBranches=app.config["PRODUCT_BRANCHES"],
                            form=form, pagination=data["p"])
 
 
@@ -106,7 +107,7 @@ def inspect_diff():
     app.logger.info("Code Collaborator review for changeset id " + str(
         changeset.id) + " has been added to queue. Changeset: " + str(changeset))
     flash("Code Collaborator review has been scheduled for processing", "notice")
-    return redirect(url_for('changeset_info', review=request.form['back_id']))
+    return redirect(url_for('changeset_info', sha1=request.form['back_id']))
 
 
 #
@@ -124,13 +125,36 @@ def jenkins_build():
         "Jenkins build for changeset id " + str(changeset.id) + " has been added to queue. Changeset: " + str(
             changeset) + " , build: " + str(build))
     flash("Jenkins build has been scheduled for processing", "notice")
-    return redirect(url_for('changeset_info', review=request.form['back_id']))
+    return redirect(url_for('changeset_info', sha1=request.form['back_id']))
 
 
-@app.route('/info/<review>', methods=['POST', 'GET'])
-def changeset_info(review):
+@app.route('/changeset/<sha1>', methods=['POST', 'GET'])
+def changeset_info(sha1):
+    cs = Changeset.query.filter(Changeset.sha1 == sha1).first()
+    review = Review.query.filter(Review.id == cs.review_id).first()
+    return render_template("changeset.html", review=review, cs = cs)
+
+
+
+@app.route('/review/<review>', methods=['POST', 'GET'])
+def review_info(review):
     review = Review.query.filter(Review.id == review).first()
     if request.method == 'POST':
+        if request.form["action"] == "rework":
+            # make sure cs doesnt exist
+            cs = Changeset.query.filter(Changeset.sha1 == request.form["sha1"]).first()
+            if cs is None:
+                info = repo.hg_rev_info(request.form["sha1"])
+                cs = Changeset(info["author"], info["email"], info["desc"], info["changeset"], info["bookmarks"],
+                               "ACTIVE")
+                cs.review_id = review.id
+                db.session.add(cs)
+                db.session.commit()
+                flash(
+                    "Changeset '{title}' (SHA1: {sha1}) has been marked as rework".format(title=cs.title, sha1=cs.sha1),
+                    "notice")
+            else:
+                flash("Error - changeset already exists", "error")
         if request.form["action"] == "abandon":
             review.status = "ABANDONED"
             db.session.add(review)
@@ -157,7 +181,8 @@ def changeset_info(review):
                                                                                  sha1=changeset.sha1), "notice")
 
     descendants, heads, dec_heads = [], [], []
-    newset_changeset = Changeset.query.filter(and_(Review.id == review.id, Changeset.status == "ACTIVE")).order_by(desc(Changeset.created_date)).first()
+    newset_changeset = Changeset.query.filter(and_(Review.id == review.id, Changeset.status == "ACTIVE")).order_by(
+        desc(Changeset.created_date)).first()
 
     decs = repo.hg_log(identifier="descendants({sha1})".format(sha1=newset_changeset.sha1), template="{node}\n")
     for row in decs.strip().split('\n'):
@@ -181,10 +206,10 @@ def changeset_info(review):
         if (cs is None):
             final.append(c)
 
-
     for c in review.changesets:
         update_build_status(c.id)
-    return render_template("info.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"], descendants=final)
+    return render_template("review.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"],
+                           descendants=final)
 
 
 @app.route('/merge', methods=['POST'])
@@ -200,7 +225,7 @@ def merge_branch():
     else:
         bookmark = review.target
 
-    link = url_for("changeset_info", review=review.id, _external=True)
+    link = url_for("review_info", review=review.id, _external=True)
 
     repo_sync()
 
@@ -304,7 +329,8 @@ def run_scheduled_jobs():
         changeset = Changeset.query.filter(Changeset.id == b.changeset_id).first()
         build_info = jenkins.run_job(b.job_name, changeset.sha1)
         if build_info is None:
-            app.logger.error("Unable to submit scheduled Jenkins job. Name: " + b.job_name + " , changeset: " + str(changeset))
+            app.logger.error(
+                "Unable to submit scheduled Jenkins job. Name: " + b.job_name + " , changeset: " + str(changeset))
             continue
         b.build_number = build_info["buildNo"]
         b.build_url = build_info["url"]

@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+
+    {% include "messages.html" %}
+
+    <div class="panel panel-primary">
+        <div class="panel-heading">
+            <h3 class="panel-title">Review <b>{{ review.title }}</b></h3>
+        </div>
+        <div class="panel-body">
+            <div><span class="col-lg-2 text-right">Title</span><span><b>{{ review.title }}</b></span></div>
+            <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner }} (<a
+                    href="mailto:{{ review.owner_email }}">{{ review.owner_email }}</a>)</span></div>
+            <div><span class="col-lg-2 text-right">Created</span><span>{{ review.created_date }}</span></div>
+            {% if review.close_date is not none %}
+                <div><span class="col-lg-2 text-right">Closed</span><span>{{ review.close_date }}</span></div>
+            {% endif %}
+            <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ review.bookmark }} &nbsp;</span></div>
+            <div><span class="col-lg-2 text-right">Status</span>
+                {% if review.status == "ACTIVE" %}
+                    <span class="label label-success">
+                {% elif review.status == "MERGED" %}
+                    <span class="label label-default">
+                {% else %}
+                    <span class="label label-info">
+                {% endif %}
+                {{ review.status }}
+                </span>
+
+            </div>
+            <div><span class="col-lg-2 text-right">Target branch</span><span>
+                    {{ review.target }}
+                </span></div>
+        </div>
+    </div>
+
+
+
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">Changeset <b>{{ cs.title }}</b> <a class="btn-sm btn btn-default"
+                                                                       href="{{ url_for("review_info", review=review.id) }}"><span
+                    class="glyphicon glyphicon-home"></span> back to review</a></h3>
+        </div>
+        <div class="panel-body">
+            <div><span class="col-lg-2 text-right">Title</span><span><b>{{ cs.title }}</b></span></div>
+            <div><span class="col-lg-2 text-right">Owner</span><span>{{ cs.owner }} (<a
+                    href="mailto:{{ cs.owner_email }}">{{ cs.owner_email }}</a>)</span></div>
+            <div><span class="col-lg-2 text-right">Created</span><span>{{ cs.created_date }}</span></div>
+            <div><span class="col-lg-2 text-right">SHA1</span><span><code>{{ cs.sha1 }}</code>&nbsp;</span></div>
+            <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ cs.bookmark }}&nbsp;</span></div>
+            <div><span class="col-lg-2 text-right">Status</span><span>{{ cs.status }}&nbsp;</span></div>
+        </div>
+    </div>
+
+    <div class="panel panel-success">
+        <div class="panel-heading">
+            <h3 class="panel-title">Jenkins builds <a class="btn-sm btn btn-default"
+                                                      href="{{ url_for("review_info", review=review.id) }}"><span
+                    class="glyphicon glyphicon-home"></span> back to review</a></h3>
+        </div>
+        <div class="panel-body">
+            <form method="post" action="{{ url_for("jenkins_build") }}">
+                <input type="hidden" name="src" value="{{ cs.sha1 }}"/>
+                <input type="hidden" name="back_id" value="{{ cs.sha1 }}"/>
+                <input type="hidden" name="release" value="{{ review.target }}"/>
+
+                <div class="form-group">
+                    <input type="hidden" name="src" value="{{ cs.revision }}">
+                    <button class="btn btn-sm btn-success" type="submit"><span class="glyphicon glyphicon-plus"></span>
+                        Run Jenkins
+                        build
+                    </button>
+                </div>
+            </form>
+            <table class="table table-hover table-condensed">
+                <thead>
+                <tr>
+                    <th>Build No</th>
+                    <th>Scheduled</th>
+                    <th>Url</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for b in cs.builds %}
+                    <tr>
+                        <td>{{ b.build_number }}</td>
+                        <td>{{ b.scheduled }}</td>
+                        <td><a target="_blank" href="{{ b.build_url }}">{{ b.build_url }}</a></td>
+                        <td>
+                            {% if b.status == "SUCCESS" %}
+                                <span class="label label-success">
+                            {% elif b.status == "FAILURE" %}
+                                <span class="label label-danger">
+                            {% else %}
+                                <span class="label label-default">
+                            {% endif %}
+                            {{ b.status }}
+                            </span>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel panel-info">
+        <div class="panel-heading">
+            <h3 class="panel-title">CodeCollaborator inspections <a class="btn-sm btn btn-default"
+                                                                    href="{{ url_for("review_info", review=review.id) }}"><span
+                    class="glyphicon glyphicon-home"></span> back to review</a></h3>
+        </div>
+        <div class="panel-body">
+            <form method="post" action="{{ url_for("inspect_diff") }}">
+                <input type="hidden" name="src" value="{{ cs.sha1 }}"/>
+                <input type="hidden" name="back_id" value="{{ cs.sha1 }}"/>
+                <button class="btn btn-sm btn-info" type="submit"><span class="glyphicon glyphicon-plus"></span> New
+                    inspection
+                </button>
+            </form>
+            <table class="table table-hover table-condensed">
+                <thead>
+                <tr>
+                    <th>Inspection No</th>
+                    <th>Inspection URL</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for i in cs.inspections %}
+                    <tr>
+                        <td>{{ i.inspection_number }}</td>
+                        <td><a target="_blank" href="{{ i.inspection_url }}">{{ i.inspection_url }}</a></td>
+                        <td>
+                            {% if i.status == "SUCCESS" %}
+                                <span class="label label-success">
+                            {% elif i.status == "FAILURE" %}
+                                <span class="label label-danger">
+                            {% else %}
+                                <span class="label label-default">
+                            {% endif %}
+                            {{ i.status }}
+                            </span>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="panel panel-danger">
+        <div class="panel-heading">
+            <h3 class="panel-title">Administrative operations</h3>
+        </div>
+        <div class="panel-body">
+            {# merge #}
+            <div>
+                <form method="post" class="form-horizontal" action="{{ url_for("merge_branch") }}">
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Merge this changeset with "{{ review.target }}"
+                            branch</label>
+                        <input type="hidden" name="sha1" value="{{ cs.sha1 }}">
+                        <button class="btn btn-danger btn-sm" type="submit"><span
+                                class="glyphicon glyphicon-check"></span> merge
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div>
+                <form class="form-horizontal" method="post"
+                      action="{{ url_for("review_info", review=review.id) }}">
+                    <div class="form-group">
+                        <label class="col-sm-4 control-label">Abandon this review</label>
+                        <button class="btn btn-danger btn-sm confirmation-needed"
+                                data-question="Are you sure you want to ABANDON this review?" type="submit"><span
+                                class="glyphicon glyphicon-trash"></span> Abandon
+                        </button>
+                        <input type="hidden" name="action" value="abandon">
+                        <input type="hidden" name="sha1" value="{{ cs.sha1 }}">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+
+
+    <script>
+        $(function () {
+
+
+        });
+    </script>
+
+{% endblock %}

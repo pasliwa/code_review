@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+
+    {% include "messages.html" %}
+
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h3 class="panel-title">Review <b>{{ review.title }}</b></h3>
+            </div>
+            <div class="panel-body">
+                <div><span class="col-lg-2 text-right">Title</span><span><b>{{ review.title }}</b></span></div>
+                <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner }} (<a
+                        href="mailto:{{ review.owner_email }}">{{ review.owner_email }}</a>)</span></div>
+                <div><span class="col-lg-2 text-right">Created</span><span>{{ review.created_date }}</span></div>
+                {% if review.close_date is not none %}
+                    <div><span class="col-lg-2 text-right">Closed</span><span>{{ review.close_date }}</span></div>
+                {% endif %}
+                <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ review.bookmark }} &nbsp;</span></div>
+                <div><span class="col-lg-2 text-right">Status</span>
+                    {% if review.status == "ACTIVE" %}
+                        <span class="label label-success">
+                    {% elif review.status == "MERGED" %}
+                        <span class="label label-default">
+                    {% else %}
+                        <span class="label label-info">
+                    {% endif %}
+                    {{ review.status }}
+                    </span>
+
+                </div>
+                <br/>
+                <div><span class="col-lg-2 text-right">Target branch</span><span>
+                    <form method="post" action="{{ url_for("review_info", review=review.id) }}">
+
+
+                        <div class="form-group">
+                            <div class="col-sm-2">
+                                <select id="inputEmail4" class="form-control" name="target">
+                                    {% for pb in productBranches %}
+                                        <option {% if review.target == pb %}selected{% endif %} value="{{ pb }}">{{ pb }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <input type="hidden" name="action" value="target">
+                            <button class="btn btn-sm btn-info" type="submit"><span
+                                    class="glyphicon glyphicon-save"></span>
+                               Save
+                            </button>
+                        </div>
+                    </form>
+                </span></div>
+            </div>
+        </div>
+
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <h3 class="panel-title">Changesets</h3>
+            </div>
+            <div class="panel-body">
+                <table class="table table-hover">
+                    <thead>
+                        <th>No.</th>
+                        <th>Title</th>
+                        <th>SHA1</th>
+                        <th>Created</th>
+                        <th>Status</th>
+                        <th>Last build</th>
+                    </thead>
+                    <tbody>
+                        {% for c in review.changesets %}
+                        <tr>
+                            <td>{{ c.id }}</td>
+                            <td>{{ c.title }}</td>
+                            <td><a href="{{ url_for("changeset_info", sha1=c.sha1) }}"><code>{{ c.sha1 }}</code></a></td>
+                            <td>{{ c.created_date }}</td>
+                            <td>
+                                {% if c.status == "ACTIVE" %}
+                                    <span class="label label-success">
+                                {% elif c.status == "ABANDONED" %}
+                                    <span class="label label-danger">
+                                {% else %}
+                                    <span class="label label-info">
+                                {% endif %}
+                                {{ c.status }}
+                                </span>
+                            </td>
+                            <td>{% if c.builds|length > 0 %}
+                                    {% if c.builds[-1].status == "SUCCESS" %}
+                                        <span class="label label-success">
+                                    {% elif c.builds[-1].status == "FAILURE" %}
+                                        <span class="label label-danger">
+                                    {% else %}
+                                        <span class="label label-default">
+                                    {% endif %}
+                                    {{ c.builds[-1].status }}
+                                    </span>
+                                {% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                        {% for c in descendants %}
+                        <tr>
+                            <td></td>
+                            <td>{{ c.desc }}</td>
+                            <td><code>{{ c.changeset }}</code></td>
+                            <td>
+                                <form method="post" action="{{ url_for("review_info", review=review.id) }}">
+                                    <input type="hidden" name="action" value="rework">
+                                    <input type="hidden" name="sha1" value="{{ c.changeset }}">
+                                    <button type="submit" class="btn btn-success btn-sm"><span class="glyphicon glyphicon-plus-sign"></span> Add as rework</button>
+                                </form>
+                            </td>
+                            <td>
+                                <form method="post" action="{{ url_for("review_info", review=review.id) }}">
+                                    <input type="hidden" name="action" value="abandon_changeset">
+                                    <input type="hidden" name="sha1" value="{{ c.changeset }}">
+                                    <button type="submit" class="btn btn-danger btn-sm confirmation-needed" data-question="Are you sure you want to ABANDON this changeset?"><span class="glyphicon glyphicon-trash"></span> Abandon</button>
+                                </form>
+                            </td>
+                            <td></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+<script>
+$(function() {
+
+
+
+});
+</script>
+
+{% endblock %}

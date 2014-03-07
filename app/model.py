@@ -58,7 +58,7 @@ class Changeset(db.Model):
     owner_email = db.Column(db.String(120))
     created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     title = db.Column(db.String(120))
-    sha1 = db.Column(db.String(40), index=True)
+    sha1 = db.Column(db.String(40), index=True, unique=True)
     status = db.Column(db.String(20)) # ACTIVE, ABANDONED
     bookmark = db.Column(db.String(120))
     builds = db.relationship("Build")

@@ -46,7 +46,7 @@
                     {% if type == "new" %}
                        {{ r.title }}
                     {% else %}
-                        <a href="{{ url_for("changeset_info", review=r.id) }}">{{ r.title }} </a>
+                        <a href="{{ url_for("review_info", review=r.id) }}">{{ r.title }} </a>
                     {% endif %}
                 </td>
                 <td>{{ r.owner }}</td>
