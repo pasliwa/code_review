@@ -131,8 +131,12 @@ def jenkins_build():
 @app.route('/changeset/<sha1>', methods=['POST', 'GET'])
 def changeset_info(sha1):
     cs = Changeset.query.filter(Changeset.sha1 == sha1).first()
+    prev = Changeset.query.filter(and_(Changeset.created_date < cs.created_date, Changeset.status == "ACTIVE")).order_by(Changeset.created_date).all()
+    if prev:
+        prev = prev[-1]
+    next = Changeset.query.filter(and_(Changeset.created_date > cs.created_date, Changeset.status == "ACTIVE")).order_by(Changeset.created_date).first()
     review = Review.query.filter(Review.id == cs.review_id).first()
-    return render_template("changeset.html", review=review, cs = cs)
+    return render_template("changeset.html", review=review, cs = cs, next=next, prev=prev)
 
 
 
