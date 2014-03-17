@@ -30,11 +30,11 @@ JENKINS_URL = "http://pl-byd-srv01.emea.int.genesyslab.com:18080"
 
 
 # Mercurial settings
-REPO_PATH = "/home/jenkins/code_review/app/repo"
+REPO_PATH = "/home/jenkins/code_review/repo/iwd8"
 HG_PROD = "http://pl-byd-srv01.emea.int.genesyslab.com/hg/iwd8"
 PRODUCT_BRANCHES = (
 "iwd-8.5.000", "master", "iwd-8.1.000", "iwd-8.1.001", "iwd-8.1.101", "iwd-8.0.001", "iwd-8.0.002", "iwd-8.0.003")
-IGNORED_BRANCHES = ("test", "qatest/datamart", "iwd_history_nosql")
+IGNORED_BRANCHES = ("test", "iwd-rest", "iwd-history-nosql", "multi-bp-list", "iwd-history")
 
 
 
@@ -55,3 +55,4 @@ SECURITY_CONFIRMABLE = False
 SECURITY_REGISTERABLE = True
 SECURITY_RECOVERABLE = True
 SECURITY_CHANGEABLE = True
+
