@@ -26,7 +26,7 @@ Message:
 app.logger.addHandler(mail_handler)
 
 here = os.path.dirname(__file__)
-file_handler = RotatingFileHandler(os.path.join(here, "code_review.log"), maxBytes=104857600, backupCount=30)
+file_handler = RotatingFileHandler(os.path.join(here, "../logs/code_review.log"), maxBytes=104857600, backupCount=30)
 file_handler.setFormatter(logging.Formatter(
     '%(asctime)s %(levelname)s: %(message)s '
     '[in %(pathname)s:%(lineno)d]'
