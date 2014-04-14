@@ -50,6 +50,10 @@ SECURITY_REGISTER_USER_TEMPLATE = "security/register_user.html"
 SECURITY_RESET_PASSWORD_TEMPLATE = "security/reset_password.html"
 SECURITY_SEND_CONFIRMATION_TEMPLATE = "security/send_confirmation.html"
 SECURITY_SEND_LOGIN_TEMPLATE = "security/send_login.html"
+SECURITY_POST_LOGIN_VIEW = "changes_active"
+SECURITY_POST_LOGOUT_VIEW = "login"
+SECURITY_POST_REGISTER_VIEW = "changes_active"
+SECURITY_POST_RESET_VIEW = "changes_active"
 
 SECURITY_CONFIRMABLE = False
 SECURITY_REGISTERABLE = True
