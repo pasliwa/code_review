@@ -23,7 +23,6 @@ Message:
 
 %(message)s
 '''))
-app.logger.addHandler(mail_handler)
 
 here = os.path.dirname(__file__)
 file_handler = RotatingFileHandler(os.path.join(here, "../logs/code_review.log"), maxBytes=104857600, backupCount=30)
