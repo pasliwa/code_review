@@ -24,6 +24,7 @@ class Jenkins(object):
         info = self.repo.hg_rev_info(rev)
         sha1 = info["changeset_short"]
         payload = urllib.urlencode({
+            'token': jobName,
             'json': json.dumps(
                 {"parameter": [{"name": "BRANCH", "value": sha1}, {"name": "REQUEST_ID", "value": uuid}]})})
         headers = {'content-type': 'application/x-www-form-urlencoded'}
