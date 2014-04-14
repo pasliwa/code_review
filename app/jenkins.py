@@ -57,7 +57,7 @@ class Jenkins(object):
                     return None
         else:
             self.app.logger.error(
-                "There was an error scheduling Jenkins job for " + jobName + " using revision " + rev + " Response status code: " + resp.status_code + " , resp content: " + resp.content)
+                "There was an error scheduling Jenkins job for " + jobName + " using revision " + rev + " Response status code: " + str(resp.status_code) + " , resp content: " + resp.content)
             return None
 
 

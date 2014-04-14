@@ -431,4 +431,10 @@ def repo_sync():
             app.logger.info("No new changes locally so there is nothing to push")
     return redirect(url_for('changes_active'))
 
+@app.errorhandler(Exception)
+def internal_error(ex):
+    app.logger.exception(ex)
+    import traceback
+    error = {'message': str(ex), 'stacktrace': traceback.format_exc()}
+    return render_template('500.html', error=error), 500
 
