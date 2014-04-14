@@ -66,6 +66,7 @@ def changes_new():
             db.session.commit()
             return redirect(url_for('changes_new'))
 
+    repo_sync()
     reviews = get_new()
     pagination = Pagination(1, 1, 1)
 
