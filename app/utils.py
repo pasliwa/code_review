@@ -100,3 +100,4 @@ def get_new():
         reviews.append(review)
 
     return reviews
+
