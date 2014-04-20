@@ -37,7 +37,7 @@ class TestHgAPI(unittest.TestCase):
         TestHgAPI._delete_and_create("./original")
 
     @classmethod
-    def tearDownClass(self):
+    def tearDownClass(cls):
         shutil.rmtree("test", ignore_errors=True)
         shutil.rmtree("test-clone", ignore_errors=True)
 

@@ -6,17 +6,17 @@ from app import jenkins, db, User, Role, app, repo
 from app.model import Build, Changeset
 from app.model import CodeInspection
 from app.model import Review
-from app.view import SearchForm, Pagination
+from app.view import Pagination
 
 
 def update_build_status(changeset):
     builds = Build.query.filter(Build.changeset_id == changeset).all()
     for b in builds:
         build_info = jenkins.get_build_info(b.job_name, b.build_number)
-        if build_info == None:
+        if build_info is None:
             continue
         b.status = build_info["result"]
-        if build_info["building"] == True:
+        if build_info["building"]:
             b.status = "RUNNING"
         b.scheduled = build_info["id"]
         db.session.add(b)
@@ -83,13 +83,13 @@ def get_new():
         sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
         count = Changeset.query.filter(Changeset.sha1 == h["changeset"]).count()
         # make sure changeset is not part of any review
-        if (count < 1):
+        if count < 1:
             # make sure changeset is not direct ancestor of changeset that is already in an active review
             parent_rev = repo.hg_parent(sha1)
             parent = repo.hg_rev_info(parent_rev)
             count = Changeset.query.filter(
-                and_(Changeset.sha1 == parent["changeset"], Changeset.review_id != None)).count()
-            if (count < 1):
+                and_(Changeset.sha1 == parent["changeset"], Changeset.review_id is not None)).count()
+            if count < 1:
                 new.append(h)
 
     for h in new:

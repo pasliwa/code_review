@@ -43,18 +43,18 @@ class CodeCollaborator(object):
         regex = re.compile("Review #([0-9]+)")
         # /home/jenkins/ccollab-client/ccollab --no-browser --non-interactive admin review create --creator piotrr --custom-field "Overview=this is the overview" --custom-field "Project=iWD (Intelligent Workload Distribution)" --title "this is title"
         r = regex.search(output)
-        reviewId = r.groups()[0]
-        cmd = "{cc} --no-browser --non-interactive admin review participant assign {reviewId} {owner} author".format(
-            cc=app.config["CC_BIN"], owner=owner.cc_login, reviewId=reviewId)
+        review_id = r.groups()[0]
+        cmd = "{cc} --no-browser --non-interactive admin review participant assign {review_id} {owner} author".format(
+            cc=app.config["CC_BIN"], owner=owner.cc_login, review_id=review_id)
         app.logger.info("Setting author, cmd: " + cmd)
         output = subprocess.check_output(cmd, shell=True)
         app.logger.info("CodeCollaborator response: {resp}".format(resp=output))
-        cmd = "{cc} --no-browser --non-interactive admin review participant assign {reviewId} roman.szalla observer".format(
-            cc=app.config["CC_BIN"], reviewId=reviewId)
+        cmd = "{cc} --no-browser --non-interactive admin review participant assign {review_id} roman.szalla observer".format(
+            cc=app.config["CC_BIN"], review_id=review_id)
         app.logger.info("Setting script user as participant, cmd: " + cmd)
         output = subprocess.check_output(cmd, shell=True)
         app.logger.info("CodeCollaborator response: {resp}".format(resp=output))
-        return reviewId
+        return review_id
 
     def create_empty_cc_review(self):
         output = subprocess.check_output(
@@ -62,18 +62,18 @@ class CodeCollaborator(object):
         regex = re.compile("Review #([0-9]+)")
         # /home/jenkins/ccollab-client/ccollab --no-browser --non-interactive admin review create --creator piotrr --custom-field "Overview=this is the overview" --custom-field "Project=iWD (Intelligent Workload Distribution)" --title "this is title"
         r = regex.search(output)
-        reviewId = r.groups()[0]
-        return reviewId
+        review_id = r.groups()[0]
+        return review_id
 
-    def upload_diff(self, reviewId, revision, repoPath):
+    def upload_diff(self, review_id, revision, repo_path):
         parent = repo.hg_parent(revision)
         # TODO: get parent revision, -1 doesn't work
         output = subprocess.check_output(
-            "{cc} addhgdiffs {reviewId} -r {parent} -r {rev}".format(cc=app.config["CC_BIN"], reviewId=reviewId,
-                                                                     parent=parent, rev=revision), cwd=repoPath,
-            shell=True)
+            "{cc} addhgdiffs {review_id} -r {parent} -r {rev}".format(cc=app.config["CC_BIN"], review_id=review_id,
+                                                                      parent=parent, rev=revision), cwd=repo_path,
+                                                                      shell=True)
         if "Changes successfully attached" in output:
-            return (True, output)
-        return (False, output)
+            return True, output
+        return False, output
 
 

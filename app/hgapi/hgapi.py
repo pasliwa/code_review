@@ -253,9 +253,9 @@ class Repo(object):
                               "--template", "{node}")
         return res.strip()
 
-    def hg_commit(self, message, user=None, date=None, files=[],
-                  close_branch=False):
+    def hg_commit(self, message, user=None, date=None, files=None, close_branch=False):
         """Commit changes to the repository."""
+        if not files: files = []
         userspec = "-u" + user if user \
             else "-u" + self.user if self.user else ""
         datespec = "-d" + date if date else ""
@@ -539,7 +539,7 @@ class Repo(object):
         return Repo(path)
 
     @classmethod
-    def hg_root(self, path):
+    def hg_root(cls, path):
         """
             Return the root (top) of the path.
 

@@ -1,6 +1,5 @@
 *.pyc
-.idea/
-.idea/**
+/.idea/
 repo/iwd8
 logs
 

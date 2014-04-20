@@ -16,7 +16,7 @@ from app.collab import CodeCollaborator
 from app.model import CodeInspection
 from app.view import Pagination
 from app.model import Review
-from app.utils import update_build_status, find_origin_inspection, get_admin_emails, repo_clone, get_reviews, get_new
+from app.utils import update_build_status, find_origin_inspection, get_admin_emails, get_reviews, get_new
 from view import SearchForm
 
 
@@ -42,7 +42,7 @@ def index():
 @app.route('/changes/new', methods=['GET', 'POST'])
 @login_required
 def changes_new():
-    if (request.method == "POST"):
+    if request.method == "POST":
         action = request.form['action']
 
         if action == "start":
@@ -208,7 +208,7 @@ def review_info(review):
     final = []
     for c in dec_heads:
         cs = Changeset.query.filter(Changeset.sha1 == c["changeset"]).first()
-        if (cs is None):
+        if cs is None:
             final.append(c)
 
     for c in review.changesets:
@@ -225,7 +225,7 @@ def merge_branch():
     changeset = Changeset.query.filter(Changeset.sha1 == sha1).first()
     review = Review.query.filter(Review.id == changeset.review_id).first()
 
-    if (review.target == "iwd-8.5.000"):
+    if review.target == "iwd-8.5.000":
         bookmark = "master"
     else:
         bookmark = review.target
@@ -307,17 +307,17 @@ def run_scheduled_jobs():
 
         # check if this is a rework
         inspection = find_origin_inspection(changeset)
-        if inspection == None or inspection.inspection_number == None:
-            ccInspectionId = cc.create_review(changeset)
-            app.logger.debug("Got new CodeCollaborator review id: " + str(ccInspectionId))
+        if inspection is None or inspection.inspection_number is None:
+            cc_inspection_id = cc.create_review(changeset)
+            app.logger.debug("Got new CodeCollaborator review id: " + str(cc_inspection_id))
         else:
-            ccInspectionId = inspection.inspection_number
-            app.logger.debug("Rework for CC review " + str(ccInspectionId))
+            cc_inspection_id = inspection.inspection_number
+            app.logger.debug("Rework for CC review " + str(cc_inspection_id))
 
-        res, output = cc.upload_diff(ccInspectionId, str(i.sha1), repo.path)
-        if (res):
-            i.inspection_number = ccInspectionId
-            i.inspection_url = app.config["CC_REVIEW_URL"].format(reviewId=ccInspectionId)
+        res, output = cc.upload_diff(cc_inspection_id, str(i.sha1), repo.path)
+        if res:
+            i.inspection_number = cc_inspection_id
+            i.inspection_url = app.config["CC_REVIEW_URL"].format(reviewId=cc_inspection_id)
             i.status = 'NEW'
             db.session.add(i)
             db.session.commit()
@@ -337,7 +337,7 @@ def run_scheduled_jobs():
             app.logger.error(
                 "Unable to submit scheduled Jenkins job. Name: " + b.job_name + " , changeset: " + str(changeset))
             continue
-        b.build_number = build_info["buildNo"]
+        b.build_number = build_info["build_no"]
         b.build_url = build_info["url"]
         b.scheduled = datetime.datetime.utcnow()
         b.status = "RUNNING"
@@ -359,7 +359,7 @@ def repo_scan():
 
         #make sure changeset is in DB
         count = Changeset.query.filter(Changeset.sha1 == h["changeset"]).count()
-        if (count < 1):
+        if count < 1:
             changeset = Changeset(h["author"], h["email"], h["desc"], sha1, h["bookmarks"], "new")
             db.session.add(changeset)
             db.session.commit()
@@ -368,7 +368,7 @@ def repo_scan():
         # try to find valid review for changeset by searching the commit tree 1 levels down
         # TODO improvement - extract to function, possibly make it recursive
         changeset = Changeset.query.filter(Changeset.sha1 == h["changeset"]).first()
-        if (changeset.review_id is None):
+        if changeset.review_id is None:
             parent = repo.hg_rev_info(changeset.sha1)
             rev_parent = parent["rev_parent"]
             # get sha1 for parent revision
@@ -376,9 +376,9 @@ def repo_scan():
             parent_sha1 = parent_info["changeset"]
             # look for review for parent
             parent_changeset = Changeset.query.filter(Changeset.sha1 == parent_sha1).first()
-            if (parent_changeset is not None and parent_changeset.review_id is not None):
+            if parent_changeset is not None and parent_changeset.review_id is not None:
                 parent_review = Review.query.filter(Review.id == parent_changeset.review_id).first()
-                if (parent_review.status == "OPEN"):
+                if parent_review.status == "OPEN":
                     changeset.review_id = parent_review.id
                     app.logger.info(
                         "Attaching review id " + str(parent_review.id) + " to changeset id " + str(
@@ -388,7 +388,7 @@ def repo_scan():
                     db.session.commit()
 
         # review for parent has not been found
-        if (changeset.review_id is None):
+        if changeset.review_id is None:
             review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"], sha1=sha1,
                             bookmark=h["bookmarks"], status="OPEN", target="iwd-8.5.000")
             db.session.add(review)
@@ -409,7 +409,7 @@ def repo_sync():
     # http://www.kevinberridge.com/2012/05/hg-bookmarks-made-me-sad.html
     app.logger.info("Syncing repos, pull")
     repo.hg_pull()
-    bookmarks = repo.hg_bookbarks()
+    bookmarks = repo.hg_bookmarks()
     app.logger.info("Bookmarks: " + str(bookmarks))
     reg_expr = "(?P<bookmark>[\s\w\S]+)@(?P<num>\d+)"
     pattern = re.compile(reg_expr)

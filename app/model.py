@@ -1,6 +1,6 @@
 from flask.ext.security import RoleMixin, UserMixin
 import datetime
-from sqlalchemy.sql.expression import or_, desc, asc, and_
+from sqlalchemy.sql.expression import desc
 
 from app import db
 

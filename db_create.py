@@ -7,7 +7,7 @@ with app.app_context():
     db.session.commit()
 
     admin_role = user_datastore.find_or_create_role(name="admin", description="Administrator")
-    user_role = user_datastore.find_or_create_role(name="user", description="User");
+    user_role = user_datastore.find_or_create_role(name="user", description="User")
 
     admin = user_datastore.create_user(email="roman.szalla@genesyslab.com", password=encrypt_password("password"),
                                        cc_login="roman.szalla")

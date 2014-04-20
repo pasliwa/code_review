@@ -4,7 +4,7 @@ from hgapi.hgapi import Repo
 # http://hgbook.red-bean.com/read/customizing-the-output-of-mercurial.html
 
 class Repo2(Repo):
-    def hg_bookbarks(self, namesOnly=True):
+    def hg_bookmarks(self, names_only=True):
         output = self.hg_command("bookmarks")
         res = {}
         reg_expr = "(?P<bookmark>\S+)\s+(?P<rev>\d+):(?P<changeset>\w+)"
@@ -15,7 +15,7 @@ class Repo2(Repo):
                 bookmark = match.group("bookmark")
                 changeset = match.group("changeset")
                 res[bookmark] = {"changeset": changeset, "rev": match.group("rev")}
-        return res.keys() if namesOnly else res
+        return res.keys() if names_only else res
 
     def hg_bookmark(self, bookmark, delete=False):
         cmd = ["bookmark", str(bookmark)]
