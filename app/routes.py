@@ -1,9 +1,11 @@
 from flask import render_template, flash, redirect, url_for
+# noinspection PyUnresolvedReferences
 from flask.ext.login import current_user
+# noinspection PyUnresolvedReferences
 from flask.ext.mail import Message
 from flask.globals import request
-from flask.ext.security import login_required, roles_required, \
-    user_registered
+# noinspection PyUnresolvedReferences
+from flask.ext.security import login_required, roles_required, user_registered
 import re
 from sqlalchemy.sql.expression import desc, and_
 import datetime
@@ -16,7 +18,8 @@ from app.collab import CodeCollaborator
 from app.model import CodeInspection
 from app.view import Pagination
 from app.model import Review
-from app.utils import update_build_status, find_origin_inspection, get_admin_emails, get_reviews, get_new
+from app.utils import update_build_status, find_origin_inspection, \
+    get_admin_emails, get_reviews, get_new
 from view import SearchForm
 
 
@@ -25,6 +28,7 @@ def inject_user():
     return dict(user=current_user)
 
 
+# noinspection PyUnusedLocal
 def new_user_registered(sender, **extra):
     user = extra["user"]
     role = user_datastore.find_role("user")
@@ -132,12 +136,19 @@ def jenkins_build():
 @app.route('/changeset/<sha1>', methods=['POST', 'GET'])
 def changeset_info(sha1):
     cs = Changeset.query.filter(Changeset.sha1 == sha1).first()
-    prev = Changeset.query.filter(and_(Changeset.created_date < cs.created_date, Changeset.status == "ACTIVE", Changeset.review_id == cs.review_id)).order_by(Changeset.created_date).all()
+    prev = Changeset.query.filter(and_(Changeset.created_date < cs.created_date,
+                                       Changeset.status == "ACTIVE",
+                                       Changeset.review_id == cs.review_id))\
+        .order_by(Changeset.created_date).all()
     if prev:
         prev = prev[-1]
-    next = Changeset.query.filter(and_(Changeset.created_date > cs.created_date, Changeset.status == "ACTIVE", Changeset.review_id == cs.review_id)).order_by(Changeset.created_date).first()
+    next_ = Changeset.query.filter(and_(Changeset.created_date > cs.created_date,
+                                        Changeset.status == "ACTIVE",
+                                        Changeset.review_id == cs.review_id))\
+        .order_by(Changeset.created_date).first()
     review = Review.query.filter(Review.id == cs.review_id).first()
-    return render_template("changeset.html", review=review, cs = cs, next=next, prev=prev)
+    return render_template("changeset.html", review=review, cs=cs, next=next_,
+                           prev=prev)
 
 
 
@@ -197,9 +208,9 @@ def review_info(review):
     map((lambda x: heads.append(x["changeset"]) if x["rev"] is not None else x), temp)
 
     descendants = set(descendants)
-    heads = set(heads)
+    heads_set = set(heads)
 
-    common = descendants.intersection(heads)
+    common = descendants.intersection(heads_set)
     for c in common:
         info = repo.hg_rev_info(c)
         dec_heads.append(info)
@@ -389,7 +400,7 @@ def repo_scan():
 
         # review for parent has not been found
         if changeset.review_id is None:
-            review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"], sha1=sha1,
+            review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"],
                             bookmark=h["bookmarks"], status="OPEN", target="iwd-8.5.000")
             db.session.add(review)
             db.session.commit()
@@ -418,7 +429,6 @@ def repo_sync():
         if match is not None:
             app.logger.info("Detected a divergent bookmark " + b)
             bookmark = match.group("bookmark")
-            bookmark_num = match.group("num")
             # todo - handle merge
             repo.hg_update(bookmark)
             repo.hg_merge(b)

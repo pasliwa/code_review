@@ -5,16 +5,17 @@ from subprocess import Popen, PIPE
 try:
     from urllib import unquote
 except ImportError:  # python 3
+    # noinspection PyUnresolvedReferences
     from urllib.parse import unquote
 
 import re
-import os.path
 import os
 import sys
 
 try:
     import json  # for reading logs
 except ImportError:
+    # noinspection PyUnresolvedReferences
     import simplejson as json
 
 
@@ -456,8 +457,8 @@ class Repo(object):
 
     def revisions(self, slice_):
         """Retruns a list of Revision objects for the given slice"""
-        id = ":".join([str(x) for x in (slice_.start, slice_.stop)])
-        out = self.hg_log(identifier=id,
+        id_ = ":".join([str(x) for x in (slice_.start, slice_.stop)])
+        out = self.hg_log(identifier=id_,
                           template=self.rev_log_tpl)
 
         revs = []

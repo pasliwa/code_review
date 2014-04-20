@@ -1,3 +1,4 @@
+# noinspection PyUnresolvedReferences
 from flask.ext.security import RoleMixin, UserMixin
 import datetime
 from sqlalchemy.sql.expression import desc

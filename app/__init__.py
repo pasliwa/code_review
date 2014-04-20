@@ -1,6 +1,9 @@
 from flask import Flask
+# noinspection PyUnresolvedReferences
 from flask.ext.mail import Mail
+# noinspection PyUnresolvedReferences
 from flask.ext.security import Security, SQLAlchemyUserDatastore
+# noinspection PyUnresolvedReferences
 from flask.ext.sqlalchemy import SQLAlchemy
 
 

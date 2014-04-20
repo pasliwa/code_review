@@ -1,3 +1,4 @@
+# noinspection PyUnresolvedReferences
 from flask.ext.security.utils import encrypt_password
 from app import app
 from app import db, user_datastore
