@@ -12,13 +12,19 @@ from app.view import Pagination
 def update_build_status(changeset):
     builds = Build.query.filter(Build.changeset_id == changeset).all()
     for b in builds:
-        build_info = jenkins.get_build_info(b.job_name, b.build_number)
-        if build_info is None:
-            continue
-        b.status = build_info["result"]
-        if build_info["building"]:
-            b.status = "RUNNING"
-        b.scheduled = build_info["id"]
+        if b.build_number is not None:
+            build_info = jenkins.get_build_info(b.job_name, b.build_number)
+            b.status = build_info['status']
+        elif jenkins.check_queue(b.job_name, b.request_id):
+            b.status = 'Queued'
+        else:
+            build_info = jenkins.find_build(b.job_name, b.request_id)
+            if build_info is not None:
+                b.status = build_info['status']
+                b.build_number = build_info['build_number']
+                b.build_url = build_info['build_url']
+            else:
+                b.status = 'Missing'
         db.session.add(b)
         db.session.commit()
 

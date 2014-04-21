@@ -1,76 +1,112 @@
 import json
 import requests
 import urllib
+import urlparse
 from uuid import uuid4
 import time
+import datetime
 
+import jenkinsapi
 
 class Jenkins(object):
     def __init__(self, url, app, repo):
         self.url = url
         self.app = app
         self.repo = repo
-
-
-    def get_next_build_number(self, job_name):
-        resp = requests.get(self.url + "/job/" + job_name + "/api/python?pretty=true")
-        props = eval(resp.content)
-        self.app.logger.debug("Next build number for " + job_name + " is " + str(props["nextBuildNumber"]))
-        return props["nextBuildNumber"]
+        self.api = jenkinsapi.jenkins.Jenkins(self.url)
 
     def run_job(self, job_name, rev):
-        build_no = self.get_next_build_number(job_name)
-        uuid = str(uuid4())
+        if not self.api.has_job(job_name):
+            self.app.logger.error("Cannot find job %s", job_name)
+            return None
+        job = self.api.get_job(job_name)
+
         info = self.repo.hg_rev_info(rev)
+        #TODO: Missing revision
         sha1 = info["changeset_short"]
-        payload = urllib.urlencode({
-            'token': job_name,
-            'json': json.dumps(
-                {"parameter": [{"name": "BRANCH", "value": sha1}, {"name": "REQUEST_ID", "value": uuid}]})})
-        headers = {'content-type': 'application/x-www-form-urlencoded'}
-        resp = requests.post(self.url + "/job/" + job_name + "/build/api/json", data=payload, headers=headers)
-        self.app.logger.debug(
-            "Scheduling Jenkins job for " + job_name + " using revision " + rev + " Expected build number is " + str(
-                build_no))
-        if resp.status_code == 201:
-            counter = 1
-            while counter < 10:
-                counter += 1
-                # Jenkins queues job and does not start them immediately
-                # lets give him some time to respond
-                time.sleep(counter)
-                resp = requests.get(self.url + "/job/" + job_name + "/" + str(build_no) + "/api/python", data=payload,
-                                    headers=headers)
-                if resp.status_code != 404:
-                    # build has started, make sure we got the right build number (possible race-condition)
-                    props = eval(resp.content)
-                    for a in props['actions']:
-                        if a.has_key("parameters"):
-                            for parameters in a['parameters']:
-                                if parameters['name'] == "REQUEST_ID" and parameters['value'] == uuid:
-                                    self.app.logger.info(
-                                        "Successfully scheduled Jenkins job for " + job_name + " using revision " + rev + " url: " +
-                                        props["url"])
-                                    return {"build_no": build_no, "url": props["url"], "result": None}
-                    self.app.logger.error(
-                        "Failed job verification, possible race-condition occurred. REQUEST_ID: " + uuid + " jobname: " + job_name + " rev: " + rev + " expected build number: " + str(
-                            build_no))
-                    return None
+        uuid = str(uuid4())
+        parameters = {"BRANCH": sha1, "REQUEST_ID": uuid}
+
+        self.app.logger.info("Invoking job %s for revision %s with id %s",
+                             job_name, rev, uuid)
+        invocation = job.invoke(securitytoken=job_name, build_params=parameters)
+
+        if invocation.is_queued():
+            self.app.logger.info("Build %s is queued in job %s", uuid, job_name)
+            return {"status": "Queued",
+                    "request_id": uuid,
+                    "scheduled": datetime.datetime.utcnow(),
+                    "build_url": self.url + "/job/" + job_name}
+
+        if invocation.is_running():
+            build_number = invocation.get_build_number()
+            self.app.logger.info("Build %s running in job %s with number %d",
+                                 uuid, job_name, build_number)
+            return {"status": "Running",
+                    "request_id": uuid,
+                    "scheduled": datetime.datetime.utcnow(),
+                    "build_number": build_number,
+                    "build_url": invocation.get_build().get_result_url()}
+
+        self.app.logger.error("Build %s is neither queued nor running in job %s",
+                              uuid, job_name)
+        return None
+
+    def check_queue(self, job_name, request_id):
+        if not self.api.has_job(job_name):
+            self.app.logger.error("Cannot find job %s", job_name)
+            return None
+
+        self.app.logger.info("Looking for build %s in Jenkins queue", request_id)
+        for item in self.api.get_queue().get_queue_items_for_job(job_name):
+            params = item.get_parameters()
+            if "REQUEST_ID" in params and params["REQUEST_ID"] == request_id:
+                self.app.logger.info("Found build %s in Jenkins queue", request_id)
+                return True
+        self.app.logger.info("Build %s is no longer in Jenkins queue", request_id)
+        return False
+
+    def _get_build_status(self, build):
+        if build.is_running():
+            return "Running"
         else:
-            self.app.logger.error(
-                "There was an error scheduling Jenkins job for " + job_name + " using revision " + rev + " Response status code: " + str(resp.status_code) + " , resp content: " + resp.content)
+            return build.get_status()
+
+    def find_build(self, job_name, request_id):
+        if not self.api.has_job(job_name):
+            self.app.logger.error("Cannot find job %s", job_name)
             return None
 
+        self.app.logger.info("Looking for build %s in Jenkins", request_id)
+        job = self.api.get_job(job_name)
+        for build_id in job.get_build_ids():
+            build = job.get_build(build_id)
+            for param in build.get_actions()['parameters']:
+                if param['name'] == 'REQUEST_ID' and param['value'] == request_id:
+                    self.app.logger.info("Found build %d in job %s for id %s",
+                                         build.get_number(),
+                                         job_name,
+                                         request_id)
+                    build_number = build.get_number()
+                    build_url = "%s/job/%s/%d/" % \
+                                (self.url, job_name, build_number)
+                    return {"status": self._get_build_status(build),
+                            "build_number": build_number,
+                            "build_url": build_url}
+        self.app.logger.info("Build %s not found in Jenkins job %s",
+                             request_id, job_name)
+        return None
 
-    def get_build_info(self, job_name, build_no):
-        if job_name is None or build_no is None:
+    def get_build_info(self, job_name, build_number):
+        if not self.api.has_job(job_name):
+            self.app.logger.error("Cannot find job %s", job_name)
             return None
-        resp = requests.get(self.url + "/job/" + job_name + "/" + str(build_no) + "/api/python?pretty=true")
-        props = eval(resp.content)
-        return props
 
-    def get_build_result(self, job_name, build_no):
-        res = self.get_build_info(job_name, build_no)
-        return res['result'] if res.has_key("result") else None
+        self.app.logger.info("Fetching build %d in job %s",
+                             build_number, job_name)
+        job = self.api.get_job(job_name)
+        build = job.get_build(build_number)
+        return {"status": self._get_build_status(build)}
+
 
 

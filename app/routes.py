@@ -123,7 +123,7 @@ def inspect_diff():
 def jenkins_build():
     info = repo.hg_rev_info(request.form['src'])
     changeset = Changeset.query.filter(Changeset.sha1 == info['changeset']).first()
-    build = Build(changeset_id=changeset.id, status="SCHEDULED", job_name=request.form['release'] + "-REVIEW")
+    build = Build(changeset_id=changeset.id, status="SCHEDULED", job_name=request.form['release'] + "-ci")
     db.session.add(build)
     db.session.commit()
     app.logger.info(
@@ -147,6 +147,7 @@ def changeset_info(sha1):
                                         Changeset.review_id == cs.review_id))\
         .order_by(Changeset.created_date).first()
     review = Review.query.filter(Review.id == cs.review_id).first()
+    update_build_status(cs.id)
     return render_template("changeset.html", review=review, cs=cs, next=next_,
                            prev=prev)
 
@@ -337,7 +338,6 @@ def run_scheduled_jobs():
             app.logger.error("There was an error creating CodeCollaborator review, inspection: " + str(
                 i) + " , command output: " + output)
 
-
     # Jenkins builds
     builds = Build.query.filter(Build.status == "SCHEDULED").all()
     app.logger.debug("Builds to be sent to Jenkins: " + str(builds))
@@ -345,13 +345,14 @@ def run_scheduled_jobs():
         changeset = Changeset.query.filter(Changeset.id == b.changeset_id).first()
         build_info = jenkins.run_job(b.job_name, changeset.sha1)
         if build_info is None:
-            app.logger.error(
-                "Unable to submit scheduled Jenkins job. Name: " + b.job_name + " , changeset: " + str(changeset))
+            app.logger.info("Build id " + str(b.id) + " has been skipped.")
             continue
-        b.build_number = build_info["build_no"]
-        b.build_url = build_info["url"]
-        b.scheduled = datetime.datetime.utcnow()
-        b.status = "RUNNING"
+        b.status = build_info["status"]
+        b.request_id = build_info["request_id"]
+        b.scheduled = build_info["scheduled"]
+        b.build_url = build_info["build_url"]
+        if "build_number" in build_info:
+            b.build_number = build_info["build_number"]
         db.session.add(b)
         db.session.commit()
         app.logger.info("Build id " + str(b.id) + " has been sent to Jenkins.")

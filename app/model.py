@@ -34,6 +34,7 @@ class Build(db.Model):
     __tablename__ = 'builds'
     id = db.Column(db.Integer, primary_key=True)
     changeset_id = db.Column(db.Integer, db.ForeignKey('changesets.id'))
+    request_id = db.Column(db.String(36))
     build_number = db.Column(db.Integer)
     build_url = db.Column(db.String(120))
     status = db.Column(db.String(20))
