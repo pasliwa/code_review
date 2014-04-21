@@ -19,7 +19,7 @@ from app.model import CodeInspection
 from app.view import Pagination
 from app.model import Review
 from app.utils import update_build_status, find_origin_inspection, \
-    get_admin_emails, get_reviews, get_new
+    get_admin_emails, get_reviews, get_new, el
 from view import SearchForm
 
 
@@ -50,12 +50,16 @@ def changes_new():
         action = request.form['action']
 
         if action == "start":
-            info = repo.hg_rev_info(request.form['sha1'])
-            review = Review(owner=info["author"], owner_email=info["email"], title=info["desc"],
-                            bookmark=info["bookmarks"], status="ACTIVE", target="iwd-8.5.000")
+            info = repo.revision(request.form['sha1'])
+            #TODO: Multiple bookmarks
+            review = Review(owner=info.name, owner_email=info.email,
+                            title=info.title, bookmark=el(info.bookmarks),
+                            status="ACTIVE", target="iwd-8.5.000")
             db.session.add(review)
             db.session.commit()
-            changeset = Changeset(info["author"], info["email"], info["desc"], request.form['sha1'], info["bookmarks"],
+            #TODO: Multiple bookmarks
+            changeset = Changeset(info.name, info.email, info.title,
+                                  request.form['sha1'], el(info.bookmarks),
                                   "ACTIVE")
             changeset.review_id = review.id
             db.session.add(changeset)
@@ -63,8 +67,10 @@ def changes_new():
             return redirect(url_for('review_info', review=review.id))
 
         if action == "abandon":
-            info = repo.hg_rev_info(request.form['sha1'])
-            changeset = Changeset(info["author"], info["email"], info["desc"], request.form['sha1'], info["bookmarks"],
+            info = repo.revision(request.form['sha1'])
+            #TODO: Multiple bookmarks
+            changeset = Changeset(info.name, info.email, info.title,
+                                  request.form['sha1'], el(info.bookmarks),
                                   "ABANDONED")
             db.session.add(changeset)
             db.session.commit()
@@ -74,7 +80,7 @@ def changes_new():
     reviews = get_new()
     pagination = Pagination(1, 1, 1)
 
-    return render_template('changes.html', type="new", reviews=reviews, productBranches=app.config["PRODUCT_BRANCHES"],
+    return render_template('changes.html', type="new", reviews=reviews,
                            pagination=pagination)
 
 
@@ -85,7 +91,6 @@ def changes_active(page):
     form = SearchForm()
     data = get_reviews("ACTIVE", page, request)
     return render_template('changes.html', type="active", reviews=data["r"],
-                           productBranches=app.config["PRODUCT_BRANCHES"],
                            form=form, pagination=data["p"])
 
 
@@ -101,12 +106,12 @@ def changes_merged(page):
 @login_required
 @roles_required('user')
 def inspect_diff():
-    info = repo.hg_rev_info(request.form['src'])
+    info = repo.revision(request.form['src'])
     changeset = Changeset.query.filter(Changeset.sha1 == request.form['src']).first()
     inspection = CodeInspection()
     inspection.status = "SCHEDULED"
     inspection.changeset_id = changeset.id
-    inspection.sha1 = info["changeset"]
+    inspection.sha1 = info.node
     db.session.add(inspection)
     db.session.commit()
     app.logger.info("Code Collaborator review for changeset id " + str(
@@ -121,9 +126,10 @@ def inspect_diff():
 @login_required
 @roles_required('user')
 def jenkins_build():
-    info = repo.hg_rev_info(request.form['src'])
-    changeset = Changeset.query.filter(Changeset.sha1 == info['changeset']).first()
-    build = Build(changeset_id=changeset.id, status="SCHEDULED", job_name=request.form['release'] + "-ci")
+    info = repo.revision(request.form['src'])
+    changeset = Changeset.query.filter(Changeset.sha1 == info['node']).first()
+    build = Build(changeset_id=changeset.id, status="SCHEDULED",
+                  job_name=request.form['release'] + "-ci")
     db.session.add(build)
     db.session.commit()
     app.logger.info(
@@ -161,8 +167,10 @@ def review_info(review):
             # make sure cs doesnt exist
             cs = Changeset.query.filter(Changeset.sha1 == request.form["sha1"]).first()
             if cs is None:
-                info = repo.hg_rev_info(request.form["sha1"])
-                cs = Changeset(info["author"], info["email"], info["desc"], info["changeset"], info["bookmarks"],
+                info = repo.revision(request.form["sha1"])
+                #TODO: Multiple bookmarks
+                cs = Changeset(info.name, info.email, info.title,
+                               info.node, el(info.bookmarks),
                                "ACTIVE")
                 cs.review_id = review.id
                 db.session.add(cs)
@@ -188,8 +196,11 @@ def review_info(review):
         if request.form["action"] == "abandon_changeset":
             changeset = Changeset.query.filter(Changeset.sha1 == request.form["sha1"]).first()
             if changeset is None:
-                info = repo.hg_rev_info(request.form["sha1"])
-                changeset = Changeset(info["author"], info["email"], info["desc"], info["changeset"], info["bookmarks"])
+                info = repo.revision(request.form["sha1"])
+                #TODO: Multiple bookmarks
+                changeset = Changeset(info.name, info.email,
+                                      info.title, info.node,
+                                      el(info.bookmarks))
                 changeset.review_id = review.id
             changeset.status = "ABANDONED"
             db.session.add(changeset)
@@ -206,26 +217,26 @@ def review_info(review):
         descendants.append(row)
 
     temp = repo.hg_heads()
-    map((lambda x: heads.append(x["changeset"]) if x["rev"] is not None else x), temp)
 
     descendants = set(descendants)
     heads_set = set(heads)
 
     common = descendants.intersection(heads_set)
     for c in common:
-        info = repo.hg_rev_info(c)
+        info = repo.revision(c)
         dec_heads.append(info)
 
     # filter out all changesets that are already in db
     final = []
     for c in dec_heads:
-        cs = Changeset.query.filter(Changeset.sha1 == c["changeset"]).first()
+        cs = Changeset.query.filter(Changeset.sha1 == c.node).first()
         if cs is None:
             final.append(c)
 
     for c in review.changesets:
         update_build_status(c.id)
-    return render_template("review.html", review=review, productBranches=app.config["PRODUCT_BRANCHES"],
+    return render_template("review.html", review=review,
+                           productBranches=sorted(app.config["PRODUCT_BRANCHES"]),
                            descendants=final)
 
 
@@ -260,7 +271,8 @@ def merge_branch():
     subject = "Successful merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
 
     if "abort: nothing to merge" in output:
-        result = repo.hg_bookmark_move(sha1, bookmark)
+        repo.hg_update(sha1)
+        result = repo.hg_bookmark(bookmark, force=True)
         app.logger.info(result)
         flash("Changeset has been merged", "notice")
     elif "use 'hg resolve' to retry unresolved" in output:
@@ -271,7 +283,8 @@ def merge_branch():
                                                                              dest=review.target)
         error = True
     elif "abort: merging with a working directory ancestor has no effect" in output:
-        result = repo.hg_bookmark_move(sha1, bookmark)
+        repo.hg_update(sha1)
+        result = repo.hg_bookmark(bookmark, force=True)
         app.logger.info(result)
         flash("Changeset has been merged", "notice")
 
@@ -362,30 +375,29 @@ def run_scheduled_jobs():
 
 @app.route('/repo_scan')
 def repo_scan():
-    temp = repo.hg_heads()
-    heads = []
-    map((lambda x: heads.append(x) if x["bookmarks"] not in app.config["IGNORED_BRANCHES"] else x), temp)
+    heads = [repo.revision(node) for node in repo.hg_heads()]
     for h in heads:
-        h['src'] = h['bookmarks']
-        sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
+        if h.bookmarks & app.config["IGNORED_BRANCHES"]:
+            continue
 
         #make sure changeset is in DB
-        count = Changeset.query.filter(Changeset.sha1 == h["changeset"]).count()
+        count = Changeset.query.filter(Changeset.sha1 == h.node).count()
         if count < 1:
-            changeset = Changeset(h["author"], h["email"], h["desc"], sha1, h["bookmarks"], "new")
+            #TODO: Support for multiple bookmarks
+            changeset = Changeset(h.name, h.email, h.title, h.node, el(h.bookmarks), "new")
             db.session.add(changeset)
             db.session.commit()
             app.logger.info("Added new changeset: " + str(changeset))
 
         # try to find valid review for changeset by searching the commit tree 1 levels down
         # TODO improvement - extract to function, possibly make it recursive
-        changeset = Changeset.query.filter(Changeset.sha1 == h["changeset"]).first()
+        changeset = Changeset.query.filter(Changeset.sha1 == h.node).first()
         if changeset.review_id is None:
-            parent = repo.hg_rev_info(changeset.sha1)
-            rev_parent = parent["rev_parent"]
+            parent = repo.revision(changeset.sha1)
+            rev_parent = parent.parents[0]
             # get sha1 for parent revision
-            parent_info = repo.hg_rev_info(rev_parent)
-            parent_sha1 = parent_info["changeset"]
+            parent_info = repo.revision(rev_parent)
+            parent_sha1 = parent_info.node
             # look for review for parent
             parent_changeset = Changeset.query.filter(Changeset.sha1 == parent_sha1).first()
             if parent_changeset is not None and parent_changeset.review_id is not None:
@@ -401,8 +413,10 @@ def repo_scan():
 
         # review for parent has not been found
         if changeset.review_id is None:
-            review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"],
-                            bookmark=h["bookmarks"], status="OPEN", target="iwd-8.5.000")
+            #TODO: Multiple bookmarks support
+            review = Review(owner=h.name, owner_email=h.email, title=h.title,
+                            bookmark=el(h.bookmarks), status="OPEN",
+                            target="iwd-8.5.000")
             db.session.add(review)
             db.session.commit()
             changeset.review_id = review.id
@@ -421,7 +435,7 @@ def repo_sync():
     # http://www.kevinberridge.com/2012/05/hg-bookmarks-made-me-sad.html
     app.logger.info("Syncing repos, pull")
     repo.hg_pull()
-    bookmarks = repo.hg_bookmarks()
+    bookmarks = repo.hg_bookmarks().keys()
     app.logger.info("Bookmarks: " + str(bookmarks))
     reg_expr = "(?P<bookmark>[\s\w\S]+)@(?P<num>\d+)"
     pattern = re.compile(reg_expr)

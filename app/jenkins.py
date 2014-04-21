@@ -21,9 +21,9 @@ class Jenkins(object):
             return None
         job = self.api.get_job(job_name)
 
-        info = self.repo.hg_rev_info(rev)
+        info = self.repo.revision(rev)
         #TODO: Missing revision
-        sha1 = info["changeset_short"]
+        sha1 = info.node
         uuid = str(uuid4())
         parameters = {"BRANCH": sha1, "REQUEST_ID": uuid}
 

@@ -18,9 +18,9 @@ security = Security(app, user_datastore)
 mail = Mail(app)
 
 from app.jenkins import Jenkins
-from mercurial import Repo2
+from mercurial import Repo
 
-repo = Repo2(app.config["REPO_PATH"])
+repo = Repo(app.config["REPO_PATH"])
 jenkins = Jenkins(app.config["JENKINS_URL"], app, repo)
 
 from app import view

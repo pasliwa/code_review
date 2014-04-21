@@ -77,33 +77,42 @@ def get_reviews(status, page, request):
 
 
 def get_new():
-    temp = repo.hg_heads()
-    heads, new, reviews = [], [], []
+    heads = [repo.revision(node) for node in repo.hg_heads()]
+    ignored_bookmarks = app.config["IGNORED_BRANCHES"] | \
+                        app.config["PRODUCT_BRANCHES"]
 
-    # remove all official bookmarks
-    map((lambda x: heads.append(x) if x["bookmarks"] not in app.config["IGNORED_BRANCHES"] + app.config[
-        "PRODUCT_BRANCHES"] else x), temp)
-
+    new = []
     for h in heads:
-        h['src'] = h['bookmarks']
-        sha1 = repo.hg_log(identifier=h['rev'], template="{node}")
-        count = Changeset.query.filter(Changeset.sha1 == h["changeset"]).count()
+        if h.bookmarks & ignored_bookmarks:
+            continue
+        count = Changeset.query.filter(Changeset.sha1 == h.node).count()
         # make sure changeset is not part of any review
         if count < 1:
             # make sure changeset is not direct ancestor of changeset that is already in an active review
-            parent_rev = repo.hg_parent(sha1)
-            parent = repo.hg_rev_info(parent_rev)
+            #TODO: Multiple parents
+            parent_rev = h.parents[0]
+            parent = repo.revision(parent_rev)
             count = Changeset.query.filter(
-                and_(Changeset.sha1 == parent["changeset"], Changeset.review_id is not None)).count()
+                and_(Changeset.sha1 == parent.node, Changeset.review_id is not None)).count()
             if count < 1:
                 new.append(h)
 
+    reviews = []
     for h in new:
-        review = Review(owner=h["author"], owner_email=h["email"], title=h["desc"],
-                        bookmark=h["bookmarks"], status="NEW", target="iwd-8.5.000")
+        #TODO: Multiple bookmarks
+        review = Review(owner=h.name, owner_email=h.email,
+                        title=h.title, bookmark=el(h.bookmarks),
+                        status="NEW", target="iwd-8.5.000")
         review.id = 0
-        review.sha1 = h["changeset"]
+        review.sha1 = h.node
         reviews.append(review)
 
     return reviews
 
+
+def el(set_):
+    l = list(set_)
+    if len(l) == 0:
+        return None
+    else:
+        return l[0]

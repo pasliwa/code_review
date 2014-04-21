@@ -1,10 +1,17 @@
 import re
-from hgapi.hgapi import Repo
+from hgapi import hgapi
 
 # http://hgbook.red-bean.com/read/customizing-the-output-of-mercurial.html
 
-class Repo2(Repo):
-    def hg_bookmarks(self, names_only=True):
+class Revision(hgapi.Revision):
+    def __init__(self, json_log):
+        super(Revision, self).__init__(json_log)
+        self.bookmarks = set(self.bookmarks.split())
+
+hgapi.Revision = Revision
+
+class Repo(hgapi.Repo):
+    def hg_bookmarks(self):
         output = self.hg_command("bookmarks")
         res = {}
         reg_expr = "(?P<bookmark>\S+)\s+(?P<rev>\d+):(?P<changeset>\w+)"
@@ -14,88 +21,24 @@ class Repo2(Repo):
             if match is not None:
                 bookmark = match.group("bookmark")
                 changeset = match.group("changeset")
-                res[bookmark] = {"changeset": changeset, "rev": match.group("rev")}
-        return res.keys() if names_only else res
+                res[bookmark] = changeset
+        return res
 
-    def hg_bookmark(self, bookmark, delete=False):
+    def hg_bookmark(self, bookmark, delete=False, force=False):
         cmd = ["bookmark", str(bookmark)]
         if delete:
             cmd.append("--delete")
+        if force:
+            cmd.append("--force")
         return self.hg_command(*cmd)
 
-    def hg_bookmark_move(self, sha1, bookmark):
-        return self.hg_command("bookmark", "-f", "-r", sha1, bookmark)
-
-    def hg_heads(self):
-        res = []
-        template = "{rev}\n"
-        output = self.hg_command("heads", "--template", template)
-        for rev in output.strip().split('\n'):
-            info = self.hg_rev_info(rev)
-            if info["bookmarks"] is not None:
-                res.append(info)
-        return res
-
-    def hg_head_changeset_info(self, changeset):
-        heads = self.hg_heads()
-        for h in heads:
-            if h["changeset"] == changeset:
-                return h
-        return None
-
-    def hg_head_branch_info(self, branch):
-        heads = self.hg_heads()
-        for h in heads:
-            if h["branches"] == branch:
-                return h
-        return None
-
-    def hg_head_bookmark_info(self, bookmark):
-        heads = self.hg_heads()
-        for h in heads:
-            if h["bookmarks"] == bookmark:
-                return h
-        return None
-
-    def hg_rev_info(self, rev):
-        rev = str(rev)
-        res = None
-        template = "{rev}:::{parents}:::{desc|firstline}:::{bookmarks}:::{node}:::{author|person}:::{author|email}\n"
-        output = self.hg_command("log", "--template", template, "-r", rev)
-        reg_expr = "(?P<rev>\d+):::((?P<rev_parent>(\d+)):([\s\w\S]+)){0,}:::(?P<desc>[\s\w\S]+):::(?P<bookmarks>[\s\w\S]{0,}):::(?P<changeset>[\d\w]+):::(?P<user>[\s\w\S]+):::(?P<email>[\s\w\S]{0,})"
-        pattern = re.compile(reg_expr)
-        for row in output.strip().split('\n'):
-            match = pattern.search(row)
-            print row
-            # The template keyword parents is empty when the only parent is the next node
-            if match is not None:
-                return {
-                    "rev": match.group("rev"),
-                    "rev_parent": match.group("rev_parent") if match.group("rev_parent") is not None else str(
-                        int(match.group("rev")) - 1),
-                    "desc": match.group("desc"),
-                    "bookmarks": match.group("bookmarks"),
-                    "changeset": match.group("changeset"),
-                    "changeset_short": match.group("changeset")[:12],
-                    "author": match.group("user"),
-                    "email": match.group("email")}
-        return res
-
-    def hg_parent(self, rev):
-        info = self.hg_rev_info(rev)
-        parent = self.hg_rev_info(info["rev_parent"])
-        return parent["changeset"]
-        # The template keyword parents is empty when the only parent is the next node
-        #res = int(rev)-1
-        #template = "{rev}\n"
-        #output = self.hg_command("parents", "--template", template, "-r", rev)
-        #reg_expr = "(?P<rev>\d+)"
-        #pattern = re.compile(reg_expr)
-        #for row in output.strip().split('\n'):
-        #    match = pattern.search(row)
-        #    if match is not None:
-        #       return match.group("rev")
-        #return res
+    rev_log_tpl = (
+        '\{"node":"{node}","rev":"{rev}","author":"{author|urlescape}",'
+        '"name":"{author|person|urlescape}","email":"{author|email|urlescape}",'
+        '"branch":"{branches}","parents":"{parents}","date":"{date|isodate}",'
+        '"bookmarks":"{bookmarks}","title":"{desc|firstline|urlescape}",'
+        '"tags":"{tags}","desc":"{desc|urlescape}\"}\n'
+    )
 
     def hg_merge(self, reference):
         return self.hg_command("merge", "--tool", "internal:fail", reference)

@@ -66,7 +66,8 @@ class CodeCollaborator(object):
         return review_id
 
     def upload_diff(self, review_id, revision, repo_path):
-        parent = repo.hg_parent(revision)
+        # TODO: Multiple parents
+        parent = repo.revision(revision).parents[0]
         # TODO: get parent revision, -1 doesn't work
         output = subprocess.check_output(
             "{cc} addhgdiffs {review_id} -r {parent} -r {rev}".format(cc=app.config["CC_BIN"], review_id=review_id,
