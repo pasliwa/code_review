@@ -87,8 +87,12 @@
                                 </span>
                             </td>
                             <td>{% if c.builds|length > 0 %}
-                                    {% if c.builds[-1].status == "SUCCESS" %}
+                                    {% if c.builds[-1].status == "Running" %}
+                                        <span class="label label-info">
+                                    {% elif c.builds[-1].status == "SUCCESS" %}
                                         <span class="label label-success">
+                                    {% elif c.builds[-1].status == "UNSTABLE" %}
+                                        <span class="label label-warning">
                                     {% elif c.builds[-1].status == "FAILURE" %}
                                         <span class="label label-danger">
                                     {% else %}

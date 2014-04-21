@@ -115,8 +115,12 @@
                         <td>{{ b.scheduled }}</td>
                         <td><a target="_blank" href="{{ b.build_url }}">{{ b.build_url }}</a></td>
                         <td>
-                            {% if b.status == "SUCCESS" %}
+                            {% if b.status == "Running" %}
+                                <span class="label label-info">
+                            {% elif b.status == "SUCCESS" %}
                                 <span class="label label-success">
+                            {% elif b.status == "UNSTABLE" %}
+                                <span class="label label-warning">
                             {% elif b.status == "FAILURE" %}
                                 <span class="label label-danger">
                             {% else %}
