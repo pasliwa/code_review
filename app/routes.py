@@ -247,11 +247,7 @@ def merge_branch():
     sha1 = request.form['sha1']
     changeset = Changeset.query.filter(Changeset.sha1 == sha1).first()
     review = Review.query.filter(Review.id == changeset.review_id).first()
-
-    if review.target == "iwd-8.5.000":
-        bookmark = "master"
-    else:
-        bookmark = review.target
+    bookmark = review.target
 
     link = url_for("review_info", review=review.id, _external=True)
 
