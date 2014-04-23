@@ -284,6 +284,8 @@ def merge_branch():
         app.logger.info(result)
         flash("Changeset has been merged", "notice")
 
+    repo_sync()
+
     html = subject + "<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
         link=link, sha1=changeset.sha1, owner=changeset.owner)
 
