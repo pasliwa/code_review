@@ -1,4 +1,6 @@
 import re
+import logging
+
 from hgapi import hgapi
 
 # http://hgbook.red-bean.com/read/customizing-the-output-of-mercurial.html
@@ -8,7 +10,9 @@ class Revision(hgapi.Revision):
         super(Revision, self).__init__(json_log)
         self.bookmarks = set(self.bookmarks.split())
 
+
 hgapi.Revision = Revision
+
 
 class Repo(hgapi.Repo):
     def hg_bookmarks(self):
@@ -42,4 +46,29 @@ class Repo(hgapi.Repo):
 
     def hg_merge(self, reference):
         return self.hg_command("merge", "--tool", "internal:fail", reference)
+
+    def hg_ancestor(self, identifier1, identifier2):
+        query = "ancestor({0},{1})".format(identifier1, identifier2)
+        res = self.hg_command("log", "-r", query, "--template", "{node}")
+        return res.strip()
+
+    def hg_target(self, identifier, official_bookmarks):
+        ancestors = {}
+        for bookmark in official_bookmarks:
+            ancestor = self.hg_ancestor(identifier, bookmark)
+            if not ancestor in ancestors:
+                ancestors[ancestor] = []
+            ancestors[ancestor].append(bookmark)
+        if not ancestors:
+            return []
+        ancestor_ids = ancestors.keys()
+        target_ancestor_id = ancestor_ids[0]
+        for ancestor_id in ancestor_ids[1:]:
+            target_ancestor_id = self.hg_ancestor(target_ancestor_id,
+                                                  ancestor_id)
+        if not target_ancestor_id in ancestors:
+            logging.error("Target ancestor id %s not within list of ancestors"
+                          " for changeset %s", target_ancestor_id, identifier)
+            return []
+        return ancestors[target_ancestor_id]
 

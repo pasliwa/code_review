@@ -425,7 +425,9 @@ def repo_scan():
         app.logger.info(changeset)
     return redirect(url_for('changes_active'))
 
-
+#TODO: Move to Mercurial?
+#TODO: Check if repo is always reset to bare.
+#TODO: Race conditions on repository access
 #@login_required
 #@roles_required('admin')
 @app.route('/repo_sync')
