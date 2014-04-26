@@ -1,11 +1,13 @@
+import logging
+import datetime
+
 # noinspection PyUnresolvedReferences
 from flask.ext.security import RoleMixin, UserMixin
-import datetime
 from sqlalchemy.sql.expression import desc
 
 from app import db
 
-
+logger = logging.getLogger(__name__)
 
 # Define models
 roles_users = db.Table('roles_users',
@@ -110,14 +112,47 @@ class Review(db.Model):
     status = db.Column(db.String(20))   # ACTIVE, MERGED, ABANDONED
     target = db.Column(db.String(20))
     changesets = db.relationship("Changeset", order_by=desc("created_date"))
+    targets = db.relationship("Target", order_by=desc("name"))
 
-    def __init__(self, owner=None, owner_email=None, title=None, bookmark=None, status=None, target=None):
+    def __init__(self, owner=None, owner_email=None, title=None, bookmark=None, status=None):
         self.owner = owner
         self.owner_email = owner_email
         self.title = title
         self.bookmark = bookmark
         self.status = status
-        self.target = target
+
+    #TODO: Test, that targets cannot duplicate
+    #TODO: Test, that target must be one of targets
+    #TODO: What happens on UI when targets list is empty
+    #TODO: Test, that target cannot be set to something outside of targets list
+    def add_targets(self, targets):
+        existing_targets = set([rec.name for rec in self.targets])
+        for target in list(set(targets) - existing_targets):
+            self.targets.append(Target(target))
+        if len(self.targets) == 0:
+            logger.error("Empty targets list for review %d", self.id)
+            self.target = None
+        elif not self.target in set(targets) | existing_targets:
+            self.target = self.targets[0].name
+
+    def set_target(self, target):
+        targets = set([rec.name for rec in self.targets])
+        if not target in targets:
+            raise Exception("Target %s is not allowed for review %d",
+                            target, self.id)
+
+    def __str__(self):
+        return str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))
+
+
+class Target(db.Model):
+    __tablename__ = 'target'
+    id = db.Column(db.Integer, primary_key=True)
+    review_id = db.Column(db.Integer, db.ForeignKey('review.id'))
+    name = db.Column(db.String(20))
+
+    def __init__(self, name):
+        self.name = name
 
     def __str__(self):
         return str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))

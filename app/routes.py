@@ -54,7 +54,9 @@ def changes_new():
             #TODO: Multiple bookmarks
             review = Review(owner=info.name, owner_email=info.email,
                             title=info.title, bookmark=el(info.bookmarks),
-                            status="ACTIVE", target="iwd-8.5.000")
+                            status="ACTIVE")
+            targets = repo.hg_targets(info.rev, app.config['PRODUCT_BRANCHES'])
+            review.add_targets(targets)
             db.session.add(review)
             db.session.commit()
             #TODO: Multiple bookmarks
@@ -189,10 +191,15 @@ def review_info(review):
             db.session.commit()
             flash("Review has been abandoned", "notice")
         if request.form["action"] == "target":
-            review.target = request.form['target']
-            db.session.add(review)
-            db.session.commit()
-            flash("Target branch has been set to <b>{b}</b>".format(b=review.target), "notice")
+            try:
+                review.set_target(request.form['target'])
+            except Exception, ex:
+                flash(str(ex), "error")
+            else:
+                db.session.add(review)
+                db.session.commit()
+                msg = "Target branch has been set to <b>{0}</b>"
+                flash(msg.format(review.target), "notice")
         if request.form["action"] == "abandon_changeset":
             changeset = Changeset.query.filter(Changeset.sha1 == request.form["sha1"]).first()
             if changeset is None:
@@ -236,7 +243,6 @@ def review_info(review):
     for c in review.changesets:
         update_build_status(c.id)
     return render_template("review.html", review=review,
-                           productBranches=sorted(app.config["PRODUCT_BRANCHES"]),
                            descendants=final)
 
 
@@ -370,60 +376,6 @@ def run_scheduled_jobs():
 
     return redirect(url_for('index'))
 
-
-@app.route('/repo_scan')
-def repo_scan():
-    heads = [repo.revision(node) for node in repo.hg_heads()]
-    for h in heads:
-        if h.bookmarks & app.config["IGNORED_BRANCHES"]:
-            continue
-
-        #make sure changeset is in DB
-        count = Changeset.query.filter(Changeset.sha1 == h.node).count()
-        if count < 1:
-            #TODO: Support for multiple bookmarks
-            changeset = Changeset(h.name, h.email, h.title, h.node, el(h.bookmarks), "new")
-            db.session.add(changeset)
-            db.session.commit()
-            app.logger.info("Added new changeset: " + str(changeset))
-
-        # try to find valid review for changeset by searching the commit tree 1 levels down
-        # TODO improvement - extract to function, possibly make it recursive
-        changeset = Changeset.query.filter(Changeset.sha1 == h.node).first()
-        if changeset.review_id is None:
-            parent = repo.revision(changeset.sha1)
-            rev_parent = parent.parents[0]
-            # get sha1 for parent revision
-            parent_info = repo.revision(rev_parent)
-            parent_sha1 = parent_info.node
-            # look for review for parent
-            parent_changeset = Changeset.query.filter(Changeset.sha1 == parent_sha1).first()
-            if parent_changeset is not None and parent_changeset.review_id is not None:
-                parent_review = Review.query.filter(Review.id == parent_changeset.review_id).first()
-                if parent_review.status == "OPEN":
-                    changeset.review_id = parent_review.id
-                    app.logger.info(
-                        "Attaching review id " + str(parent_review.id) + " to changeset id " + str(
-                            changeset.id) + " found by parent")
-                    app.logger.debug("review: " + str(parent_review) + ", changeset: " + str(changeset))
-                    db.session.add(changeset)
-                    db.session.commit()
-
-        # review for parent has not been found
-        if changeset.review_id is None:
-            #TODO: Multiple bookmarks support
-            review = Review(owner=h.name, owner_email=h.email, title=h.title,
-                            bookmark=el(h.bookmarks), status="OPEN",
-                            target="iwd-8.5.000")
-            db.session.add(review)
-            db.session.commit()
-            changeset.review_id = review.id
-            db.session.add(changeset)
-            db.session.commit()
-            app.logger.info("Created new review for changeset id:" + str(changeset.id) + ", review: " + str(review))
-
-        app.logger.info(changeset)
-    return redirect(url_for('changes_active'))
 
 #TODO: Move to Mercurial?
 #TODO: Check if repo is always reset to bare.

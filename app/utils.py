@@ -100,9 +100,10 @@ def get_new():
     reviews = []
     for h in new:
         #TODO: Multiple bookmarks
+        #TODO: Do not return reviews here
         review = Review(owner=h.name, owner_email=h.email,
                         title=h.title, bookmark=el(h.bookmarks),
-                        status="NEW", target="iwd-8.5.000")
+                        status="NEW")
         review.id = 0
         review.sha1 = h.node
         reviews.append(review)

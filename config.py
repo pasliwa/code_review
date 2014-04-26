@@ -31,9 +31,9 @@ JENKINS_URL = "http://pl-byd-srv01.emea.int.genesyslab.com:18080"
 # Mercurial settings
 REPO_PATH = "/home/jenkins/code_review/repo/iwd8"
 HG_PROD = "http://pl-byd-srv01.emea.int.genesyslab.com/hg/iwd8"
-PRODUCT_BRANCHES = set(["iwd-8.5.000", "iwd-8.1.000", "iwd-8.1.001",
-                        "iwd-8.1.101", "iwd-8.0.001", "iwd-8.0.002",
-                        "iwd-8.0.003"])
+PRODUCT_BRANCHES = set(["iwd-8.5.000", "iwd-8.1.101", "iwd-8.1.001",
+                        "iwd-8.1.000", "iwd-8.0.003", "iwd-8.0.002",
+                        "iwd-8.0.001"])
 IGNORED_BRANCHES = set(["test", "iwd-rest", "iwd-history-nosql",
                         "multi-bp-list", "iwd-history"])
 
