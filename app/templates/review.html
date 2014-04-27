@@ -110,7 +110,7 @@
                         {% for c in descendants %}
                         <tr>
                             <td></td>
-                            <td>{{ c.desc }}</td>
+                            <td>{{ c.title }}</td>
                             <td><code>{{ c.changeset }}</code></td>
                             <td>
                                 <form method="post" action="{{ url_for("review_info", review=review.id) }}">

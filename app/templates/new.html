@@ -21,7 +21,7 @@
 {% endif %}
 
 
-<h1>{{ type|title }} changes</h1>
+<h1>New changes</h1>
 
     <table class="table table-hover">
         <thead>
@@ -30,22 +30,33 @@
             <th>Changeset</th>
             <th>Author</th>
             <th>Created</th>
-            <th>Bookmark</th>
-            <th>Target Branch</th>
+            <th>Bookmarks</th>
+            <th>Target Branches</th>
+            <th>Actions</th>
         </tr>
         </thead>
         <tbody>
 
-        {% for r in reviews %}
+        {% for r in revisions %}
             <tr>
                 <td>{{ loop.index }}</td>
+                <td>{{ r.title }}</td>
+                <td>{{ r.author }}</td>
+                <td>{{ r.date|datetime }}</td>
+                <td>{{ r.bookmarks|sort|join("<br>")|nowrap|safe }}</td>
+                <td>{{ r.targets|join("<br>")|nowrap|safe }}</td>
                 <td>
-                    <a href="{{ url_for("review_info", review=r.id) }}">{{ r.title }} </a>
+                    <form method="post" action="{{ url_for("changes_new") }}">
+                        <button class="btn btn-success btn-xs" type="submit"><span class="glyphicon glyphicon-play"></span> Start review</button>
+                        <input type="hidden" name="action" value="start">
+                        <input type="hidden" name="sha1" value="{{ r.node }}">
+                    </form>
+                    <form method="post" action="{{ url_for("changes_new") }}">
+                        <button class="btn btn-danger btn-xs" type="submit"><span class="glyphicon glyphicon-trash"></span> Abandon</button>
+                        <input type="hidden" name="action" value="abandon">
+                        <input type="hidden" name="sha1" value="{{ r.node }}">
+                    </form>
                 </td>
-                <td>{{ r.owner }}</td>
-                <td>{{ r.created_date }}</td>
-                <td>{{ r.bookmark }}</td>
-                <td>{{ r.target }}</td>
             </tr>
         {% endfor %}
         </tr>

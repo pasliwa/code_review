@@ -13,9 +13,17 @@ def url_for_other_page(page):
     args = dict(request.view_args.items() + request.args.to_dict().items())
     args['page'] = page
     return url_for(request.endpoint, **args)
-
-
 app.jinja_env.globals['url_for_other_page'] = url_for_other_page
+
+
+@app.template_filter("nowrap")
+def nowrap_filter(text):
+    return '<span style="white-space: nowrap">' + text + '</span>'
+
+
+@app.template_filter("datetime")
+def datetime_filter(dt):
+    return dt.strftime("%Y-%m-%d %H:%M")
 
 
 class Pagination(object):

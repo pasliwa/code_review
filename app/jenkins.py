@@ -13,7 +13,7 @@ class Jenkins(object):
         self.url = url
         self.app = app
         self.repo = repo
-        self.api = jenkinsapi.jenkins.Jenkins(self.url)
+        self.api = jenkinsapi.jenkins.Jenkins(self.url, lazy=True)
 
     def run_job(self, job_name, rev):
         if not self.api.has_job(job_name):

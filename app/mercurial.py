@@ -1,23 +1,29 @@
 import re
 import logging
+import dateutil.parser
 
 from hgapi import hgapi
 
+#TODO: Use logging instead of app.logger
 # http://hgbook.red-bean.com/read/customizing-the-output-of-mercurial.html
-
-class Revision(hgapi.Revision):
-    def __init__(self, json_log):
-        super(Revision, self).__init__(json_log)
-        self.bookmarks = set(self.bookmarks.split())
-
-
-hgapi.Revision = Revision
 
 logger = logging.getLogger(__name__)
 
 
-class Repo(hgapi.Repo):
+class Revision(hgapi.Revision):
+    def __init__(self, json_log):
+        try:
+            super(Revision, self).__init__(json_log)
+            self.bookmarks = set(self.bookmarks.split())
+            self.date = dateutil.parser.parse(self.date)
+        except:
+            logger.error("Error in Revision.init(). Json log:\n%s", json_log)
+            raise
 
+hgapi.Revision = Revision
+
+
+class Repo(hgapi.Repo):
 
     def hg_bookmarks(self):
         output = self.hg_command("bookmarks")
@@ -74,7 +80,7 @@ class Repo(hgapi.Repo):
 
     def hg_targets(self, identifier, product_bookmarks):
         ancestors = {}
-        for bookmark in product_bookmarks:
+        for bookmark in sorted(product_bookmarks, reverse=True):
             ancestor = self.hg_ancestor(identifier, bookmark)
             if not ancestor in ancestors:
                 ancestors[ancestor] = []

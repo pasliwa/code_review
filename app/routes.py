@@ -19,7 +19,7 @@ from app.model import CodeInspection
 from app.view import Pagination
 from app.model import Review
 from app.utils import update_build_status, find_origin_inspection, \
-    get_admin_emails, get_reviews, get_new, el
+    get_admin_emails, get_reviews, get_new, get_reworks, el
 from view import SearchForm
 
 
@@ -37,6 +37,8 @@ def new_user_registered(sender, **extra):
 
 user_registered.connect(new_user_registered, app)
 
+#TODO: Split and redesign routes
+#TODO: No JIRA support
 
 @app.route('/')
 def index():
@@ -46,6 +48,8 @@ def index():
 @app.route('/changes/new', methods=['GET', 'POST'])
 @login_required
 def changes_new():
+    repo_sync()
+
     if request.method == "POST":
         action = request.form['action']
 
@@ -57,14 +61,12 @@ def changes_new():
                             status="ACTIVE")
             targets = repo.hg_targets(info.rev, app.config['PRODUCT_BRANCHES'])
             review.add_targets(targets)
-            db.session.add(review)
-            db.session.commit()
             #TODO: Multiple bookmarks
             changeset = Changeset(info.name, info.email, info.title,
                                   request.form['sha1'], el(info.bookmarks),
                                   "ACTIVE")
-            changeset.review_id = review.id
-            db.session.add(changeset)
+            review.changesets.append(changeset)
+            db.session.add(review)
             db.session.commit()
             return redirect(url_for('review_info', review=review.id))
 
@@ -78,11 +80,14 @@ def changes_new():
             db.session.commit()
             return redirect(url_for('changes_new'))
 
-    repo_sync()
-    reviews = get_new()
+    revisions = get_new()
+    for revision in revisions:
+        revision.targets = repo.hg_targets(revision.node,
+                                           app.config["PRODUCT_BRANCHES"])
+
     pagination = Pagination(1, 1, 1)
 
-    return render_template('changes.html', type="new", reviews=reviews,
+    return render_template('new.html', revisions=revisions,
                            pagination=pagination)
 
 
@@ -163,6 +168,7 @@ def changeset_info(sha1):
 
 @app.route('/review/<review>', methods=['POST', 'GET'])
 def review_info(review):
+    repo_sync()
     review = Review.query.filter(Review.id == review).first()
     if request.method == 'POST':
         if request.form["action"] == "rework":
@@ -215,35 +221,11 @@ def review_info(review):
             flash("Changeset '{title}' (SHA1: {sha1}) has been abandoned".format(title=changeset.title,
                                                                                  sha1=changeset.sha1), "notice")
 
-    descendants, heads, dec_heads = [], [], []
-    newset_changeset = Changeset.query.filter(and_(Review.id == review.id, Changeset.status == "ACTIVE")).order_by(
-        desc(Changeset.created_date)).first()
-
-    decs = repo.hg_log(identifier="descendants({sha1})".format(sha1=newset_changeset.sha1), template="{node}\n")
-    for row in decs.strip().split('\n'):
-        descendants.append(row)
-
-    temp = repo.hg_heads()
-
-    descendants = set(descendants)
-    heads_set = set(heads)
-
-    common = descendants.intersection(heads_set)
-    for c in common:
-        info = repo.revision(c)
-        dec_heads.append(info)
-
-    # filter out all changesets that are already in db
-    final = []
-    for c in dec_heads:
-        cs = Changeset.query.filter(Changeset.sha1 == c.node).first()
-        if cs is None:
-            final.append(c)
-
     for c in review.changesets:
         update_build_status(c.id)
+
     return render_template("review.html", review=review,
-                           descendants=final)
+                           descendants=get_reworks(review))
 
 
 @app.route('/merge', methods=['POST'])

@@ -140,6 +140,13 @@ class Review(db.Model):
         if not target in targets:
             raise Exception("Target %s is not allowed for review %d",
                             target, self.id)
+        self.target = target
+
+    def active_changeset(self):
+        for changeset in self.changesets:
+            if changeset.status == "ACTIVE":
+                return changeset
+        return None
 
     def __str__(self):
         return str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))

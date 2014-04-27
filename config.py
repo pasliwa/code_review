@@ -32,10 +32,9 @@ JENKINS_URL = "http://pl-byd-srv01.emea.int.genesyslab.com:18080"
 REPO_PATH = "/home/jenkins/code_review/repo/iwd8"
 HG_PROD = "http://pl-byd-srv01.emea.int.genesyslab.com/hg/iwd8"
 PRODUCT_BRANCHES = set(["iwd-8.5.000", "iwd-8.1.101", "iwd-8.1.001",
-                        "iwd-8.1.000", "iwd-8.0.003", "iwd-8.0.002",
-                        "iwd-8.0.001"])
-IGNORED_BRANCHES = set(["test", "iwd-rest", "iwd-history-nosql",
-                        "multi-bp-list", "iwd-history"])
+                        "iwd-8.0.003", "iwd-8.0.002"])
+IGNORED_BRANCHES = set(["test", "iwd-rest", "iwd-history-nosql", "iwd-8.0.001",
+                        "multi-bp-list", "iwd-history", "iwd-8.1.000"])
 
 
 
@@ -43,7 +42,8 @@ IGNORED_BRANCHES = set(["test", "iwd-rest", "iwd-history-nosql",
 SECURITY_PASSWORD_HASH = "sha512_crypt"
 SECURITY_PASSWORD_SALT = "changeme"
 SECURITY_EMAIL_SENDER = "Code Review <jenkins@pl-byd-srv01.emea.int.genesyslab.com>"
-CSRF_ENABLED = False
+
+WTF_CSRF_ENABLED = False
 
 SECURITY_FORGOT_PASSWORD_TEMPLATE = "security/forgot_password.html"
 SECURITY_LOGIN_USER_TEMPLATE = "security/login_user.html"

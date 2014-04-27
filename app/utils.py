@@ -76,39 +76,67 @@ def get_reviews(status, page, request):
     return {"r": reviews, "p": pagination}
 
 
+def get_active_changesets():
+    reviews = Review.query.filter(Review.status == "ACTIVE")
+    changesets = []
+    for review in reviews:
+        for changeset in review.changesets:
+            if changeset.status == "ACTIVE":
+                changesets.append(changeset)
+                break
+    return changesets
+
+
+def is_descendant(node, parents):
+    for chset in parents:
+        if repo.hg_ancestor(node, chset) == chset:
+            return True
+    return False
+
+
 def get_new():
     heads = [repo.revision(node) for node in repo.hg_heads()]
+    active = [changeset.sha1 for changeset in get_active_changesets()]
+    abandoned = set([changeset.sha1 for changeset in
+                    Changeset.query.filter(Changeset.status == "ABANDONED")])
     ignored_bookmarks = app.config["IGNORED_BRANCHES"] | \
                         app.config["PRODUCT_BRANCHES"]
 
-    new = []
+    result = []
     for h in heads:
         if h.bookmarks & ignored_bookmarks:
             continue
-        count = Changeset.query.filter(Changeset.sha1 == h.node).count()
-        # make sure changeset is not part of any review
-        if count < 1:
-            # make sure changeset is not direct ancestor of changeset that is already in an active review
-            #TODO: Multiple parents
-            parent_rev = h.parents[0]
-            parent = repo.revision(parent_rev)
-            count = Changeset.query.filter(
-                and_(Changeset.sha1 == parent.node, Changeset.review_id is not None)).count()
-            if count < 1:
-                new.append(h)
+        if h.node in abandoned:
+            continue
+        if is_descendant(h.node, active):
+            continue
+        result.append(h)
 
-    reviews = []
-    for h in new:
-        #TODO: Multiple bookmarks
-        #TODO: Do not return reviews here
-        review = Review(owner=h.name, owner_email=h.email,
-                        title=h.title, bookmark=el(h.bookmarks),
-                        status="NEW")
-        review.id = 0
-        review.sha1 = h.node
-        reviews.append(review)
+    return result
 
-    return reviews
+
+def get_reworks(review):
+    if review.status != "ACTIVE":
+        return []
+    active = review.active_changeset()
+    if active is None:
+        return []
+
+    heads = [repo.revision(node) for node in repo.hg_heads()]
+    changesets = set([changeset.sha1 for changeset in Changeset.query.all()])
+    ignored_bookmarks = app.config["IGNORED_BRANCHES"] | \
+                        app.config["PRODUCT_BRANCHES"]
+
+    result = []
+    for head in heads:
+        if head.bookmarks & ignored_bookmarks:
+            continue
+        if head.node in changesets:
+            continue
+        if not is_descendant(head.node, [active.sha1]):
+            continue
+        result.append(head)
+    return result
 
 
 def el(set_):
