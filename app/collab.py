@@ -1,6 +1,10 @@
+import logging
 import subprocess, re
 from app import app, repo, User
 from app.model import Review
+
+
+logger = logging.getLogger(__name__)
 
 
 # subprocess.check_output was introduced in 2.7 see
@@ -37,23 +41,23 @@ class CodeCollaborator(object):
 --custom-field "Release={rel}" \
 --title "{title}"
         """.format(cc=app.config["CC_BIN"], owner=owner.cc_login, title=changeset.title, rel=target_release)
-        app.logger.info("CMD: " + cmd)
+        logger.info("CMD: " + cmd)
         output = subprocess.check_output(cmd, shell=True)
-        app.logger.info("CodeCollaborator response: {resp}".format(resp=output))
+        logger.info("CodeCollaborator response: {resp}".format(resp=output))
         regex = re.compile("Review #([0-9]+)")
         # /home/jenkins/ccollab-client/ccollab --no-browser --non-interactive admin review create --creator piotrr --custom-field "Overview=this is the overview" --custom-field "Project=iWD (Intelligent Workload Distribution)" --title "this is title"
         r = regex.search(output)
         review_id = r.groups()[0]
         cmd = "{cc} --no-browser --non-interactive admin review participant assign {review_id} {owner} author".format(
             cc=app.config["CC_BIN"], owner=owner.cc_login, review_id=review_id)
-        app.logger.info("Setting author, cmd: " + cmd)
+        logger.info("Setting author, cmd: " + cmd)
         output = subprocess.check_output(cmd, shell=True)
-        app.logger.info("CodeCollaborator response: {resp}".format(resp=output))
+        logger.info("CodeCollaborator response: {resp}".format(resp=output))
         cmd = "{cc} --no-browser --non-interactive admin review participant assign {review_id} roman.szalla observer".format(
             cc=app.config["CC_BIN"], review_id=review_id)
-        app.logger.info("Setting script user as participant, cmd: " + cmd)
+        logger.info("Setting script user as participant, cmd: " + cmd)
         output = subprocess.check_output(cmd, shell=True)
-        app.logger.info("CodeCollaborator response: {resp}".format(resp=output))
+        logger.info("CodeCollaborator response: {resp}".format(resp=output))
         return review_id
 
     def create_empty_cc_review(self):

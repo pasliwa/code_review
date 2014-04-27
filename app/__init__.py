@@ -21,7 +21,7 @@ from app.jenkins import Jenkins
 from mercurial import Repo
 
 repo = Repo(app.config["REPO_PATH"])
-jenkins = Jenkins(app.config["JENKINS_URL"], app, repo)
+jenkins = Jenkins(app.config["JENKINS_URL"])
 
 from app import view
 from app import utils

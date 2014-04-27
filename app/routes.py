@@ -1,3 +1,7 @@
+import logging
+import datetime
+import re
+
 from flask import render_template, flash, redirect, url_for
 # noinspection PyUnresolvedReferences
 from flask.ext.login import current_user
@@ -6,9 +10,7 @@ from flask.ext.mail import Message
 from flask.globals import request
 # noinspection PyUnresolvedReferences
 from flask.ext.security import login_required, roles_required, user_registered
-import re
 from sqlalchemy.sql.expression import desc, and_
-import datetime
 
 from app import app, db, repo, jenkins, mail, user_datastore
 from app.hgapi.hgapi import HgException
@@ -21,6 +23,9 @@ from app.model import Review
 from app.utils import update_build_status, find_origin_inspection, \
     get_admin_emails, get_reviews, get_new, get_reworks, el
 from view import SearchForm
+
+
+logger = logging.getLogger(__name__)
 
 
 @app.context_processor
@@ -121,9 +126,11 @@ def inspect_diff():
     inspection.sha1 = info.node
     db.session.add(inspection)
     db.session.commit()
-    app.logger.info("Code Collaborator review for changeset id " + str(
-        changeset.id) + " has been added to queue. Changeset: " + str(changeset))
-    flash("Code Collaborator review has been scheduled for processing", "notice")
+    logger.info("Code Collaborator review for changeset id " +
+                str(changeset.id) + " has been added to queue. Changeset: " +
+                str(changeset))
+    flash("Code Collaborator review has been scheduled for processing",
+          "notice")
     return redirect(url_for('changeset_info', sha1=request.form['back_id']))
 
 
@@ -139,9 +146,9 @@ def jenkins_build():
                   job_name=request.form['release'] + "-ci")
     db.session.add(build)
     db.session.commit()
-    app.logger.info(
-        "Jenkins build for changeset id " + str(changeset.id) + " has been added to queue. Changeset: " + str(
-            changeset) + " , build: " + str(build))
+    logger.info("Jenkins build for changeset id " + str(changeset.id) +
+                " has been added to queue. Changeset: " + str(changeset) +
+                " , build: " + str(build))
     flash("Jenkins build has been scheduled for processing", "notice")
     return redirect(url_for('changeset_info', sha1=request.form['back_id']))
 
@@ -241,7 +248,8 @@ def merge_branch():
 
     repo_sync()
 
-    app.logger.info("Merging {sha1} into {target}".format(sha1=sha1, target=review.target))
+    logger.info("Merging {sha1} into {target}".format(sha1=sha1,
+                                                      target=review.target))
     repo.hg_update(bookmark)
 
     try:
@@ -249,7 +257,7 @@ def merge_branch():
     except HgException as e:
         output = str(e)
 
-    app.logger.info("Merge result: {output}".format(output=output))
+    logger.info("Merge result: {output}".format(output=output))
 
     error = False
     subject = "Successful merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
@@ -257,7 +265,7 @@ def merge_branch():
     if "abort: nothing to merge" in output:
         repo.hg_update(sha1)
         result = repo.hg_bookmark(bookmark, force=True)
-        app.logger.info(result)
+        logger.info(result)
         flash("Changeset has been merged", "notice")
     elif "use 'hg resolve' to retry unresolved" in output:
         repo.hg_update("null", clean=True)
@@ -269,7 +277,7 @@ def merge_branch():
     elif "abort: merging with a working directory ancestor has no effect" in output:
         repo.hg_update(sha1)
         result = repo.hg_bookmark(bookmark, force=True)
-        app.logger.info(result)
+        logger.info(result)
         flash("Changeset has been merged", "notice")
 
     repo_sync()
@@ -310,9 +318,10 @@ def run_scheduled_jobs():
     # TODO : add support for flashing messages
     # CC reviews
     inspections = CodeInspection.query.filter(CodeInspection.status == "SCHEDULED").all()
-    app.logger.debug("Code Collaborator reviews to be sent to CC server : " + str(inspections))
+    logger.debug("Code Collaborator reviews to be sent to CC server : " +
+                 str(inspections))
     for i in inspections:
-        app.logger.debug("Processing inspection: " + str(i))
+        logger.debug("Processing inspection: " + str(i))
         cc = CodeCollaborator()
         changeset = Changeset.query.filter(Changeset.id == i.changeset_id).first()
 
@@ -320,10 +329,10 @@ def run_scheduled_jobs():
         inspection = find_origin_inspection(changeset)
         if inspection is None or inspection.inspection_number is None:
             cc_inspection_id = cc.create_review(changeset)
-            app.logger.debug("Got new CodeCollaborator review id: " + str(cc_inspection_id))
+            logger.debug("Got new CodeCollaborator review id: " + str(cc_inspection_id))
         else:
             cc_inspection_id = inspection.inspection_number
-            app.logger.debug("Rework for CC review " + str(cc_inspection_id))
+            logger.debug("Rework for CC review " + str(cc_inspection_id))
 
         res, output = cc.upload_diff(cc_inspection_id, str(i.sha1), repo.path)
         if res:
@@ -332,19 +341,20 @@ def run_scheduled_jobs():
             i.status = 'NEW'
             db.session.add(i)
             db.session.commit()
-            app.logger.info("New CC review has been created: " + str(i))
+            logger.info("New CC review has been created: " + str(i))
         else:
-            app.logger.error("There was an error creating CodeCollaborator review, inspection: " + str(
-                i) + " , command output: " + output)
+            logger.error("There was an error creating CodeCollaborator "
+                         "review, inspection: " + str(i) +
+                         " , command output: " + output)
 
     # Jenkins builds
     builds = Build.query.filter(Build.status == "SCHEDULED").all()
-    app.logger.debug("Builds to be sent to Jenkins: " + str(builds))
+    logger.debug("Builds to be sent to Jenkins: " + str(builds))
     for b in builds:
         changeset = Changeset.query.filter(Changeset.id == b.changeset_id).first()
         build_info = jenkins.run_job(b.job_name, changeset.sha1)
         if build_info is None:
-            app.logger.info("Build id " + str(b.id) + " has been skipped.")
+            logger.info("Build id " + str(b.id) + " has been skipped.")
             continue
         b.status = build_info["status"]
         b.request_id = build_info["request_id"]
@@ -354,7 +364,7 @@ def run_scheduled_jobs():
             b.build_number = build_info["build_number"]
         db.session.add(b)
         db.session.commit()
-        app.logger.info("Build id " + str(b.id) + " has been sent to Jenkins.")
+        logger.info("Build id " + str(b.id) + " has been sent to Jenkins.")
 
     return redirect(url_for('index'))
 
@@ -367,33 +377,33 @@ def run_scheduled_jobs():
 @app.route('/repo_sync')
 def repo_sync():
     # http://www.kevinberridge.com/2012/05/hg-bookmarks-made-me-sad.html
-    app.logger.info("Syncing repos, pull")
+    logger.info("Syncing repos, pull")
     repo.hg_pull()
     bookmarks = repo.hg_bookmarks().keys()
-    app.logger.info("Bookmarks: " + str(bookmarks))
+    logger.info("Bookmarks: " + str(bookmarks))
     reg_expr = "(?P<bookmark>[\s\w\S]+)@(?P<num>\d+)"
     pattern = re.compile(reg_expr)
     for b in bookmarks:
         match = pattern.search(b)
         if match is not None:
-            app.logger.info("Detected a divergent bookmark " + b)
+            logger.info("Detected a divergent bookmark " + b)
             bookmark = match.group("bookmark")
             # todo - handle merge
             repo.hg_update(bookmark)
             repo.hg_merge(b)
             repo.hg_bookmark(b, delete=True)
             repo.hg_update("null")  #make repo bare again
-    app.logger.info("Syncing repos, push")
+    logger.info("Syncing repos, push")
     try:
         repo.hg_push()
     except HgException as e:
         if "no changes found" in e:
-            app.logger.info("No new changes locally so there is nothing to push")
+            logger.info("No new changes locally so there is nothing to push")
     return redirect(url_for('changes_active'))
 
 @app.errorhandler(Exception)
 def internal_error(ex):
-    app.logger.exception(ex)
+    logger.exception(ex)
     import traceback
     error = {'message': str(ex), 'stacktrace': traceback.format_exc()}
     return render_template('500.html', error=error), 500

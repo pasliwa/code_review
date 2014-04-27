@@ -4,7 +4,6 @@ import dateutil.parser
 
 from hgapi import hgapi
 
-#TODO: Use logging instead of app.logger
 # http://hgbook.red-bean.com/read/customizing-the-output-of-mercurial.html
 
 logger = logging.getLogger(__name__)
