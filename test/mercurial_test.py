@@ -92,7 +92,9 @@ class MercurialTest:
         self.commit_master("IWD 8.1.001 branch", bmk="iwd-8.1.001", rev="b811")
         self.commit_master("IWD 8.1.101 branch", bmk="iwd-8.1.101", rev="b811")
         self.commit_master("IWD 8.5.000 branch", bmk="iwd-8.5.000", rev="b810")
-        self.slave = Repo.hg_clone(REPO_MASTER, config.REPO_PATH)
+        #TODO: Bug in mercurial.py. Should return mercurial.Repo, returns hgapi.Repo
+        Repo.hg_clone(REPO_MASTER, config.REPO_PATH)
+        self.slave = Repo(config.REPO_PATH)
 
     @after_class
     def tear_down(self):
@@ -271,6 +273,47 @@ class MercurialTest:
         assert_equal(len(revisions), 0)
 
     @test(depends_on=[dangling_heads])
+    def diverged_merge(self):
+        """Merge review with conflicting changes (diverged)
+            - Verify, that merge is not done
+            - Verify, that local repository is recovered
+            - Verify, that user is informed
+        """
+        # Commit two new revisions IWD-0010 on top of iwd-8.0.002
+        rev1 = self.commit_master("IWD-1010: Diverged merge 1", bmk="IWD-1010",
+                                  rev="iwd-8.0.002")
+        rev1_node = self.master.revision(rev1).node
+        rev2 = self.commit_master("IWD-2010: Diverged merge 2", bmk="IWD-2010",
+                                  rev="iwd-8.0.002")
+        rev2_node = self.master.revision(rev2).node
+        # Login into Detektyw
+        rv = self.login("maciej.malycha@genesyslab.com", "password")
+        assert_true("Active changes" in rv.data)
+        # Open review for first revision and merge it
+        rv = self.app.post("/changes/new", data={"action": "start",
+                                                 "sha1": rev1_node})
+        self.app.post("/merge", data={"sha1": rev1_node})
+        # Open review for second revision and try to merge it
+        rv = self.app.post("/changes/new", data={"action": "start",
+                                                 "sha1": rev2_node})
+        rv = self.app.post("/merge", data={"sha1": rev2_node},
+                           follow_redirects=True)
+        # Verify, that user is informed
+        assert_true("There is merge conflict. Merge with bookmark "
+                    "iwd-8.0.002 and try again." in rv.data)
+        # Verify, that merge is not done
+        assert_true("iwd-8.0.002" in self.master.revision(rev1_node).bookmarks)
+        assert_true("iwd-8.0.002" in self.slave.revision(rev1_node).bookmarks)
+        with patch("flask.templating._render", Dingus(return_value='')):
+            rv = self.app.get("/review/5")
+            review = flask.templating._render.calls[0].args[1]['review']
+        assert_equal(review.status, "ACTIVE")
+        # Verify, that repository has recovered
+        for key, value in self.slave.hg_status().items():
+            assert_equal(value, [])
+        assert_equal(self.slave.hg_id(), "000000000000")
+
+    @test(depends_on=[diverged_merge])
     def merge_with_ancestor(self):
         """Merge review with official branch being descendant of active
            changeset (merging with ancestor case)
@@ -293,14 +336,14 @@ class MercurialTest:
         child_node = self.master.revision(rev).node
         # Verify, that official branch is not recognized as rework
         with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/4")
+            rv = self.app.get("/review/6")
             revisions = flask.templating._render.calls[0].args[1]['descendants']
         assert_equal(len(revisions), 0)
         # And can be merged without problem
         rv = self.app.post("/merge", data={"sha1": parent_node})
         # Review is merged
         with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/4")
+            rv = self.app.get("/review/6")
             review = flask.templating._render.calls[0].args[1]['review']
         assert_equal(review.status, "MERGED")
         # And official bookmark didn't move

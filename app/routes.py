@@ -260,9 +260,9 @@ def merge_branch():
         app.logger.info(result)
         flash("Changeset has been merged", "notice")
     elif "use 'hg resolve' to retry unresolved" in output:
-        result = repo.hg_update(bookmark, clean=True)
-        app.logger.info(result)
-        flash("There is merge conflict: <br/><pre>" + result + "</pre>", "error")
+        repo.hg_update("null", clean=True)
+        flash("There is merge conflict. Merge with bookmark " + bookmark +
+              " and try again.", "error")
         subject = "Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1,
                                                                              dest=review.target)
         error = True
