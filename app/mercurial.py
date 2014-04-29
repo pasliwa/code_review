@@ -16,8 +16,6 @@ class Revision(hgapi.Revision):
             self.bookmarks = set(self.bookmarks.split())
             self.date = dateutil.parser.parse(self.date)
         except:
-            #TODO: Flask is hiding this exception in unit tests
-            #TODO: Something (proboscis?) is eating logs as well
             logger.error("Error in Revision.init(). Json log:\n%s", json_log)
             raise
 

@@ -26,10 +26,8 @@ Message:
 
 here = os.path.dirname(__file__)
 file_handler = RotatingFileHandler(os.path.join(here, "../logs/code_review.log"), maxBytes=104857600, backupCount=30)
-file_handler.setFormatter(logging.Formatter(
-    '%(asctime)s %(levelname)s: %(message)s '
-    '[in %(pathname)s:%(lineno)d]'
-))
+log_format = "%(asctime)s %(levelname)s [%(name)s:%(lineno)d] %(message)s"
+file_handler.setFormatter(logging.Formatter(log_format))
 file_handler.setLevel(logging.DEBUG)
 
 # don't change this!

@@ -17,8 +17,8 @@ class TestHgAPI(unittest.TestCase):
         (a.k.a clone).  Tests are dependent on each other; named
         test_<number>_name for sorting.
     """
-    repo = hgapi.Repo("./test", user="testuser")
-    clone = hgapi.Repo("./test-clone", user="testuser")
+    repo = hgapi.Repo("./tmp/test", user="testuser")
+    clone = hgapi.Repo("./tmp/test-clone", user="testuser")
 
     @classmethod
     def _delete_and_create(cls, path):
