@@ -24,7 +24,8 @@ def update_build_status(changeset):
                 b.build_number = build_info['build_number']
                 b.build_url = build_info['build_url']
             else:
-                b.status = 'Missing'
+                if b.status != "SCHEDULED":
+                    b.status = 'Missing'
         db.session.add(b)
         db.session.commit()
 
