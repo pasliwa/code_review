@@ -46,7 +46,7 @@ class Revision(object):
         rev = json.loads(json_log)
 
         for key in rev.keys():
-            if sys.version_info.major < 3:
+            if sys.version_info[0] < 3:
                 _value = unquote(rev[key].encode("ascii")).decode("utf-8")
             else:
                 _value = unquote(rev[key])

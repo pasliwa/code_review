@@ -141,7 +141,7 @@ def inspect_diff():
 @roles_required('user')
 def jenkins_build():
     info = repo.revision(request.form['src'])
-    changeset = Changeset.query.filter(Changeset.sha1 == info['node']).first()
+    changeset = Changeset.query.filter(Changeset.sha1 == info.node).first()
     build = Build(changeset_id=changeset.id, status="SCHEDULED",
                   job_name=request.form['release'] + "-ci")
     db.session.add(build)

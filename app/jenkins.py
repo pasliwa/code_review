@@ -98,7 +98,8 @@ class Jenkins(object):
         logger.info("Fetching build %d in job %s",
                     build_number, job_name)
         job = self.api.get_job(job_name)
-        build = job.get_build(build_number)
+        # jenkinsapi requires int here; SQLAlchemy returns long
+        build = job.get_build(int(build_number))
         return {"status": self._get_build_status(build)}
 
 
