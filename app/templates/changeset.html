@@ -146,7 +146,7 @@
             {% if cs.diff is none %}
             {% if cs.is_active and cs.review.target is not none %}
             {# TODO: Should display popup window about irreversibility of creating new CI. Target cannot be changed. #}
-            <form method="post" action="{{ url_for("inspect_diff", id=cs.id) }}">
+            <form method="post" action="{{ url_for("inspect_diff", cs_id=cs.id) }}">
                 <button class="btn btn-sm btn-info" type="submit"><span class="glyphicon glyphicon-plus"></span> New
                     inspection
                 </button>
