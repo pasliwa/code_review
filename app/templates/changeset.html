@@ -143,13 +143,16 @@
                     class="glyphicon glyphicon-home"></span> back to review</a></h3>
         </div>
         <div class="panel-body">
-            <form method="post" action="{{ url_for("inspect_diff") }}">
-                <input type="hidden" name="src" value="{{ cs.sha1 }}"/>
-                <input type="hidden" name="back_id" value="{{ cs.sha1 }}"/>
+            {% if cs.diff is none %}
+            {% if cs.is_active and cs.review.target is not none %}
+            {# TODO: Should display popup window about irreversibility of creating new CI. Target cannot be changed. #}
+            <form method="post" action="{{ url_for("inspect_diff", id=cs.id) }}">
                 <button class="btn btn-sm btn-info" type="submit"><span class="glyphicon glyphicon-plus"></span> New
                     inspection
                 </button>
             </form>
+            {% endif %}
+            {% else %}
             <table class="table table-hover table-condensed">
                 <thead>
                 <tr>
@@ -159,25 +162,26 @@
                 </tr>
                 </thead>
                 <tbody>
-                {% for i in cs.inspections %}
                     <tr>
-                        <td>{{ i.inspection_number }}</td>
-                        <td><a target="_blank" href="{{ i.inspection_url }}">{{ i.inspection_url }}</a></td>
+                        <td>{{ cs.review.inspection.number }}</td>
                         <td>
-                            {% if i.status == "SUCCESS" %}
+                            <a target="_blank" href="{{ cs.review.inspection.url }}">
+                                {{ cs.review.inspection.url }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if cs.diff.status == "UPLOADED" %}
                                 <span class="label label-success">
-                            {% elif i.status == "FAILURE" %}
-                                <span class="label label-danger">
                             {% else %}
                                 <span class="label label-default">
                             {% endif %}
-                            {{ i.status }}
+                            {{ cs.diff.status }}
                             </span>
                         </td>
                     </tr>
-                {% endfor %}
                 </tbody>
             </table>
+            {% endif %}
         </div>
     </div>
 
@@ -188,6 +192,7 @@
         <div class="panel-body">
             {# merge #}
             {% if cs.status != "ABANDONED" %}
+            {# TODO: Should display popup window about irreversibility of merge. #}
                 <div>
                     <form method="post" class="form-horizontal" action="{{ url_for("merge_branch") }}">
                         <div class="form-group">

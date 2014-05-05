@@ -30,16 +30,6 @@ def update_build_status(changeset):
         db.session.commit()
 
 
-def find_origin_inspection(changeset):
-    review = Review.query.filter(Review.id == changeset.review_id).first()
-    changesets = review.changesets
-    ids = []
-    map((lambda x: ids.append(x.id) if x.id else x), changesets)
-    inspection = CodeInspection.query.filter(CodeInspection.changeset_id.in_(ids)).order_by(
-        asc(CodeInspection.id)).first()
-    return inspection
-
-
 def get_admin_emails():
     admins = []
     try:

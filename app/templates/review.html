@@ -31,6 +31,7 @@
 
                 </div>
                 <div><span class="col-lg-2 text-right">Target branch</span><span>
+                    {# TODO: If inspection scheduled, target cannot change #}
                     {% if review.targets|length > 1 %}
                     <form method="post" action="{{ url_for("review_info", review=review.id) }}">
 
@@ -120,6 +121,8 @@
                                 </form>
                             </td>
                             <td>
+                                {# TODO: If inspection scheduled, cannot abandon changeset #}
+                                {# TODO: Only active changeset or its descendant can be abandoned #}
                                 <form method="post" action="{{ url_for("review_info", review=review.id) }}">
                                     <input type="hidden" name="action" value="abandon_changeset">
                                     <input type="hidden" name="sha1" value="{{ c.changeset }}">

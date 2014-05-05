@@ -10,17 +10,13 @@ from flask.ext.mail import Message
 from flask.globals import request
 # noinspection PyUnresolvedReferences
 from flask.ext.security import login_required, roles_required, user_registered
-from sqlalchemy.sql.expression import desc, and_
+from sqlalchemy.sql.expression import and_
 
-from app import app, db, repo, jenkins, mail, user_datastore
+from app import app, db, repo, jenkins, cc, mail, user_datastore
 from app.hgapi.hgapi import HgException
-from app.model import Build
-from app.model import Changeset
-from app.collab import CodeCollaborator
-from app.model import CodeInspection
+from app.model import Build, Changeset, CodeInspection, Review, Diff
 from app.view import Pagination
-from app.model import Review
-from app.utils import update_build_status, find_origin_inspection, \
+from app.utils import update_build_status, \
     get_admin_emails, get_reviews, get_new, get_reworks, el
 from view import SearchForm
 
@@ -114,27 +110,50 @@ def changes_merged(page):
     return render_template('changes.html', type="merged", reviews=data["r"], form=form, pagination=data["p"])
 
 
-@app.route('/inspect', methods=['POST'])
+@app.route('/changeset/<int:cs_id>/inspect', methods=['POST'])
 @login_required
 @roles_required('user')
-def inspect_diff():
-    info = repo.revision(request.form['src'])
-    changeset = Changeset.query.filter(Changeset.sha1 == request.form['src']).first()
-    inspection = CodeInspection()
-    inspection.status = "SCHEDULED"
-    inspection.changeset_id = changeset.id
-    inspection.sha1 = info.node
-    db.session.add(inspection)
+def inspect_diff(cs_id):
+    cs = Changeset.query.filter(Changeset.id == cs_id).first()
+    if cs is None:
+        logger.error("Changeset not found: %d", cs_id)
+        return redirect(url_for('index'))
+    redirect_url = redirect(url_for('changeset_info', sha1=cs.sha1))
+    if not cs.is_active():
+        logger.error("Cannot schedule inspection. Changeset %d is not active "
+                     "within review %d. Active changeset is %d",
+                     cs.id, cs.review.id, cs.review.active_changeset().id)
+        flash("Changeset is not active. Cannot schedule inspection.", "error")
+        return redirect_url
+    if cs.review.inspection is None:
+        if cs.review.target is None:
+            logger.error("Cannot schedule inspection. Review %d has no target",
+                         cs.review.id)
+            flash("Review has no target release. Cannot schedule inspection",
+                  "error")
+            return redirect_url
+        msg = "Code Inspection is scheduled for processing"
+        tree_root = repo.hg_ancestor(cs.sha1, cs.review.target)
+        ci = CodeInspection(current_user.cc_login, tree_root, cs.review)
+        db.session.add(ci)
+        logger.info("CodeInspection record %d has been created for review %d",
+                    ci.id, cs.review.id)
+    else:
+        msg = "Rework is scheduled for upload to CodeCollaborator"
+    if cs.diff is not None:
+        logger.error("Cannot upload diff for changeset %d. Already exists "
+                     "diff %d", cs.id, cs.diff.id)
+        flash("Rework has been already scheduled for upload", "error")
+        return redirect_url
+    diff = Diff(cs)
+    db.session.add(diff)
+    logger.info("Diff record %d has been created for changeset %d",
+                diff.id, cs.id)
     db.session.commit()
-    logger.info("Code Collaborator review for changeset id " +
-                str(changeset.id) + " has been added to queue. Changeset: " +
-                str(changeset))
-    flash("Code Collaborator review has been scheduled for processing",
-          "notice")
-    return redirect(url_for('changeset_info', sha1=request.form['back_id']))
 
+    flash(msg, "notice")
+    return redirect_url
 
-#
 
 @app.route('/build', methods=['POST'])
 @login_required
@@ -203,6 +222,7 @@ def review_info(review):
                 db.session.add(c)
             db.session.commit()
             flash("Review has been abandoned", "notice")
+        #TODO: If inspection scheduled, target cannot change
         if request.form["action"] == "target":
             try:
                 review.set_target(request.form['target'])
@@ -213,6 +233,8 @@ def review_info(review):
                 db.session.commit()
                 msg = "Target branch has been set to <b>{0}</b>"
                 flash(msg.format(review.target), "notice")
+        #TODO: If inspection scheduled, cannot abandon changeset
+        #TODO: Only active changeset or its descendant can be abandoned
         if request.form["action"] == "abandon_changeset":
             changeset = Changeset.query.filter(Changeset.sha1 == request.form["sha1"]).first()
             if changeset is None:
@@ -317,55 +339,66 @@ def merge_branch():
 def run_scheduled_jobs():
     # TODO : add support for flashing messages
     # CC reviews
-    inspections = CodeInspection.query.filter(CodeInspection.status == "SCHEDULED").all()
-    logger.debug("Code Collaborator reviews to be sent to CC server : " +
-                 str(inspections))
+    logger.info("Running scheduled jobs")
+    inspections = CodeInspection.query.filter(
+        CodeInspection.status == "SCHEDULED").all()
     for i in inspections:
-        logger.debug("Processing inspection: " + str(i))
-        cc = CodeCollaborator()
-        changeset = Changeset.query.filter(Changeset.id == i.changeset_id).first()
-
-        # check if this is a rework
-        inspection = find_origin_inspection(changeset)
-        if inspection is None or inspection.inspection_number is None:
-            cc_inspection_id = cc.create_review(changeset)
-            logger.debug("Got new CodeCollaborator review id: " + str(cc_inspection_id))
-        else:
-            cc_inspection_id = inspection.inspection_number
-            logger.debug("Rework for CC review " + str(cc_inspection_id))
-
-        res, output = cc.upload_diff(cc_inspection_id, str(i.sha1), repo.path)
-        if res:
-            i.inspection_number = cc_inspection_id
-            i.inspection_url = app.config["CC_REVIEW_URL"].format(reviewId=cc_inspection_id)
-            i.status = 'NEW'
-            db.session.add(i)
+        try:
+            logger.info("Processing inspection: %d", i.id)
+            if i.number is not None:
+                logger.error("Inspection %d with number is still scheduled.",
+                             i.id)
+                continue
+            i.number, i.url = cc.create_review(i.review.title, i.review.target)
+            if i.number is None:
+                logger.error("Creating inspection %d in CodeCollaborator "
+                             "failed.", i.id)
+                continue
+            cc.add_participant(i.number, i.author, "author")
+            i.status = "NEW"
+            #TODO: What happens if there is exception in database? Thousands of inspections will be created?
             db.session.commit()
-            logger.info("New CC review has been created: " + str(i))
-        else:
-            logger.error("There was an error creating CodeCollaborator "
-                         "review, inspection: " + str(i) +
-                         " , command output: " + output)
+        except:
+            logger.exception("Exception when processing inspection: %d", i.id)
+            db.session.rollback()
+
+    # CC diffs
+    diffs = Diff.query.filter(Diff.status == "SCHEDULED").all()
+    for d in diffs:
+        try:
+            logger.info("Processing diff: %d", d.id)
+            i = d.changeset.review.inspection
+            if i.status == "SCHEDULED":
+                logger.error("Inspection of diff %d is still scheduled", d.id)
+                continue
+            if cc.upload_diff(i.number, i.root, d.changeset.sha1):
+                d.status = "UPLOADED"
+                db.session.commit()
+        except:
+            logger.exception("Exception when uploading diff: %d", d.id)
+            db.session.rollback()
 
     # Jenkins builds
     builds = Build.query.filter(Build.status == "SCHEDULED").all()
-    logger.debug("Builds to be sent to Jenkins: " + str(builds))
     for b in builds:
-        changeset = Changeset.query.filter(Changeset.id == b.changeset_id).first()
-        build_info = jenkins.run_job(b.job_name, changeset.sha1)
-        if build_info is None:
-            logger.info("Build id " + str(b.id) + " has been skipped.")
-            continue
-        b.status = build_info["status"]
-        b.request_id = build_info["request_id"]
-        b.scheduled = build_info["scheduled"]
-        b.build_url = build_info["build_url"]
-        if "build_number" in build_info:
-            b.build_number = build_info["build_number"]
-        db.session.add(b)
-        db.session.commit()
-        logger.info("Build id " + str(b.id) + " has been sent to Jenkins.")
+        try:
+            logger.info("Processing build: %d", b.id)
+            build_info = jenkins.run_job(b.job_name, b.changeset.sha1)
+            if build_info is None:
+                logger.error("Build id " + str(b.id) + " has been skipped.")
+                continue
+            b.status = build_info["status"]
+            b.request_id = build_info["request_id"]
+            b.scheduled = build_info["scheduled"]
+            b.build_url = build_info["build_url"]
+            if "build_number" in build_info:
+                b.build_number = build_info["build_number"]
+            db.session.commit()
+        except:
+            logger.exception("Exception when running build: %d", b.id)
+            db.session.rollback()
 
+    logger.info("Running scheduled jobs completed")
     return redirect(url_for('index'))
 
 

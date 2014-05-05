@@ -18,10 +18,13 @@ security = Security(app, user_datastore)
 mail = Mail(app)
 
 from app.jenkins import Jenkins
-from mercurial import Repo
+from app.mercurial import Repo
+from app.collab import CodeCollaborator
 
 repo = Repo(app.config["REPO_PATH"])
 jenkins = Jenkins(app.config["JENKINS_URL"])
+cc = CodeCollaborator(app.config["CC_BIN"], app.config["CC_REVIEW_URL"],
+                      app.config["REPO_PATH"])
 
 from app import view
 from app import utils
