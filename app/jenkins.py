@@ -74,7 +74,10 @@ class Jenkins(object):
         job = self.api.get_job(job_name)
         for build_id in job.get_build_ids():
             build = job.get_build(build_id)
-            for param in build.get_actions()['parameters']:
+            actions = build.get_actions()
+            if not 'parameters' in actions:
+                continue
+            for param in actions['parameters']:
                 if param['name'] == 'REQUEST_ID' and param['value'] == request_id:
                     logger.info("Found build %d in job %s for id %s",
                                 build.get_number(),

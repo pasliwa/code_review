@@ -192,7 +192,7 @@ def changeset_info(sha1):
 
 
 
-@app.route('/review/<review>', methods=['POST', 'GET'])
+@app.route('/review/<int:review>', methods=['POST', 'GET'])
 def review_info(review):
     repo_sync()
     review = Review.query.filter(Review.id == review).first()
