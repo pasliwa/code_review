@@ -1,0 +1,43 @@
+import os
+
+from sandbox import REPO_MASTER
+
+def modfile(file_name, line_no, line_text):
+    lines = []
+    if os.path.exists(file_name):
+        lines = file(file_name, "r").readlines()
+    lines.extend([""] * (line_no + 1 - len(lines)))
+    lines[line_no] = line_text
+    file(file_name, "w").writelines(lines)
+
+FILE_1 = os.path.join(REPO_MASTER, "file1.txt")
+
+
+class MercurialBase:
+
+    def commit_master(self, line_text, file_name=FILE_1, rev=None, line_no=0,
+                      bmk=None, tag=None):
+        if rev:
+            self.master.hg_update(rev, clean=True)
+        if bmk:
+            self.master.hg_bookmark(bmk, force=True)
+        modfile(file_name, line_no, line_text)
+        self.master.hg_add(file_name)
+        self.master.hg_commit(line_text)
+        if tag:
+            self.master.hg_tag(tag, "--local")
+        return self.master.hg_id()
+
+    def commit_slave(self, line_text, file_name=FILE_1, rev=None, line_no=0,
+                     bmk=None, tag=None):
+        if rev:
+            self.slave.hg_update(rev, clean=True)
+        if bmk:
+            self.slave.hg_bookmark(bmk, force=True)
+        modfile(file_name, line_no, line_text)
+        self.slave.hg_add(file_name)
+        self.slave.hg_commit(line_text)
+        if tag:
+            self.slave.hg_tag(tag, "--local")
+        return self.slave.hg_id()
+

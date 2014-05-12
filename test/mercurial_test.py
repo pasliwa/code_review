@@ -6,60 +6,19 @@ from proboscis import test, before_class, after_class
 from proboscis.asserts import assert_equal, assert_true
 from dingus import patch, Dingus
 
-import config
-config.SQLALCHEMY_DATABASE_URI = "sqlite://"
-config.REPO_PATH = "/home/mmalych/Work/IWD/Mercurial/tmp/repo_clone"
-config.TESTING = True
-config.DEBUG = True
-config.WTF_CSRF_ENABLED = False
+from sandbox import REPO_MASTER, config
 
 import flask.templating
 from app import app
 from app.mercurial import Repo
 from db_create import db_create
 
+from test.mercurial import MercurialBase
 
-REPO_MASTER = "/home/mmalych/Work/IWD/Mercurial/tmp/repo_master"
-FILE_1 = os.path.join(REPO_MASTER, "file1.txt")
-
-
-def modfile(file_name, line_no, line_text):
-    lines = []
-    if os.path.exists(file_name):
-        lines = file(file_name, "r").readlines()
-    lines.extend([""] * (line_no + 1 - len(lines)))
-    lines[line_no] = line_text
-    file(file_name, "w").writelines(lines)
 
 
 @test
-class MercurialTest:
-
-    def commit_master(self, line_text, file_name=FILE_1, rev=None, line_no=0,
-                      bmk=None, tag=None):
-        if rev:
-            self.master.hg_update(rev, clean=True)
-        if bmk:
-            self.master.hg_bookmark(bmk, force=True)
-        modfile(file_name, line_no, line_text)
-        self.master.hg_add(file_name)
-        self.master.hg_commit(line_text)
-        if tag:
-            self.master.hg_tag(tag, "--local")
-        return self.master.hg_id()
-
-    def commit_slave(self, line_text, file_name=FILE_1, rev=None, line_no=0,
-                     bmk=None, tag=None):
-        if rev:
-            self.slave.hg_update(rev, clean=True)
-        if bmk:
-            self.slave.hg_bookmark(bmk, force=True)
-        modfile(file_name, line_no, line_text)
-        self.slave.hg_add(file_name)
-        self.slave.hg_commit(line_text)
-        if tag:
-            self.slave.hg_tag(tag, "--local")
-        return self.slave.hg_id()
+class MercurialTest(MercurialBase):
 
     def login(self, username, password):
         return self.app.post('/login', data=dict(

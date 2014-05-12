@@ -93,3 +93,20 @@ class Repo(hgapi.Repo):
                 youngest = candidate
         return ancestors[youngest]
 
+    diverged_regexp = re.compile("(?P<bookmark>[\s\w\S]+)@(?P<num>\d+)")
+
+    def hg_fetch(self):
+        self.hg_pull()
+        bookmarks = self.hg_bookmarks()
+        for b in bookmarks.keys():
+            match = self.diverged_regexp.search(b)
+            if match is not None:
+                logger.warn("Detected diverged bookmark %s with node %s."
+                            "Attempting merge.", b, bookmarks[b])
+                core_bookmark = match.group("bookmark")
+                self.hg_update(core_bookmark)
+                self.hg_merge(b)
+                # TODO: Handle merge status & conflicts
+                self.hg_bookmark(b, delete=True)
+                # TODO: Clean also for regular merge?
+                self.hg_update("null", clean=True)
