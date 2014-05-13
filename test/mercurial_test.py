@@ -33,13 +33,7 @@ class MercurialTest(MercurialBase):
     def setup(self):
         db_create()
         self.app = app.test_client()
-        if os.path.exists(REPO_MASTER):
-            shutil.rmtree(REPO_MASTER)
-        if os.path.exists(config.REPO_PATH):
-            shutil.rmtree(config.REPO_PATH)
-        os.makedirs(REPO_MASTER)
-        self.master = Repo(REPO_MASTER)
-        self.master.hg_init()
+        self.init_repos()
         self.commit_master("Initial creation",   tag="root")
         self.commit_master("IWD 8.0 root",       tag="b800",        rev="root")
         self.commit_master("IWD 8.0.001 branch", bmk="iwd-8.0.001", rev="b800")
@@ -52,9 +46,7 @@ class MercurialTest(MercurialBase):
         self.commit_master("IWD 8.1.001 branch", bmk="iwd-8.1.001", rev="b811")
         self.commit_master("IWD 8.1.101 branch", bmk="iwd-8.1.101", rev="b811")
         self.commit_master("IWD 8.5.000 branch", bmk="iwd-8.5.000", rev="b810")
-        #TODO: Bug in mercurial.py. Should return mercurial.Repo, returns hgapi.Repo
-        Repo.hg_clone(REPO_MASTER, config.REPO_PATH)
-        self.slave = Repo(config.REPO_PATH)
+        self.slave.hg_pull()
 
     @after_class
     def tear_down(self):

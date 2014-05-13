@@ -9,6 +9,9 @@ from hgapi import hgapi
 logger = logging.getLogger(__name__)
 
 
+class MergeConflictException(Exception): pass
+
+
 class Revision(hgapi.Revision):
     def __init__(self, json_log):
         try:
@@ -95,7 +98,7 @@ class Repo(hgapi.Repo):
 
     diverged_regexp = re.compile("(?P<bookmark>[\s\w\S]+)@(?P<num>\d+)")
 
-    def hg_fetch(self):
+    def hg_sync(self):
         self.hg_pull()
         bookmarks = self.hg_bookmarks()
         for b in bookmarks.keys():
