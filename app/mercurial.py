@@ -9,7 +9,8 @@ from hgapi import hgapi
 logger = logging.getLogger(__name__)
 
 
-class MergeConflictException(Exception): pass
+class MergeConflictException(Exception):
+    pass
 
 
 class Revision(hgapi.Revision):
@@ -59,6 +60,43 @@ class Repo(hgapi.Repo):
     def hg_merge(self, reference):
         return self.hg_command("merge", "--tool", "internal:fail", reference)
 
+    def hg_push(self, destination=None):
+        try:
+            if destination is None:
+                self.hg_command("push", "-f")
+            else:
+                self.hg_command("push", "-f", destination)
+        except hgapi.HgException, ex:
+            if not "no changes found" in ex.message:
+                raise
+
+    def hg_incoming_bookmarks(self, source=None):
+        try:
+            if source is None:
+                output = self.hg_command("incoming", "-B")
+            else:
+                output = self.hg_command("incoming", "-B", source)
+        except hgapi.HgException, ex:
+            if "no changed bookmarks found" in ex.message:
+                return []
+            raise
+        result = []
+        for line in output.split('\n')[2:-1]:
+            bookmark, node = line.split()
+            result.append(bookmark)
+        return result
+
+    def hg_pull_bookmark(self, bookmark, source=None):
+        if source is None:
+            self.hg_command("pull", "-B", bookmark)
+        else:
+            self.hg_command("pull", "-B", bookmark, source)
+
+    def hg_pull(self, source=None):
+        hgapi.Repo.hg_pull(self, source)
+        for bookmark in self.hg_incoming_bookmarks(source):
+            self.hg_pull_bookmark(bookmark, source)
+
     def hg_ancestor(self, identifier1, identifier2):
         query = "ancestor('{0}','{1}')".format(identifier1, identifier2)
         res = self.hg_command("log", "-r", query, "--template", "{node}")
@@ -96,11 +134,12 @@ class Repo(hgapi.Repo):
                 youngest = candidate
         return ancestors[youngest]
 
-    diverged_regexp = re.compile("(?P<bookmark>[\s\w\S]+)@(?P<num>\d+)")
+    diverged_regexp = re.compile("(?P<bookmark>[\s\w\S]+)@default")
 
     def hg_sync(self):
         self.hg_pull()
         bookmarks = self.hg_bookmarks()
+        merged = False
         for b in bookmarks.keys():
             match = self.diverged_regexp.search(b)
             if match is not None:
@@ -109,7 +148,12 @@ class Repo(hgapi.Repo):
                 core_bookmark = match.group("bookmark")
                 self.hg_update(core_bookmark)
                 self.hg_merge(b)
+                self.hg_commit("Merge of divergent branch {}".format(b))
                 # TODO: Handle merge status & conflicts
                 self.hg_bookmark(b, delete=True)
-                # TODO: Clean also for regular merge?
-                self.hg_update("null", clean=True)
+                merged = True
+        if merged:
+            # TODO: Clean also for regular merge?
+            self.hg_update("null", clean=True)
+        self.hg_push()
+
