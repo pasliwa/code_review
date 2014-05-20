@@ -24,7 +24,6 @@ class MergeTest(MercurialBase):
         self.slave.hg_sync()
         assert_true("iwd-8.5.000" in self.master.revision(rev2).bookmarks)
         assert_true("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
-        # TODO: Report this situation
 
     @test
     def advance_branch_recovery(self):
@@ -36,7 +35,6 @@ class MergeTest(MercurialBase):
         self.slave.hg_sync()
         assert_true("iwd-8.5.000" in self.master.revision(rev2).bookmarks)
         assert_true("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
-        # TODO: Report this situation for official branch
 
     @test
     def conflicting_changes_during_sync(self):
@@ -58,7 +56,7 @@ class MergeTest(MercurialBase):
         assert_raises(HgException, self.slave.revision, rev1)
         # TODO: Report this situation
 
-    @test(groups=["run"])
+    @test
     def diverged_branches_recovery(self):
         self.init_repos()
         self.commit_master("Initial creation", bmk="iwd-8.5.000")
@@ -75,9 +73,8 @@ class MergeTest(MercurialBase):
         assert_true("iwd-8.5.000" in self.slave.revision(rev3).bookmarks)
         assert_false("iwd-8.5.000@default" in self.master.hg_bookmarks().keys())
         assert_false("iwd-8.5.000@default" in self.master.hg_bookmarks().keys())
-        #TODO: Report this situation
 
-    @test
+    @test(groups=["run"])
     def multiple_failed_branches(self):
         self.init_repos()
         self.commit_master("Initial creation")
@@ -110,12 +107,12 @@ class MergeTest(MercurialBase):
         assert_equal(self.slave.revision(rev5).bookmarks, set([]))
         assert_true("iwd-8.5.000" in self.master.revision(rev6).bookmarks)
         assert_true("iwd-8.5.000" in self.slave.revision(rev6).bookmarks)
-        #TODO: Check, that all violations were reported.
+        fail()
 
 
 def run_tests():
-    from proboscis import TestProgram
-    TestProgram().run_and_exit()
+    from proboscis import TestProgram, register
+    TestProgram(groups=["run"]).run_and_exit()
 
 if __name__ == "__main__":
     run_tests()

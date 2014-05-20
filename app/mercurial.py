@@ -61,14 +61,10 @@ class Repo(hgapi.Repo):
         return self.hg_command("merge", "--tool", "internal:fail", reference)
 
     def hg_push(self, destination=None):
-        try:
-            if destination is None:
-                self.hg_command("push", "-f")
-            else:
-                self.hg_command("push", "-f", destination)
-        except hgapi.HgException, ex:
-            if not "no changes found" in ex.message:
-                raise
+        if destination is None:
+            self.hg_command("push", "-f")
+        else:
+            self.hg_command("push", "-f", destination)
 
     def hg_incoming_bookmarks(self, source=None):
         try:
@@ -136,24 +132,43 @@ class Repo(hgapi.Repo):
 
     diverged_regexp = re.compile("(?P<bookmark>[\s\w\S]+)@default")
 
+    official_re = re.compile('^iwd-\d.\d.\d{3}$')
+
     def hg_sync(self):
+        old_bookmarks = self.hg_bookmarks()
         self.hg_pull()
-        bookmarks = self.hg_bookmarks()
-        merged = False
-        for b in bookmarks.keys():
+        new_bookmarks = self.hg_bookmarks()
+
+        for b in set(old_bookmarks.keys() + new_bookmarks.keys()):
+            if not self.official_re.match(b):
+                continue
+            elif not b in new_bookmarks:
+                logger.warn("Official bookmark %s mysteriously disappeared "
+                            "in hg_sync", b)
+            elif not b in old_bookmarks:
+                logger.warn("Official bookmark %s appeared in hg_sync", b)
+            elif new_bookmarks[b] != old_bookmarks[b]:
+                logger.warn("Official bookmark %s changed position "
+                            "from %s to %s in hg_sync", b,
+                            old_bookmarks[b], new_bookmarks[b])
+
+        for b in new_bookmarks.keys():
             match = self.diverged_regexp.search(b)
             if match is not None:
-                logger.warn("Detected diverged bookmark %s with node %s."
-                            "Attempting merge.", b, bookmarks[b])
+                logger.warn("Detected diverged bookmark %s with node %s. "
+                            "Attempting merge.", b, new_bookmarks[b])
                 core_bookmark = match.group("bookmark")
                 self.hg_update(core_bookmark)
                 self.hg_merge(b)
                 self.hg_commit("Merge of divergent branch {}".format(b))
+                self.hg_update("null", clean=True)
                 # TODO: Handle merge status & conflicts
                 self.hg_bookmark(b, delete=True)
-                merged = True
-        if merged:
-            # TODO: Clean also for regular merge?
-            self.hg_update("null", clean=True)
-        self.hg_push()
+                self.hg_push()
+        try:
+            self.hg_push()
+            logger.warn("Detected unsuccessful push. Fixed during hg_sync.")
+        except hgapi.HgException, ex:
+            if not "no changes found" in ex.message:
+                raise
 
