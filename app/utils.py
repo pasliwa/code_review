@@ -1,32 +1,39 @@
-import os
-import shutil
-from sqlalchemy import asc
-from sqlalchemy.sql import desc, and_
-from app import jenkins, db, User, Role, app, repo
+import time
+import logging
+from sqlalchemy.sql import desc
+from app import jenkins, db, User, Role, app
 from app.model import Build, Changeset
-from app.model import CodeInspection
 from app.model import Review
 from app.view import Pagination
+from app.perfutils import performance_monitor
 
 
+def known_build_numbers(job_name):
+    return db.session.query(Build.build_number).filter(Build.job_name == job_name)
+
+jenkins_final_states = ["FAILURE", "UNSTABLE", "SUCCESS"]
+
+@performance_monitor("update_build_status")
 def update_build_status(changeset):
     builds = Build.query.filter(Build.changeset_id == changeset).all()
     for b in builds:
-        if b.build_number is not None:
-            build_info = jenkins.get_build_info(b.job_name, b.build_number)
-            b.status = build_info['status']
+        if b.status in jenkins_final_states:
+            continue
+        elif b.build_number is not None:
+            b.status = jenkins.get_build_status(b.job_name, b.build_number)
         elif jenkins.check_queue(b.job_name, b.request_id):
             b.status = 'Queued'
         else:
-            build_info = jenkins.find_build(b.job_name, b.request_id)
-            if build_info is not None:
-                b.status = build_info['status']
-                b.build_number = build_info['build_number']
-                b.build_url = build_info['build_url']
+            builds = set(jenkins.list_builds(b.job_name)) - set(known_build_numbers(b.job_name))
+            for build_number in builds:
+                build_info = jenkins.get_build_info(b.job_name, build_number)
+                if build_info["request_id"] == b.request_id:
+                    b.status = build_info['status']
+                    b.build_number = build_number
+                    b.build_url = build_info["build_url"]
+                    break
             else:
-                if b.status != "SCHEDULED":
-                    b.status = 'Missing'
-        db.session.add(b)
+                b.status = "Missing" if b.status != "SCHEDULED" else "SCHEDULED"
         db.session.commit()
 
 
@@ -39,17 +46,6 @@ def get_admin_emails():
     except Exception:
         pass
     return admins
-
-
-def repo_clone(url):
-    path = app.config["REPO_PATH"]
-    if os.path.exists(path):
-        shutil.rmtree(path)
-    os.mkdir(path)
-    print("HG clone repo '{repo}' into '{path}'".format(repo=url, path=path))
-    repo.hg_clone(url, path)
-    repo.hg_update("null", True)
-    print("HG clone finished")
 
 
 def get_reviews(status, page, request):
@@ -78,14 +74,14 @@ def get_active_changesets():
     return changesets
 
 
-def is_descendant(node, parents):
+def is_descendant(repo, node, parents):
     for chset in parents:
         if repo.hg_ancestor(node, chset) == chset:
             return True
     return False
 
 
-def get_new():
+def get_new(repo):
     heads = [repo.revision(node) for node in repo.hg_heads()]
     active = [changeset.sha1 for changeset in get_active_changesets()]
     abandoned = set([changeset.sha1 for changeset in
@@ -99,14 +95,14 @@ def get_new():
             continue
         if h.node in abandoned:
             continue
-        if is_descendant(h.node, active):
+        if is_descendant(repo, h.node, active):
             continue
         result.append(h)
 
     return result
 
 
-def get_reworks(review):
+def get_reworks(repo, review):
     if review.status != "ACTIVE":
         return []
     active = review.active_changeset()
@@ -124,7 +120,7 @@ def get_reworks(review):
             continue
         if head.node in changesets:
             continue
-        if not is_descendant(head.node, [active.sha1]):
+        if not is_descendant(repo, head.node, [active.sha1]):
             continue
         result.append(head)
     return result
@@ -136,3 +132,5 @@ def el(set_):
         return None
     else:
         return l[0]
+
+

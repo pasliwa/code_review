@@ -14,35 +14,36 @@ FILE_3 = os.path.join(config.REPO_PATH, "file2.txt")
 @test
 class MergeTest(MercurialBase):
 
-    @test
-    def failed_push_recovery(self):
+    def test_failed_push_recovery(self):
         self.init_repos()
         self.commit_master("Initial creation")
-        rev1 = self.commit_master("Last commit in official repo", bmk="iwd-8.5.000")
+        rev1 = self.commit_master("Last commit in official repo",
+                                  bmk="iwd-8.5.000")
         self.slave.hg_pull()
-        rev2 = self.commit_slave("Non-pushed commit in local repo", rev="iwd-8.5.000")
+        rev2 = self.commit_slave("Non-pushed commit in local repo",
+                                 rev="iwd-8.5.000")
         self.slave.hg_sync()
         assert_true("iwd-8.5.000" in self.master.revision(rev2).bookmarks)
         assert_true("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
 
-    @test
-    def advance_branch_recovery(self):
+    def test_advance_branch_recovery(self):
         self.init_repos()
         self.commit_master("Initial creation")
-        rev1 = self.commit_master("Last commit in both repos", bmk="iwd-8.5.000")
+        rev1 = self.commit_master("Last commit in both repos",
+                                  bmk="iwd-8.5.000")
         self.slave.hg_pull()
         rev2 = self.commit_master("Advance commit in official repo")
         self.slave.hg_sync()
         assert_true("iwd-8.5.000" in self.master.revision(rev2).bookmarks)
         assert_true("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
 
-    @test
-    def conflicting_changes_during_sync(self):
+    def test_conflicting_changes_during_sync(self):
         self.init_repos()
         self.commit_master("Initial creation", bmk="iwd-8.5.000")
         self.slave.hg_pull()
         rev1 = self.commit_master("Conflicting change in master")
-        rev2 = self.commit_slave("Conflicting change in slave")
+        rev2 = self.commit_slave("Conflicting change in slave",
+                                 rev="iwd-8.5.000")
         try:
             self.slave.hg_sync()
             fail("conflicting changes during sync didn't raise exception")
@@ -53,11 +54,9 @@ class MergeTest(MercurialBase):
         assert_true("iwd-8.5.000" in self.master.revision(rev1).bookmarks)
         assert_raises(HgException, self.master.revision, rev2)
         assert_true("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
-        assert_raises(HgException, self.slave.revision, rev1)
-        # TODO: Report this situation
+        assert_true("iwd-8.5.000@default" in self.slave.revision(rev1).bookmarks)
 
-    @test
-    def diverged_branches_recovery(self):
+    def test_diverged_branches_recovery(self):
         self.init_repos()
         self.commit_master("Initial creation", bmk="iwd-8.5.000")
         self.slave.hg_pull()
@@ -72,10 +71,9 @@ class MergeTest(MercurialBase):
         rev3 = self.master.revision("iwd-8.5.000").node
         assert_true("iwd-8.5.000" in self.slave.revision(rev3).bookmarks)
         assert_false("iwd-8.5.000@default" in self.master.hg_bookmarks().keys())
-        assert_false("iwd-8.5.000@default" in self.master.hg_bookmarks().keys())
+        assert_false("iwd-8.5.000@default" in self.slave.hg_bookmarks().keys())
 
-    @test(groups=["run"])
-    def multiple_failed_branches(self):
+    def test_multiple_failed_branches(self):
         self.init_repos()
         self.commit_master("Initial creation")
         self.commit_master("Non-conflicting merge root", bmk="iwd-8.0.003")
@@ -107,12 +105,12 @@ class MergeTest(MercurialBase):
         assert_equal(self.slave.revision(rev5).bookmarks, set([]))
         assert_true("iwd-8.5.000" in self.master.revision(rev6).bookmarks)
         assert_true("iwd-8.5.000" in self.slave.revision(rev6).bookmarks)
-        fail()
 
 
 def run_tests():
-    from proboscis import TestProgram, register
-    TestProgram(groups=["run"]).run_and_exit()
+    from proboscis import TestProgram
+    TestProgram().run_and_exit()
+
 
 if __name__ == "__main__":
     run_tests()

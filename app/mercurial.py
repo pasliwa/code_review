@@ -1,16 +1,20 @@
+import os
 import re
 import logging
 import dateutil.parser
 
 from hgapi import hgapi
+from app.perfutils import PerformanceMonitor
 
 # http://hgbook.red-bean.com/read/customizing-the-output-of-mercurial.html
 
 logger = logging.getLogger(__name__)
 
 
-class MergeConflictException(Exception):
-    pass
+class MergeConflictException(hgapi.HgException):
+    def __init__(self, hg_exception):
+        super(MergeConflictException, self).__init__(hg_exception.message)
+        self.exit_code = hg_exception.exit_code
 
 
 class Revision(hgapi.Revision):
@@ -57,8 +61,15 @@ class Repo(hgapi.Repo):
         '"tags":"{tags}","desc":"{desc|urlescape}\"}\n'
     )
 
-    def hg_merge(self, reference):
-        return self.hg_command("merge", "--tool", "internal:fail", reference)
+    def hg_merge(self, reference, preview=False):
+        if preview:
+            return hgapi.Repo.hg_merge(reference, True)
+        try:
+            return self.hg_command("merge", "--tool", "internal:fail", reference)
+        except hgapi.HgException, ex:
+            if "use 'hg resolve' to retry" in ex.message:
+                raise MergeConflictException(ex)
+            raise
 
     def hg_push(self, destination=None):
         if destination is None:
@@ -134,10 +145,13 @@ class Repo(hgapi.Repo):
 
     official_re = re.compile('^iwd-\d.\d.\d{3}$')
 
+    #TODO: Check if repo is always reset to bare.
+    #TODO: Race conditions on repository access
     def hg_sync(self):
-        old_bookmarks = self.hg_bookmarks()
-        self.hg_pull()
-        new_bookmarks = self.hg_bookmarks()
+        with PerformanceMonitor("hg_sync: hg_pull"):
+            old_bookmarks = self.hg_bookmarks()
+            self.hg_pull()
+            new_bookmarks = self.hg_bookmarks()
 
         for b in set(old_bookmarks.keys() + new_bookmarks.keys()):
             if not self.official_re.match(b):
@@ -155,20 +169,33 @@ class Repo(hgapi.Repo):
         for b in new_bookmarks.keys():
             match = self.diverged_regexp.search(b)
             if match is not None:
-                logger.warn("Detected diverged bookmark %s with node %s. "
-                            "Attempting merge.", b, new_bookmarks[b])
-                core_bookmark = match.group("bookmark")
-                self.hg_update(core_bookmark)
-                self.hg_merge(b)
-                self.hg_commit("Merge of divergent branch {}".format(b))
-                self.hg_update("null", clean=True)
-                # TODO: Handle merge status & conflicts
-                self.hg_bookmark(b, delete=True)
-                self.hg_push()
-        try:
-            self.hg_push()
-            logger.warn("Detected unsuccessful push. Fixed during hg_sync.")
-        except hgapi.HgException, ex:
-            if not "no changes found" in ex.message:
-                raise
+                with PerformanceMonitor("hg_sync: hg_merge"):
+                    logger.warn("Detected diverged bookmark %s with node %s. "
+                                "Attempting merge.", b, new_bookmarks[b])
+                    core_bookmark = match.group("bookmark")
+                    self.hg_update(core_bookmark)
+                    try:
+                        self.hg_merge(b)
+                        self.hg_commit("Merge of divergent branch {}".format(b))
+                        logger.warn("Merge of diverged bookmark %s successful.", b)
+                    except:
+                        logger.error("Unsuccessful merge of diverged bookmark %s",
+                                     b, exc_info=True)
+                        raise
+                    finally:
+                        self.hg_update("null", clean=True)
+                    self.hg_bookmark(b, delete=True)
+                    self.hg_push()
 
+        with PerformanceMonitor("hg_sync: hg_push"):
+            try:
+                self.hg_push()
+                logger.warn("Detected unsuccessful push. Fixed during hg_sync.")
+            except hgapi.HgException, ex:
+                if not "no changes found" in ex.message:
+                    raise
+
+    @classmethod
+    def hg_clone(cls, url, path, *args):
+        Repo.command(".", os.environ, "clone", url, path, *args)
+        return Repo(path)
