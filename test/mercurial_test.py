@@ -3,7 +3,7 @@ import os.path
 import shutil
 
 from proboscis import test
-from proboscis.asserts import assert_equal, assert_true
+from proboscis.asserts import assert_equal, assert_true, assert_false
 from dingus import patch, Dingus
 
 from sandbox import REPO_MASTER, config
@@ -12,7 +12,7 @@ import flask.templating
 from app import app, db
 from db_create import db_create
 
-from test.mercurial import MercurialBase
+from test.mercurial import MercurialBase, FILE_3
 
 
 
@@ -173,7 +173,7 @@ class MercurialTest(MercurialBase):
         assert_equal(revisions[0].title, "IWD-0006: Side branch")
 
     def test_dangling_heads(self):
-        """Merge review with dangling heads
+        """Merge review with dangling heads (true merge)
             - Verify, that last active review is merged
             - Verify, that dangling heads became new
             - Verify, that heads no longer appear as rework candidates
@@ -181,6 +181,9 @@ class MercurialTest(MercurialBase):
         # Commit new revision IWD-0009 on top of iwd-8.5.000
         self.commit_master("IWD-0009: Dangling branches root", bmk="IWD-0009",
                            rev="iwd-8.5.000")
+        head_id = self.commit_master("IWD-1009: Advance branch for true merge",
+                                     bmk="iwd-8.5.000", rev="iwd-8.5.000",
+                                     file_name=FILE_3)
         # Login into Detektyw
         rv = self.login("maciej.malycha@genesyslab.com", "password")
         assert_true("Active changes" in rv.data)
@@ -195,7 +198,7 @@ class MercurialTest(MercurialBase):
         rv = self.app.post("/changes/new", data={"action": "start",
                                                  "sha1": review_sha1})
         # Commit two rework branches to IWD-0009
-        self.commit_master("IWD-0009: Rework 1.0", bmk="rev1")
+        self.commit_master("IWD-0009: Rework 1.0", bmk="rev1", rev="IWD-0009")
         self.commit_master("IWD-0009: Rework 1.1")
         self.commit_master("IWD-0009: Rework 2.0", bmk="rev2", rev="IWD-0009")
         # Verify, that they don't show up as new changes
@@ -211,6 +214,11 @@ class MercurialTest(MercurialBase):
         # Merge IWD-0009 but not the reworks
         # TODO: Review should be merged, not changeset
         rv = self.app.post("/merge", data={"sha1": review_sha1})
+        # Verify, that merge, commit and push was done
+        assert_false("iwd-8.5.000" in self.slave.revision(review_sha1).bookmarks)
+        assert_false("iwd-8.5.000" in self.slave.revision(head_id).bookmarks)
+        assert_false("iwd-8.5.000" in self.master.revision(review_sha1).bookmarks)
+        assert_false("iwd-8.5.000" in self.master.revision(head_id).bookmarks)
         # Verify, that reworks show up on new
         with patch("flask.templating._render", Dingus(return_value='')):
             rv = self.app.get("/changes/new")

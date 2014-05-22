@@ -93,8 +93,7 @@ class Jenkins(object):
             logger.error("Cannot find job %s", job_name)
             return None
 
-        logger.info("Fetching build %d in job %s",
-                    build_number, job_name)
+        logger.info("Fetching build %s:%d", job_name, build_number)
         job = self.api.get_job(job_name)
         # jenkinsapi requires int here; SQLAlchemy returns long
         return job.get_build(int(build_number))

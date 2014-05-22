@@ -31,7 +31,7 @@ file_handler.setFormatter(logging.Formatter(log_format))
 file_handler.setLevel(logging.DEBUG)
 
 # don't change this!
-app.logger.setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.DEBUG)
 logging.getLogger("app.mercurial").setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
 app.logger.addHandler(mail_handler)

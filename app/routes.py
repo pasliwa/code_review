@@ -1,6 +1,5 @@
 import logging
 import datetime
-import re
 
 from flask import render_template, flash, redirect, url_for
 # noinspection PyUnresolvedReferences
@@ -18,6 +17,7 @@ from app.model import Build, Changeset, CodeInspection, Review, Diff
 from app.view import Pagination
 from app.utils import update_build_status, \
     get_admin_emails, get_reviews, get_new, get_reworks, el
+from app.perfutils import performance_monitor
 from view import SearchForm
 
 
@@ -48,7 +48,9 @@ def index():
 
 @app.route('/changes/new', methods=['GET', 'POST'])
 @login_required
+@performance_monitor("Request /changes/new")
 def changes_new():
+    logger.info("Requested URL /changes/new")
     repo.hg_sync()
 
     if request.method == "POST":
@@ -173,7 +175,9 @@ def jenkins_build():
 
 
 @app.route('/changeset/<sha1>', methods=['POST', 'GET'])
+@performance_monitor("Request /changeset/<sha1>")
 def changeset_info(sha1):
+    logger.info("Requested URL /changeset/%s", sha1)
     cs = Changeset.query.filter(Changeset.sha1 == sha1).first()
     prev = Changeset.query.filter(and_(Changeset.created_date < cs.created_date,
                                        Changeset.status == "ACTIVE",
@@ -193,6 +197,7 @@ def changeset_info(sha1):
 
 
 @app.route('/review/<int:review>', methods=['POST', 'GET'])
+@performance_monitor("Request /review/<int:review>")
 def review_info(review):
     logger.info("Requested URL /review/%d", review)
     review = Review.query.filter(Review.id == review).first()
@@ -263,8 +268,10 @@ def review_info(review):
 @app.route('/merge', methods=['POST'])
 @login_required
 @roles_required('admin')
+@performance_monitor("Request /merge")
 def merge_branch():
     sha1 = request.form['sha1']
+    logger.info("Requested URL /merge for sha1=%s", sha1)
     changeset = Changeset.query.filter(Changeset.sha1 == sha1).first()
     review = Review.query.filter(Review.id == changeset.review_id).first()
     bookmark = review.target
@@ -303,6 +310,9 @@ def merge_branch():
         result = repo.hg_bookmark(bookmark, force=True)
         logger.info(result)
         flash("Changeset has been merged", "notice")
+    else:
+        repo.hg_commit("Merged with {target}".format(target=review.target))
+        repo.hg_update("null")
 
     try:
         repo.hg_push()

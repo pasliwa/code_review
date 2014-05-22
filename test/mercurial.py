@@ -15,7 +15,7 @@ def modfile(file_name, line_no, line_text):
 
 FILE_1 = os.path.join(REPO_MASTER, "file1.txt")
 FILE_2 = os.path.join(config.REPO_PATH, "file1.txt")
-
+FILE_3 = os.path.join(REPO_MASTER, "file2.txt")
 
 class MercurialBase(unittest.TestCase):
 

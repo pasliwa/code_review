@@ -12,14 +12,17 @@ logger = logging.getLogger(__name__)
 def known_build_numbers(job_name):
     return db.session.query(Build.build_number).filter(Build.job_name == job_name)
 
-jenkins_final_states = ["FAILURE", "UNSTABLE", "SUCCESS"]
+jenkins_final_states = ["FAILURE", "UNSTABLE", "SUCCESS", "ABORTED"]
 
 @performance_monitor("update_build_status")
 def update_build_status(changeset):
-    logger.info("Updating build status for changeset %s")
+    logger.info("Updating build status for changeset %s", changeset)
     builds = Build.query.filter(Build.changeset_id == changeset).all()
     for b in builds:
-        if b.status in jenkins_final_states:
+        if b.status == "SCHEDULED":
+            logger.debug("Build scheduled. Skipping")
+            continue
+        elif b.status in jenkins_final_states:
             logger.debug("Build %d in final state %s. Skipped", b.build_number,
                          b.status)
             continue
@@ -39,7 +42,7 @@ def update_build_status(changeset):
                                  b.build_number, b.status)
                     break
             else:
-                b.status = "Missing" if b.status != "SCHEDULED" else "SCHEDULED"
+                b.status = "Missing"
         db.session.commit()
 
 

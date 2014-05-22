@@ -4,7 +4,7 @@ import logging
 # TODO: Move to utils after clean-up
 class PerformanceMonitor:
 
-    logger = logging.getLogger("performance")
+    logger = logging.getLogger("app.performance")
 
     def __init__(self, text):
         self.text = text
