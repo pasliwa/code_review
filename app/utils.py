@@ -1,4 +1,3 @@
-import time
 import logging
 from sqlalchemy.sql import desc
 from app import jenkins, db, User, Role, app
@@ -10,7 +9,10 @@ from app.perfutils import performance_monitor
 logger = logging.getLogger(__name__)
 
 def known_build_numbers(job_name):
-    return db.session.query(Build.build_number).filter(Build.job_name == job_name)
+    query = db.session.query(Build.build_number)\
+        .filter(Build.job_name == job_name)\
+        .filter(Build.build_number != None)
+    return [int(row.build_number) for row in query.all()]
 
 jenkins_final_states = ["FAILURE", "UNSTABLE", "SUCCESS", "ABORTED"]
 
