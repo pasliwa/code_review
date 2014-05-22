@@ -2,64 +2,22 @@ import os
 import os.path
 import shutil
 
-from proboscis import test, before_class, after_class
-from proboscis.asserts import assert_equal, assert_true
+from proboscis import test
+from proboscis.asserts import assert_equal, assert_true, assert_false
 from dingus import patch, Dingus
 
-import config
-config.SQLALCHEMY_DATABASE_URI = "sqlite://"
-config.REPO_PATH = "/home/mmalych/Work/IWD/Mercurial/tmp/repo_clone"
-config.TESTING = True
-config.DEBUG = True
-config.WTF_CSRF_ENABLED = False
+from sandbox import REPO_MASTER, config
 
 import flask.templating
-from app import app
-from app.mercurial import Repo
+from app import app, db
 from db_create import db_create
 
+from test.mercurial import MercurialBase, FILE_3
 
-REPO_MASTER = "/home/mmalych/Work/IWD/Mercurial/tmp/repo_master"
-FILE_1 = os.path.join(REPO_MASTER, "file1.txt")
-
-
-def modfile(file_name, line_no, line_text):
-    lines = []
-    if os.path.exists(file_name):
-        lines = file(file_name, "r").readlines()
-    lines.extend([""] * (line_no + 1 - len(lines)))
-    lines[line_no] = line_text
-    file(file_name, "w").writelines(lines)
 
 
 @test
-class MercurialTest:
-
-    def commit_master(self, line_text, file_name=FILE_1, rev=None, line_no=0,
-                      bmk=None, tag=None):
-        if rev:
-            self.master.hg_update(rev, clean=True)
-        if bmk:
-            self.master.hg_bookmark(bmk, force=True)
-        modfile(file_name, line_no, line_text)
-        self.master.hg_add(file_name)
-        self.master.hg_commit(line_text)
-        if tag:
-            self.master.hg_tag(tag, "--local")
-        return self.master.hg_id()
-
-    def commit_slave(self, line_text, file_name=FILE_1, rev=None, line_no=0,
-                     bmk=None, tag=None):
-        if rev:
-            self.slave.hg_update(rev, clean=True)
-        if bmk:
-            self.slave.hg_bookmark(bmk, force=True)
-        modfile(file_name, line_no, line_text)
-        self.slave.hg_add(file_name)
-        self.slave.hg_commit(line_text)
-        if tag:
-            self.slave.hg_tag(tag, "--local")
-        return self.slave.hg_id()
+class MercurialTest(MercurialBase):
 
     def login(self, username, password):
         return self.app.post('/login', data=dict(
@@ -70,17 +28,18 @@ class MercurialTest:
     def logout(self):
         return self.app.get('/logout', follow_redirects=True)
 
-    @before_class
-    def setup(self):
-        db_create()
-        self.app = app.test_client()
+    # Disable docstring printing
+    def shortDescription(self):
+        return None
+
+    def setUp(self):
         if os.path.exists(REPO_MASTER):
             shutil.rmtree(REPO_MASTER)
         if os.path.exists(config.REPO_PATH):
             shutil.rmtree(config.REPO_PATH)
-        os.makedirs(REPO_MASTER)
-        self.master = Repo(REPO_MASTER)
-        self.master.hg_init()
+        db_create()
+        self.app = app.test_client()
+        self.init_repos()
         self.commit_master("Initial creation",   tag="root")
         self.commit_master("IWD 8.0 root",       tag="b800",        rev="root")
         self.commit_master("IWD 8.0.001 branch", bmk="iwd-8.0.001", rev="b800")
@@ -93,18 +52,12 @@ class MercurialTest:
         self.commit_master("IWD 8.1.001 branch", bmk="iwd-8.1.001", rev="b811")
         self.commit_master("IWD 8.1.101 branch", bmk="iwd-8.1.101", rev="b811")
         self.commit_master("IWD 8.5.000 branch", bmk="iwd-8.5.000", rev="b810")
-        #TODO: Bug in mercurial.py. Should return mercurial.Repo, returns hgapi.Repo
-        Repo.hg_clone(REPO_MASTER, config.REPO_PATH)
-        self.slave = Repo(config.REPO_PATH)
+        self.slave.hg_pull()
 
-    @after_class
-    def tear_down(self):
-        #shutil.rmtree(REPO_MASTER)
-        if os.path.exists(config.REPO_PATH):
-            shutil.rmtree(config.REPO_PATH)
+    def tearDown(self):
+        db.drop_all()
 
-    @test
-    def recognize_reworks(self):
+    def test_recognize_reworks(self):
         """Push chain of two commits and one commit, both lines originating
            from active changeset
             - Verify, that both are qualified as reworks
@@ -157,8 +110,7 @@ class MercurialTest:
         rv = self.app.post("/changes/new", data={"action": "abandon",
                                                  "sha1": revisions[0].node})
 
-    @test(depends_on=[recognize_reworks])
-    def revision_from_old_changeset(self):
+    def test_revision_from_old_changeset(self):
         """Push revision originating from older changeset
             - Verify, that it appears on 'New'
             - Abandon active changeset
@@ -184,13 +136,13 @@ class MercurialTest:
         self.commit_master("IWD-0006: Newer changeset")
         # Verify, that it shows up as rework
         with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/2")
+            rv = self.app.get("/review/1")
             revisions = flask.templating._render.calls[0].args[1]['descendants']
         assert_equal(len(revisions), 1)
         assert_equal(revisions[0].title, "IWD-0006: Newer changeset")
         rework_sha1 = revisions[0].node
         # Make it changeset
-        rv = self.app.post("/review/2", data={"action": "rework",
+        rv = self.app.post("/review/1", data={"action": "rework",
                                               "sha1": rework_sha1})
         # Commit new revision on top of older changeset
         self.commit_master("IWD-0006: Side branch", rev=review_sha1)
@@ -202,11 +154,11 @@ class MercurialTest:
         assert_equal(revisions[0].title, "IWD-0006: Side branch")
         # But not on the review list
         with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/2")
+            rv = self.app.get("/review/1")
             revisions = flask.templating._render.calls[0].args[1]['descendants']
         assert_equal(len(revisions), 0)
         # Abandon active changeset
-        self.app.post("/review/2", data={"action": "abandon_changeset",
+        self.app.post("/review/1", data={"action": "abandon_changeset",
                                          "sha1": rework_sha1})
         # Verify, that side branch is not on new
         with patch("flask.templating._render", Dingus(return_value='')):
@@ -215,14 +167,13 @@ class MercurialTest:
         assert_equal(len(revisions), 0)
         # But listed as rework
         with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/2")
+            rv = self.app.get("/review/1")
             revisions = flask.templating._render.calls[0].args[1]['descendants']
         assert_equal(len(revisions), 1)
         assert_equal(revisions[0].title, "IWD-0006: Side branch")
 
-    @test(depends_on=[revision_from_old_changeset])
-    def dangling_heads(self):
-        """Merge review with dangling heads
+    def test_dangling_heads(self):
+        """Merge review with dangling heads (true merge)
             - Verify, that last active review is merged
             - Verify, that dangling heads became new
             - Verify, that heads no longer appear as rework candidates
@@ -230,6 +181,9 @@ class MercurialTest:
         # Commit new revision IWD-0009 on top of iwd-8.5.000
         self.commit_master("IWD-0009: Dangling branches root", bmk="IWD-0009",
                            rev="iwd-8.5.000")
+        head_id = self.commit_master("IWD-1009: Advance branch for true merge",
+                                     bmk="iwd-8.5.000", rev="iwd-8.5.000",
+                                     file_name=FILE_3)
         # Login into Detektyw
         rv = self.login("maciej.malycha@genesyslab.com", "password")
         assert_true("Active changes" in rv.data)
@@ -244,7 +198,7 @@ class MercurialTest:
         rv = self.app.post("/changes/new", data={"action": "start",
                                                  "sha1": review_sha1})
         # Commit two rework branches to IWD-0009
-        self.commit_master("IWD-0009: Rework 1.0", bmk="rev1")
+        self.commit_master("IWD-0009: Rework 1.0", bmk="rev1", rev="IWD-0009")
         self.commit_master("IWD-0009: Rework 1.1")
         self.commit_master("IWD-0009: Rework 2.0", bmk="rev2", rev="IWD-0009")
         # Verify, that they don't show up as new changes
@@ -254,12 +208,17 @@ class MercurialTest:
         assert_equal(len(revisions), 0)
         # But show up as reworks
         with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/3")
+            rv = self.app.get("/review/1")
             revisions = flask.templating._render.calls[0].args[1]['descendants']
         assert_equal(len(revisions), 2)
         # Merge IWD-0009 but not the reworks
         # TODO: Review should be merged, not changeset
         rv = self.app.post("/merge", data={"sha1": review_sha1})
+        # Verify, that merge, commit and push was done
+        assert_false("iwd-8.5.000" in self.slave.revision(review_sha1).bookmarks)
+        assert_false("iwd-8.5.000" in self.slave.revision(head_id).bookmarks)
+        assert_false("iwd-8.5.000" in self.master.revision(review_sha1).bookmarks)
+        assert_false("iwd-8.5.000" in self.master.revision(head_id).bookmarks)
         # Verify, that reworks show up on new
         with patch("flask.templating._render", Dingus(return_value='')):
             rv = self.app.get("/changes/new")
@@ -269,12 +228,11 @@ class MercurialTest:
         assert_equal(revisions[1].title, "IWD-0009: Rework 1.1")
         # But not on the review page
         with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/3")
+            rv = self.app.get("/review/1")
             revisions = flask.templating._render.calls[0].args[1]['descendants']
         assert_equal(len(revisions), 0)
 
-    @test(depends_on=[dangling_heads])
-    def diverged_merge(self):
+    def test_diverged_merge(self):
         """Merge review with conflicting changes (diverged)
             - Verify, that merge is not done
             - Verify, that local repository is recovered
@@ -306,7 +264,7 @@ class MercurialTest:
         assert_true("iwd-8.0.002" in self.master.revision(rev1_node).bookmarks)
         assert_true("iwd-8.0.002" in self.slave.revision(rev1_node).bookmarks)
         with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/5")
+            rv = self.app.get("/review/2")
             review = flask.templating._render.calls[0].args[1]['review']
         assert_equal(review.status, "ACTIVE")
         # Verify, that repository has recovered
@@ -314,8 +272,7 @@ class MercurialTest:
             assert_equal(value, [])
         assert_equal(self.slave.hg_id(), "000000000000")
 
-    @test(depends_on=[diverged_merge])
-    def merge_with_ancestor(self):
+    def test_merge_with_ancestor(self):
         """Merge review with official branch being descendant of active
            changeset (merging with ancestor case)
             - Verify, that official branch is not recognized as rework
@@ -337,14 +294,14 @@ class MercurialTest:
         child_node = self.master.revision(rev).node
         # Verify, that official branch is not recognized as rework
         with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/6")
+            rv = self.app.get("/review/1")
             revisions = flask.templating._render.calls[0].args[1]['descendants']
         assert_equal(len(revisions), 0)
         # And can be merged without problem
         rv = self.app.post("/merge", data={"sha1": parent_node})
         # Review is merged
         with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/6")
+            rv = self.app.get("/review/1")
             review = flask.templating._render.calls[0].args[1]['review']
         assert_equal(review.status, "MERGED")
         # And official bookmark didn't move

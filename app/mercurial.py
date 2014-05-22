@@ -1,12 +1,20 @@
+import os
 import re
 import logging
 import dateutil.parser
 
 from hgapi import hgapi
+from app.perfutils import PerformanceMonitor
 
 # http://hgbook.red-bean.com/read/customizing-the-output-of-mercurial.html
 
 logger = logging.getLogger(__name__)
+
+
+class MergeConflictException(hgapi.HgException):
+    def __init__(self, hg_exception):
+        super(MergeConflictException, self).__init__(hg_exception.message)
+        self.exit_code = hg_exception.exit_code
 
 
 class Revision(hgapi.Revision):
@@ -53,8 +61,49 @@ class Repo(hgapi.Repo):
         '"tags":"{tags}","desc":"{desc|urlescape}\"}\n'
     )
 
-    def hg_merge(self, reference):
-        return self.hg_command("merge", "--tool", "internal:fail", reference)
+    def hg_merge(self, reference, preview=False):
+        if preview:
+            return hgapi.Repo.hg_merge(reference, True)
+        try:
+            return self.hg_command("merge", "--tool", "internal:fail", reference)
+        except hgapi.HgException, ex:
+            if "use 'hg resolve' to retry" in ex.message:
+                raise MergeConflictException(ex)
+            raise
+
+    def hg_push(self, destination=None):
+        if destination is None:
+            self.hg_command("push", "-f")
+        else:
+            self.hg_command("push", "-f", destination)
+
+    def hg_incoming_bookmarks(self, source=None):
+        try:
+            if source is None:
+                output = self.hg_command("incoming", "-B")
+            else:
+                output = self.hg_command("incoming", "-B", source)
+        except hgapi.HgException, ex:
+            if "no changed bookmarks found" in ex.message:
+                return []
+            raise
+        result = []
+        for line in output.split('\n')[2:-1]:
+            bookmark, node = line.split()
+            result.append(bookmark)
+        return result
+
+    def hg_pull_bookmark(self, bookmark, source=None):
+        logger.debug("Pulling bookmark %s", bookmark)
+        if source is None:
+            self.hg_command("pull", "-B", bookmark)
+        else:
+            self.hg_command("pull", "-B", bookmark, source)
+
+    def hg_pull(self, source=None):
+        hgapi.Repo.hg_pull(self, source)
+        for bookmark in self.hg_incoming_bookmarks(source):
+            self.hg_pull_bookmark(bookmark, source)
 
     def hg_ancestor(self, identifier1, identifier2):
         query = "ancestor('{0}','{1}')".format(identifier1, identifier2)
@@ -93,3 +142,62 @@ class Repo(hgapi.Repo):
                 youngest = candidate
         return ancestors[youngest]
 
+    diverged_regexp = re.compile("(?P<bookmark>[\s\w\S]+)@default")
+
+    official_re = re.compile('^iwd-\d.\d.\d{3}$')
+
+    #TODO: Check if repo is always reset to bare.
+    #TODO: Race conditions on repository access
+    def hg_sync(self):
+        logger.info("Performing hg_sync")
+        with PerformanceMonitor("hg_sync: hg_pull"):
+            old_bookmarks = self.hg_bookmarks()
+            self.hg_pull()
+            new_bookmarks = self.hg_bookmarks()
+
+        for b in set(old_bookmarks.keys() + new_bookmarks.keys()):
+            if not self.official_re.match(b):
+                continue
+            elif not b in new_bookmarks:
+                logger.warn("Official bookmark %s mysteriously disappeared "
+                            "in hg_sync", b)
+            elif not b in old_bookmarks:
+                logger.warn("Official bookmark %s appeared in hg_sync", b)
+            elif new_bookmarks[b] != old_bookmarks[b]:
+                logger.warn("Official bookmark %s changed position "
+                            "from %s to %s in hg_sync", b,
+                            old_bookmarks[b], new_bookmarks[b])
+
+        for b in new_bookmarks.keys():
+            match = self.diverged_regexp.search(b)
+            if match is not None:
+                with PerformanceMonitor("hg_sync: hg_merge"):
+                    logger.warn("Detected diverged bookmark %s with node %s. "
+                                "Attempting merge.", b, new_bookmarks[b])
+                    core_bookmark = match.group("bookmark")
+                    self.hg_update(core_bookmark)
+                    try:
+                        self.hg_merge(b)
+                        self.hg_commit("Merge of divergent branch {}".format(b))
+                        logger.warn("Merge of diverged bookmark %s successful.", b)
+                    except:
+                        logger.error("Unsuccessful merge of diverged bookmark %s",
+                                     b, exc_info=True)
+                        raise
+                    finally:
+                        self.hg_update("null", clean=True)
+                    self.hg_bookmark(b, delete=True)
+                    self.hg_push()
+
+        with PerformanceMonitor("hg_sync: hg_push"):
+            try:
+                self.hg_push()
+                logger.warn("Detected unsuccessful push. Fixed during hg_sync.")
+            except hgapi.HgException, ex:
+                if not "no changes found" in ex.message:
+                    raise
+
+    @classmethod
+    def hg_clone(cls, url, path, *args):
+        Repo.command(".", os.environ, "clone", url, path, *args)
+        return Repo(path)

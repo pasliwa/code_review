@@ -1,6 +1,5 @@
 import logging
 import datetime
-import re
 
 from flask import render_template, flash, redirect, url_for
 # noinspection PyUnresolvedReferences
@@ -18,6 +17,7 @@ from app.model import Build, Changeset, CodeInspection, Review, Diff
 from app.view import Pagination
 from app.utils import update_build_status, \
     get_admin_emails, get_reviews, get_new, get_reworks, el
+from app.perfutils import performance_monitor
 from view import SearchForm
 
 
@@ -48,8 +48,10 @@ def index():
 
 @app.route('/changes/new', methods=['GET', 'POST'])
 @login_required
+@performance_monitor("Request /changes/new")
 def changes_new():
-    repo_sync()
+    logger.info("Requested URL /changes/new")
+    repo.hg_sync()
 
     if request.method == "POST":
         action = request.form['action']
@@ -81,7 +83,7 @@ def changes_new():
             db.session.commit()
             return redirect(url_for('changes_new'))
 
-    revisions = get_new()
+    revisions = get_new(repo)
     for revision in revisions:
         revision.targets = repo.hg_targets(revision.node,
                                            app.config["PRODUCT_BRANCHES"])
@@ -173,7 +175,9 @@ def jenkins_build():
 
 
 @app.route('/changeset/<sha1>', methods=['POST', 'GET'])
+@performance_monitor("Request /changeset/<sha1>")
 def changeset_info(sha1):
+    logger.info("Requested URL /changeset/%s", sha1)
     cs = Changeset.query.filter(Changeset.sha1 == sha1).first()
     prev = Changeset.query.filter(and_(Changeset.created_date < cs.created_date,
                                        Changeset.status == "ACTIVE",
@@ -193,9 +197,12 @@ def changeset_info(sha1):
 
 
 @app.route('/review/<int:review>', methods=['POST', 'GET'])
+@performance_monitor("Request /review/<int:review>")
 def review_info(review):
-    repo_sync()
+    logger.info("Requested URL /review/%d", review)
     review = Review.query.filter(Review.id == review).first()
+    if review.status == "ACTIVE":
+        repo.hg_sync()
     if request.method == 'POST':
         if request.form["action"] == "rework":
             # make sure cs doesnt exist
@@ -250,28 +257,30 @@ def review_info(review):
             flash("Changeset '{title}' (SHA1: {sha1}) has been abandoned".format(title=changeset.title,
                                                                                  sha1=changeset.sha1), "notice")
 
-    for c in review.changesets:
-        update_build_status(c.id)
+    if review.status == "ACTIVE":
+        for c in review.changesets:
+            update_build_status(c.id)
 
     return render_template("review.html", review=review,
-                           descendants=get_reworks(review))
+                           descendants=get_reworks(repo, review))
 
 
 @app.route('/merge', methods=['POST'])
 @login_required
 @roles_required('admin')
+@performance_monitor("Request /merge")
 def merge_branch():
     sha1 = request.form['sha1']
+    logger.info("Requested URL /merge for sha1=%s", sha1)
     changeset = Changeset.query.filter(Changeset.sha1 == sha1).first()
     review = Review.query.filter(Review.id == changeset.review_id).first()
     bookmark = review.target
 
     link = url_for("review_info", review=review.id, _external=True)
 
-    repo_sync()
+    repo.hg_sync()
 
-    logger.info("Merging {sha1} into {target}".format(sha1=sha1,
-                                                      target=review.target))
+    logger.info("Merging %s into %s", sha1, review.target)
     repo.hg_update(bookmark)
 
     try:
@@ -301,8 +310,15 @@ def merge_branch():
         result = repo.hg_bookmark(bookmark, force=True)
         logger.info(result)
         flash("Changeset has been merged", "notice")
+    else:
+        repo.hg_commit("Merged with {target}".format(target=review.target))
+        repo.hg_update("null")
 
-    repo_sync()
+    try:
+        repo.hg_push()
+    except HgException, ex:
+        if not "no changes found" in ex.message:
+            raise
 
     html = subject + "<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
         link=link, sha1=changeset.sha1, owner=changeset.owner)
@@ -337,7 +353,6 @@ def merge_branch():
 
 @app.route('/run_scheduled_jobs')
 def run_scheduled_jobs():
-    # TODO : add support for flashing messages
     # CC reviews
     logger.info("Running scheduled jobs")
     inspections = CodeInspection.query.filter(
@@ -401,38 +416,6 @@ def run_scheduled_jobs():
     logger.info("Running scheduled jobs completed")
     return redirect(url_for('index'))
 
-
-#TODO: Move to Mercurial?
-#TODO: Check if repo is always reset to bare.
-#TODO: Race conditions on repository access
-#@login_required
-#@roles_required('admin')
-@app.route('/repo_sync')
-def repo_sync():
-    # http://www.kevinberridge.com/2012/05/hg-bookmarks-made-me-sad.html
-    logger.info("Syncing repos, pull")
-    repo.hg_pull()
-    bookmarks = repo.hg_bookmarks().keys()
-    logger.info("Bookmarks: " + str(bookmarks))
-    reg_expr = "(?P<bookmark>[\s\w\S]+)@(?P<num>\d+)"
-    pattern = re.compile(reg_expr)
-    for b in bookmarks:
-        match = pattern.search(b)
-        if match is not None:
-            logger.info("Detected a divergent bookmark " + b)
-            bookmark = match.group("bookmark")
-            # todo - handle merge
-            repo.hg_update(bookmark)
-            repo.hg_merge(b)
-            repo.hg_bookmark(b, delete=True)
-            repo.hg_update("null")  #make repo bare again
-    logger.info("Syncing repos, push")
-    try:
-        repo.hg_push()
-    except HgException as e:
-        if "no changes found" in e:
-            logger.info("No new changes locally so there is nothing to push")
-    return redirect(url_for('changes_active'))
 
 @app.errorhandler(Exception)
 def internal_error(ex):

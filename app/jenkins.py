@@ -4,6 +4,8 @@ from uuid import uuid4
 
 import jenkinsapi
 
+from app.perfutils import performance_monitor
+
 logger = logging.getLogger(__name__)
 
 class Jenkins(object):
@@ -45,6 +47,7 @@ class Jenkins(object):
                      uuid, job_name)
         return None
 
+    @performance_monitor("check_queue")
     def check_queue(self, job_name, request_id):
         if not self.api.has_job(job_name):
             logger.error("Cannot find job %s", job_name)
@@ -59,51 +62,57 @@ class Jenkins(object):
         logger.info("Build %s is no longer in Jenkins queue", request_id)
         return False
 
-    def _get_build_status(self, build):
-        if build.is_running():
+    @performance_monitor("list_builds")
+    def list_builds(self, job_name):
+        if not self.api.has_job(job_name):
+            logger.error("Cannot find job %s", job_name)
+            return None
+        return self.api.get_job(job_name).get_build_ids()
+
+    def __get_build_status(self, build):
+        if build is None:
+            return "Missing"
+        elif build.is_running():
             return "Running"
         else:
             return build.get_status()
 
-    def find_build(self, job_name, request_id):
+    def __get_build_request_id(self, build):
+        actions = build.get_actions()
+        if not 'parameters' in actions:
+            return None
+        for param in actions['parameters']:
+            if param['name'] == 'REQUEST_ID':
+                return param['value']
+
+    def __get_build_url(self, build):
+        return "%s/job/%s/%d/" % (self.url, build.job, build.get_number())
+
+    def __get_build(self, job_name, build_number):
         if not self.api.has_job(job_name):
             logger.error("Cannot find job %s", job_name)
             return None
 
-        logger.info("Looking for build %s in Jenkins", request_id)
-        job = self.api.get_job(job_name)
-        for build_id in job.get_build_ids():
-            build = job.get_build(build_id)
-            actions = build.get_actions()
-            if not 'parameters' in actions:
-                continue
-            for param in actions['parameters']:
-                if param['name'] == 'REQUEST_ID' and param['value'] == request_id:
-                    logger.info("Found build %d in job %s for id %s",
-                                build.get_number(),
-                                job_name,
-                                request_id)
-                    build_number = build.get_number()
-                    build_url = "%s/job/%s/%d/" % \
-                                (self.url, job_name, build_number)
-                    return {"status": self._get_build_status(build),
-                            "build_number": build_number,
-                            "build_url": build_url}
-        logger.info("Build %s not found in Jenkins job %s",
-                    request_id, job_name)
-        return None
-
-    def get_build_info(self, job_name, build_number):
-        if not self.api.has_job(job_name):
-            logger.error("Cannot find job %s", job_name)
-            return None
-
-        logger.info("Fetching build %d in job %s",
-                    build_number, job_name)
+        logger.info("Fetching build %s:%d", job_name, build_number)
         job = self.api.get_job(job_name)
         # jenkinsapi requires int here; SQLAlchemy returns long
-        build = job.get_build(int(build_number))
-        return {"status": self._get_build_status(build)}
+        return job.get_build(int(build_number))
 
+    @performance_monitor("get_build_status")
+    def get_build_status(self, job_name, build_number):
+        build = self.__get_build(job_name, build_number)
+        status = self.__get_build_status(build)
+        logger.info("Build %s:%d status is %s", job_name, build_number, status)
+        return status
+
+    @performance_monitor("get_build_info")
+    def get_build_info(self, job_name, build_number):
+        build = self.__get_build(job_name, build_number)
+        result = {"status": self.__get_build_status(build),
+                  "request_id": self.__get_build_request_id(build),
+                  "build_url": self.__get_build_url(build)}
+        logger.info("Build %s:%d status %s, request_id %s", job_name,
+                    build_number, result["status"], result["request_id"])
+        return result
 
 
