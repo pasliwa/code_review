@@ -7,6 +7,7 @@ from app.model import Review
 from app.view import Pagination
 from app.perfutils import performance_monitor
 
+logger = logging.getLogger(__name__)
 
 def known_build_numbers(job_name):
     return db.session.query(Build.build_number).filter(Build.job_name == job_name)
@@ -15,9 +16,12 @@ jenkins_final_states = ["FAILURE", "UNSTABLE", "SUCCESS"]
 
 @performance_monitor("update_build_status")
 def update_build_status(changeset):
+    logger.info("Updating build status for changeset %s")
     builds = Build.query.filter(Build.changeset_id == changeset).all()
     for b in builds:
         if b.status in jenkins_final_states:
+            logger.debug("Build %d in final state %s. Skipped", b.build_number,
+                         b.status)
             continue
         elif b.build_number is not None:
             b.status = jenkins.get_build_status(b.job_name, b.build_number)
@@ -31,6 +35,8 @@ def update_build_status(changeset):
                     b.status = build_info['status']
                     b.build_number = build_number
                     b.build_url = build_info["build_url"]
+                    logger.debug("Build found with number %d and status %s",
+                                 b.build_number, b.status)
                     break
             else:
                 b.status = "Missing" if b.status != "SCHEDULED" else "SCHEDULED"

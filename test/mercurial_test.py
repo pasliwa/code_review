@@ -28,6 +28,10 @@ class MercurialTest(MercurialBase):
     def logout(self):
         return self.app.get('/logout', follow_redirects=True)
 
+    # Disable docstring printing
+    def shortDescription(self):
+        return None
+
     def setUp(self):
         if os.path.exists(REPO_MASTER):
             shutil.rmtree(REPO_MASTER)

@@ -102,13 +102,18 @@ class Jenkins(object):
     @performance_monitor("get_build_status")
     def get_build_status(self, job_name, build_number):
         build = self.__get_build(job_name, build_number)
-        return self.__get_build_status(build)
+        status = self.__get_build_status(build)
+        logger.info("Build %s:%d status is %s", job_name, build_number, status)
+        return status
 
     @performance_monitor("get_build_info")
     def get_build_info(self, job_name, build_number):
         build = self.__get_build(job_name, build_number)
-        return {"status": self.__get_build_status(build),
-                "request_id": self.__get_build_request_id(build),
-                "build_url": self.__get_build_url(build)}
+        result = {"status": self.__get_build_status(build),
+                  "request_id": self.__get_build_request_id(build),
+                  "build_url": self.__get_build_url(build)}
+        logger.info("Build %s:%d status %s, request_id %s", job_name,
+                    build_number, result["status"], result["request_id"])
+        return result
 
 

@@ -94,6 +94,7 @@ class Repo(hgapi.Repo):
         return result
 
     def hg_pull_bookmark(self, bookmark, source=None):
+        logger.debug("Pulling bookmark %s", bookmark)
         if source is None:
             self.hg_command("pull", "-B", bookmark)
         else:
@@ -148,6 +149,7 @@ class Repo(hgapi.Repo):
     #TODO: Check if repo is always reset to bare.
     #TODO: Race conditions on repository access
     def hg_sync(self):
+        logger.info("Performing hg_sync")
         with PerformanceMonitor("hg_sync: hg_pull"):
             old_bookmarks = self.hg_bookmarks()
             self.hg_pull()

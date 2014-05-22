@@ -194,6 +194,7 @@ def changeset_info(sha1):
 
 @app.route('/review/<int:review>', methods=['POST', 'GET'])
 def review_info(review):
+    logger.info("Requested URL /review/%d", review)
     review = Review.query.filter(Review.id == review).first()
     if review.status == "ACTIVE":
         repo.hg_sync()
