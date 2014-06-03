@@ -179,6 +179,7 @@ def jenkins_build():
 def changeset_info(sha1):
     logger.info("Requested URL /changeset/%s", sha1)
     cs = Changeset.query.filter(Changeset.sha1 == sha1).first()
+    #TODO: What if changeset doesn't exist?
     prev = Changeset.query.filter(and_(Changeset.created_date < cs.created_date,
                                        Changeset.status == "ACTIVE",
                                        Changeset.review_id == cs.review_id))\
