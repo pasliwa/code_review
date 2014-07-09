@@ -383,10 +383,11 @@ def run_scheduled_jobs():
         try:
             logger.info("Processing diff: %d", d.id)
             i = d.changeset.review.inspection
+            ref = repo.hg_ancestor(d.changeset.sha1, d.changeset.review.target)
             if i.status == "SCHEDULED":
                 logger.error("Inspection of diff %d is still scheduled", d.id)
                 continue
-            if cc.upload_diff(i.number, i.root, d.changeset.sha1):
+            if cc.upload_diff(i.number, ref, d.changeset.sha1):
                 d.status = "UPLOADED"
                 db.session.commit()
         except:
