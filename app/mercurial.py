@@ -65,7 +65,7 @@ class Repo(hgapi.Repo):
         if preview:
             return hgapi.Repo.hg_merge(reference, True)
         try:
-            return self.hg_command("merge", "--tool", "internal:fail", reference)
+            return self.hg_command("merge", "--tool", "internal:merge", reference)
         except hgapi.HgException, ex:
             if "use 'hg resolve' to retry" in ex.message:
                 raise MergeConflictException(ex)
