@@ -57,6 +57,53 @@ class MercurialTest(MercurialBase):
     def tearDown(self):
         db.drop_all()
 
+    def detektyw_login(self):
+        """ Login into Detektyw """
+        rv = self.login("maciej.malycha@genesyslab.com", "password")
+        assert_true("Active changes" in rv.data)
+
+    def review_open(self, node):
+        """ Open new review """
+        # TODO: sha1 -> node
+        rv = self.app.post("/changes/new", data={"action": "start",
+                                                 "sha1": node})
+
+    def review_merge(self, node):
+        """ Merge review """
+        # TODO: Review should be merged, not changeset
+        rv = self.app.post("/merge", data={"sha1": node},
+                           follow_redirects=True)
+        return rv.data
+
+    def review_get(self, id):
+        with patch("flask.templating._render", Dingus(return_value='')):
+            rv = self.app.get("/review/%d" % id)
+            review = flask.templating._render.calls[0].args[1]['review']
+        return review
+
+    def rework_list(self):
+        """ Get list of reworks for first review """
+        with patch("flask.templating._render", Dingus(return_value='')):
+            rv = self.app.get("/review/1")
+            revisions = flask.templating._render.calls[0].args[1]['descendants']
+        return revisions
+
+    def rework_create(self, node):
+        """ Create new rework """
+        self.app.post("/review/1", data={"action": "rework",
+                                         "sha1": node})
+
+    def rework_abandon(self, node):
+        self.app.post("/review/1", data={"action": "abandon_changeset",
+                                         "sha1": node})
+
+    def new_list(self):
+        """ Get list of new review candidates """
+        with patch("flask.templating._render", Dingus(return_value='')):
+            rv = self.app.get("/changes/new")
+            revisions = flask.templating._render.calls[0].args[1]['revisions']
+        return revisions
+
     def test_recognize_reworks(self):
         """Push chain of two commits and one commit, both lines originating
            from active changeset
@@ -68,47 +115,28 @@ class MercurialTest(MercurialBase):
         rev = self.commit_master("IWD-0005: Reworks parent", bmk="IWD-0005",
                                  rev="iwd-8.0.003")
         parent_node = self.master.revision(rev).node
-        # Login into Detektyw
-        rv = self.login("maciej.malycha@genesyslab.com", "password")
-        assert_true("Active changes" in rv.data)
-        # Open new review
-        # TODO: sha1 -> node
-        rv = self.app.post("/changes/new", data={"action": "start",
-                                                 "sha1": parent_node})
+        self.detektyw_login()
+        self.review_open(parent_node)
         # Commit new revision and chain of two revisions on top of IWD-0005
         self.commit_master("IWD-0005: Rework 1.0", bmk="rev1")
         self.commit_master("IWD-0005: Rework 1.1")
         self.commit_master("IWD-0005: Rework 2.0", bmk="rev2", rev="IWD-0005")
         # Verify, that they don't show up as new changes
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/changes/new")
-            revisions = flask.templating._render.calls[0].args[1]['revisions']
-        assert_equal(len(revisions), 0)
+        assert_equal(len(self.new_list()), 0)
         # But show up as reworks
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/1")
-            revisions = flask.templating._render.calls[0].args[1]['descendants']
+        revisions = self.rework_list()
         assert_equal(len(revisions), 2)
         assert_equal(revisions[0].title, "IWD-0005: Rework 2.0")
         assert_equal(revisions[1].title, "IWD-0005: Rework 1.1")
         # Create new changeset out of one revision
-        rv = self.app.post("/review/1", data={"action": "rework",
-                                              "sha1": revisions[1].node})
+        self.rework_create(revisions[1].node)
         # Verify, that second one is not rework candidate
         #TODO: Check if full chain of revisions is sent to collaborator
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/1")
-            revisions = flask.templating._render.calls[0].args[1]['descendants']
-        assert_equal(len(revisions), 0)
+        assert_equal(len(self.rework_list()), 0)
         # But new revision
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/changes/new")
-            revisions = flask.templating._render.calls[0].args[1]['revisions']
+        revisions = self.new_list()
         assert_equal(len(revisions), 1)
         assert_equal(revisions[0].title, "IWD-0005: Rework 2.0")
-        # Abandon this revision to clean up
-        rv = self.app.post("/changes/new", data={"action": "abandon",
-                                                 "sha1": revisions[0].node})
 
     def test_revision_from_old_changeset(self):
         """Push revision originating from older changeset
@@ -119,56 +147,36 @@ class MercurialTest(MercurialBase):
         # Commit new revision IWD-0006 on top of iwd-8.1.001
         self.commit_master("IWD-0006: Older changeset", bmk="IWD-0006",
                            rev="iwd-8.1.001")
-        # Login into Detektyw
-        rv = self.login("maciej.malycha@genesyslab.com", "password")
-        assert_true("Active changes" in rv.data)
+        self.detektyw_login()
         # Verify, that IWD-0006 revision is on list of new revisions
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/changes/new")
-            revisions = flask.templating._render.calls[0].args[1]['revisions']
+        revisions = self.new_list()
         assert_equal(len(revisions), 1)
         assert_true(revisions[0].title.startswith("IWD-0006"))
         review_sha1 = revisions[0].node
-        # Open new review
-        rv = self.app.post("/changes/new", data={"action": "start",
-                                                 "sha1": review_sha1})
+        self.review_open(review_sha1)
         # Commit new revision on top of IWD-0006
         self.commit_master("IWD-0006: Newer changeset")
         # Verify, that it shows up as rework
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/1")
-            revisions = flask.templating._render.calls[0].args[1]['descendants']
+        revisions = self.rework_list()
         assert_equal(len(revisions), 1)
         assert_equal(revisions[0].title, "IWD-0006: Newer changeset")
         rework_sha1 = revisions[0].node
         # Make it changeset
-        rv = self.app.post("/review/1", data={"action": "rework",
-                                              "sha1": rework_sha1})
+        self.rework_create(rework_sha1)
         # Commit new revision on top of older changeset
         self.commit_master("IWD-0006: Side branch", rev=review_sha1)
         # Verify, that it is on list of new revisions
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/changes/new")
-            revisions = flask.templating._render.calls[0].args[1]['revisions']
+        revisions = self.new_list()
         assert_equal(len(revisions), 1)
         assert_equal(revisions[0].title, "IWD-0006: Side branch")
         # But not on the review list
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/1")
-            revisions = flask.templating._render.calls[0].args[1]['descendants']
-        assert_equal(len(revisions), 0)
+        assert_equal(len(self.rework_list()), 0)
         # Abandon active changeset
-        self.app.post("/review/1", data={"action": "abandon_changeset",
-                                         "sha1": rework_sha1})
+        self.rework_abandon(rework_sha1)
         # Verify, that side branch is not on new
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/changes/new")
-            revisions = flask.templating._render.calls[0].args[1]['revisions']
-        assert_equal(len(revisions), 0)
+        assert_equal(len(self.new_list()), 0)
         # But listed as rework
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/1")
-            revisions = flask.templating._render.calls[0].args[1]['descendants']
+        revisions = self.rework_list()
         assert_equal(len(revisions), 1)
         assert_equal(revisions[0].title, "IWD-0006: Side branch")
 
@@ -184,53 +192,35 @@ class MercurialTest(MercurialBase):
         head_id = self.commit_master("IWD-1009: Advance branch for true merge",
                                      bmk="iwd-8.5.000", rev="iwd-8.5.000",
                                      file_name=FILE_3)
-        # Login into Detektyw
-        rv = self.login("maciej.malycha@genesyslab.com", "password")
-        assert_true("Active changes" in rv.data)
+        self.detektyw_login()
         # Verify, that IWD-0009 revision is on list of new revisions
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/changes/new")
-            revisions = flask.templating._render.calls[0].args[1]['revisions']
+        revisions = self.new_list()
         assert_equal(len(revisions), 1)
         assert_true(revisions[0].title.startswith("IWD-0009"))
         review_sha1 = revisions[0].node
-        # Open new review
-        rv = self.app.post("/changes/new", data={"action": "start",
-                                                 "sha1": review_sha1})
+        self.review_open(review_sha1)
         # Commit two rework branches to IWD-0009
         self.commit_master("IWD-0009: Rework 1.0", bmk="rev1", rev="IWD-0009")
         self.commit_master("IWD-0009: Rework 1.1")
         self.commit_master("IWD-0009: Rework 2.0", bmk="rev2", rev="IWD-0009")
         # Verify, that they don't show up as new changes
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/changes/new")
-            revisions = flask.templating._render.calls[0].args[1]['revisions']
-        assert_equal(len(revisions), 0)
+        assert_equal(len(self.new_list()), 0)
         # But show up as reworks
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/1")
-            revisions = flask.templating._render.calls[0].args[1]['descendants']
-        assert_equal(len(revisions), 2)
+        assert_equal(len(self.rework_list()), 2)
         # Merge IWD-0009 but not the reworks
-        # TODO: Review should be merged, not changeset
-        rv = self.app.post("/merge", data={"sha1": review_sha1})
+        self.review_merge(review_sha1)
         # Verify, that merge, commit and push was done
         assert_false("iwd-8.5.000" in self.slave.revision(review_sha1).bookmarks)
         assert_false("iwd-8.5.000" in self.slave.revision(head_id).bookmarks)
         assert_false("iwd-8.5.000" in self.master.revision(review_sha1).bookmarks)
         assert_false("iwd-8.5.000" in self.master.revision(head_id).bookmarks)
         # Verify, that reworks show up on new
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/changes/new")
-            revisions = flask.templating._render.calls[0].args[1]['revisions']
+        revisions = self.new_list()
         assert_equal(len(revisions), 2)
         assert_equal(revisions[0].title, "IWD-0009: Rework 2.0")
         assert_equal(revisions[1].title, "IWD-0009: Rework 1.1")
         # But not on the review page
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/1")
-            revisions = flask.templating._render.calls[0].args[1]['descendants']
-        assert_equal(len(revisions), 0)
+        assert_equal(len(self.rework_list()), 0)
 
     def test_diverged_merge(self):
         """Merge review with conflicting changes (diverged)
@@ -245,28 +235,20 @@ class MercurialTest(MercurialBase):
         rev2 = self.commit_master("IWD-2010: Diverged merge 2", bmk="IWD-2010",
                                   rev="iwd-8.0.002")
         rev2_node = self.master.revision(rev2).node
-        # Login into Detektyw
-        rv = self.login("maciej.malycha@genesyslab.com", "password")
-        assert_true("Active changes" in rv.data)
+        self.detektyw_login()
         # Open review for first revision and merge it
-        rv = self.app.post("/changes/new", data={"action": "start",
-                                                 "sha1": rev1_node})
+        self.review_open(rev1_node)
         self.app.post("/merge", data={"sha1": rev1_node})
         # Open review for second revision and try to merge it
-        rv = self.app.post("/changes/new", data={"action": "start",
-                                                 "sha1": rev2_node})
-        rv = self.app.post("/merge", data={"sha1": rev2_node},
-                           follow_redirects=True)
+        self.review_open(rev2_node)
+        rv_data = self.review_merge(rev2_node)
         # Verify, that user is informed
         assert_true("There is merge conflict. Merge with bookmark "
-                    "iwd-8.0.002 and try again." in rv.data)
+                    "iwd-8.0.002 and try again." in rv_data)
         # Verify, that merge is not done
         assert_true("iwd-8.0.002" in self.master.revision(rev1_node).bookmarks)
         assert_true("iwd-8.0.002" in self.slave.revision(rev1_node).bookmarks)
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/2")
-            review = flask.templating._render.calls[0].args[1]['review']
-        assert_equal(review.status, "ACTIVE")
+        assert_equal(self.review_get(2).status, "ACTIVE")
         # Verify, that repository has recovered
         for key, value in self.slave.hg_status().items():
             assert_equal(value, [])
@@ -282,28 +264,18 @@ class MercurialTest(MercurialBase):
         rev = self.commit_master("IWD-0012: Merge with ancestor",
                                  bmk="IWD-0012", rev="iwd-8.1.101")
         parent_node = self.master.revision(rev).node
-        # Login into Detektyw
-        rv = self.login("maciej.malycha@genesyslab.com", "password")
-        assert_true("Active changes" in rv.data)
-        # Open new review
-        rv = self.app.post("/changes/new", data={"action": "start",
-                                                 "sha1": parent_node})
+        self.detektyw_login()
+        self.review_open(parent_node)
         # Add new commit and move official branch there
         rev = self.commit_master("IWD-0012: Descendant being official branch",
                                  bmk="iwd-8.1.101")
         child_node = self.master.revision(rev).node
         # Verify, that official branch is not recognized as rework
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/1")
-            revisions = flask.templating._render.calls[0].args[1]['descendants']
-        assert_equal(len(revisions), 0)
+        assert_equal(len(self.rework_list()), 0)
         # And can be merged without problem
-        rv = self.app.post("/merge", data={"sha1": parent_node})
+        self.review_merge(parent_node)
         # Review is merged
-        with patch("flask.templating._render", Dingus(return_value='')):
-            rv = self.app.get("/review/1")
-            review = flask.templating._render.calls[0].args[1]['review']
-        assert_equal(review.status, "MERGED")
+        assert_equal(self.review_get(1).status, "MERGED")
         # And official bookmark didn't move
         child_revision = self.master.revision(child_node)
         assert_true("iwd-8.1.101" in child_revision.bookmarks)
