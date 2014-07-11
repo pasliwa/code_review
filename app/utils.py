@@ -67,7 +67,10 @@ def get_reviews(status, page, request):
         f = f.filter((Review.owner.contains(author)))
     if title:
         f = f.filter((Review.title.contains(title)))
-    query = f.order_by(desc(Review.created_date)).paginate(page, app.config["PER_PAGE"], False)
+    if status == "MERGED":
+        query = f.order_by(desc(Review.close_date)).paginate(page, app.config["PER_PAGE"], False)
+    else:
+        query = f.order_by(desc(Review.created_date)).paginate(page, app.config["PER_PAGE"], False)
     total = query.total
     reviews = query.items
     pagination = Pagination(page, app.config["PER_PAGE"], total)

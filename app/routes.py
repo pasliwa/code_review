@@ -100,7 +100,7 @@ def changes_new():
 def changes_active(page):
     form = SearchForm()
     data = get_reviews("ACTIVE", page, request)
-    return render_template('changes.html', type="active", reviews=data["r"],
+    return render_template('active.html', reviews=data["r"],
                            form=form, pagination=data["p"])
 
 
@@ -109,7 +109,7 @@ def changes_active(page):
 def changes_merged(page):
     form = SearchForm()
     data = get_reviews("MERGED", page, request)
-    return render_template('changes.html', type="merged", reviews=data["r"], form=form, pagination=data["p"])
+    return render_template('merged.html', reviews=data["r"], form=form, pagination=data["p"])
 
 
 @app.route('/changeset/<int:cs_id>/inspect', methods=['POST'])
