@@ -135,8 +135,7 @@ def inspect_diff(cs_id):
                   "error")
             return redirect_url
         msg = "Code Inspection is scheduled for processing"
-        tree_root = repo.hg_ancestor(cs.sha1, cs.review.target)
-        ci = CodeInspection(current_user.cc_login, tree_root, cs.review)
+        ci = CodeInspection(current_user.cc_login, cs.review)
         db.session.add(ci)
         logger.info("CodeInspection record %d has been created for review %d",
                     ci.id, cs.review.id)
@@ -147,7 +146,8 @@ def inspect_diff(cs_id):
                      "diff %d", cs.id, cs.diff.id)
         flash("Rework has been already scheduled for upload", "error")
         return redirect_url
-    diff = Diff(cs)
+    root = repo.hg_ancestor(cs.sha1, cs.review.target)
+    diff = Diff(cs, root)
     db.session.add(diff)
     logger.info("Diff record %d has been created for changeset %d",
                 diff.id, cs.id)
@@ -384,11 +384,10 @@ def run_scheduled_jobs():
         try:
             logger.info("Processing diff: %d", d.id)
             i = d.changeset.review.inspection
-            ref = repo.hg_ancestor(d.changeset.sha1, d.changeset.review.target)
             if i.status == "SCHEDULED":
                 logger.error("Inspection of diff %d is still scheduled", d.id)
                 continue
-            if cc.upload_diff(i.number, ref, d.changeset.sha1):
+            if cc.upload_diff(i.number, d.root, d.changeset.sha1):
                 d.status = "UPLOADED"
                 db.session.commit()
         except:

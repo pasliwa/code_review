@@ -13,7 +13,7 @@ SECRET_KEY = "ChangeMeLater"
 PER_PAGE = 10
 
 # Code Collaborator settings
-CC_BIN = "../ccollab-cmdline/ccollab"
+CC_BIN = "/usr/local/bin/ccollab"
 CC_REVIEW_URL = "http://rd-w2k8.us.int.genesyslab.com:9090/go?page=ReviewDisplay&reviewid={reviewId}"
 
 # Jenkins settings

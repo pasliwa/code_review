@@ -88,10 +88,12 @@ class Diff(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     changeset_id = db.Column(db.Integer, db.ForeignKey("changesets.id"))
     changeset = db.relationship(Changeset, backref=db.backref("diff", uselist=False))
+    root = db.Column(db.String(40))
     status = db.Column(db.String(20)) # SCHEDULED, UPLOADED
 
-    def __init__(self, changeset):
+    def __init__(self, changeset, root):
         self.changeset = changeset
+        self.root = root
         self.status = "SCHEDULED"
 
     def __str__(self):
@@ -160,12 +162,10 @@ class CodeInspection(db.Model):
     author = db.Column(db.String(120))
     number = db.Column(db.Integer)
     url = db.Column(db.String(120))
-    root = db.Column(db.String(40))
     status = db.Column(db.String(20))
 
-    def __init__(self, author, root, review):
+    def __init__(self, author, review):
         self.author = author
-        self.root = root
         self.review = review
         self.status = "SCHEDULED"
 
