@@ -1,5 +1,7 @@
 import logging
 import datetime
+import re
+from itertools import chain
 
 from flask import render_template, flash, redirect, url_for
 # noinspection PyUnresolvedReferences
@@ -342,6 +344,32 @@ def merge_branch():
         flash("Review has been closed", "notice")
 
     return redirect(url_for('index'))
+
+
+@app.route('/changelog/<start>/<stop>')
+@login_required
+@roles_required('admin')
+def changelog(start, stop):
+    repo.hg_sync()
+    rev_start = repo.revision(start)
+    rev_stop = repo.revision(stop)
+
+    rev_list = {}
+    for rev in repo.revisions([1, rev_stop.node]):
+        rev_list[rev.node] = rev
+    for rev in repo.revisions([1, rev_start.node]):
+        rev_list.pop(rev.node, None)
+
+    jira_re = re.compile("(IWD-\d+)|(EVO-\d+)|(IAP-\d+)", re.IGNORECASE)
+    jira_list = {}
+    for node, rev in rev_list.items():
+        tickets = set(chain(*jira_re.findall(rev.desc))) - set([''])
+        for ticket in tickets:
+            if ticket not in jira_list:
+                jira_list[ticket] = ''
+            jira_list[ticket] += '\n' + rev.desc
+
+    return render_template("log.html", start=start, stop=stop, jira_list=sorted(jira_list.items()))
 
 
 ############################################################################

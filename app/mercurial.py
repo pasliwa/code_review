@@ -61,6 +61,17 @@ class Repo(hgapi.Repo):
         '"tags":"{tags}","desc":"{desc|urlescape}\"}\n'
     )
 
+    def revisions(self, slice_):
+        a, b = slice_
+        id_ = str(a) + "::" + str(b)
+        out = self.hg_log(identifier=id_, template=self.rev_log_tpl)
+
+        revs = []
+        for entry in out.split('\n')[:-1]:
+            revs.append(Revision(entry))
+
+        return revs
+
     def hg_merge(self, reference, preview=False):
         if preview:
             return hgapi.Repo.hg_merge(reference, True)
