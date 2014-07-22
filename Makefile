@@ -5,6 +5,7 @@ prd:
 	cp config.py.prod config.py
 	rm config.pyc
 	/sbin/service ci start
+	echo "30 1 * * * $(shell pwd)/cron/clear_kloTables" | crontab -u $(SUDO_USER) -
 
 dev:
 	cp config.py.dev config.py
@@ -17,4 +18,5 @@ tst:
 	cp config.py.test config.py
 	rm config.pyc
 	/sbin/service ci_test start
+	echo "30 1 * * * $(shell pwd)/cron/clear_kloTables" | crontab -u $(SUDO_USER) -
 
