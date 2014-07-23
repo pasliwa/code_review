@@ -210,7 +210,7 @@ class Repo(hgapi.Repo):
 
     def hg_close_branch(self, identifier):
         self.hg_update(identifier, clean=True)
-        self.hg_commit("Abandon branch", close_branch=True)
+        self.hg_commit("Abandon changeset", close_branch=True)
         self.hg_update("null", clean=True)
         self.hg_push()
 
