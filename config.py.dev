@@ -10,7 +10,7 @@ PROPAGATE_EXCEPTIONS = True  # change to False to get email notifications upon a
 LISTEN_HOST = "0.0.0.0"
 ENABLE_THREADS = True
 SECRET_KEY = "ChangeMeLater"
-PER_PAGE = 10
+PER_PAGE = 3
 
 # Code Collaborator settings
 CC_BIN = "/usr/local/bin/ccollab"

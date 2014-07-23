@@ -38,7 +38,7 @@
 
         {% for r in reviews %}
             <tr>
-                <td>{{ loop.index }}</td>
+                <td>{{ pagination.start_index + loop.index - 1 }}</td>
                 <td>
                     <a href="{{ url_for("review_info", review=r.id) }}">{{ r.title }} </a>
                 </td>

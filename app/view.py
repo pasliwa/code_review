@@ -44,6 +44,10 @@ class Pagination(object):
     def has_next(self):
         return self.page < self.pages
 
+    @property
+    def start_index(self):
+        return (self.page - 1) * self.per_page + 1
+
     def iter_pages(self, left_edge=2, left_current=2,
                    right_current=5, right_edge=2):
         last = 0
