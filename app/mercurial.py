@@ -208,6 +208,12 @@ class Repo(hgapi.Repo):
                 if not "no changes found" in ex.message:
                     raise
 
+    def hg_close_branch(self, identifier):
+        self.hg_update(identifier, clean=True)
+        self.hg_commit("Abandon branch", close_branch=True)
+        self.hg_update("null", clean=True)
+        self.hg_push()
+
     @classmethod
     def hg_clone(cls, url, path, *args):
         Repo.command(".", os.environ, "clone", url, path, *args)

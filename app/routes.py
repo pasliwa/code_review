@@ -83,6 +83,7 @@ def changes_new():
                                   "ABANDONED")
             db.session.add(changeset)
             db.session.commit()
+            repo.hg_close_branch(request.form['sha1'])
             return redirect(url_for('changes_new'))
 
     revisions = get_new(repo)
@@ -257,6 +258,7 @@ def review_info(review):
             changeset.status = "ABANDONED"
             db.session.add(changeset)
             db.session.commit()
+            repo.hg_close_branch(request.form["sha1"])
             flash("Changeset '{title}' (SHA1: {sha1}) has been abandoned".format(title=changeset.title,
                                                                                  sha1=changeset.sha1), "notice")
 
