@@ -227,11 +227,11 @@ def review_info(review):
                 flash("Error - changeset already exists", "error")
         if request.form["action"] == "abandon":
             review.status = "ABANDONED"
-            db.session.add(review)
-            for c in review.changesets:
-                c.status = "ABANDONED"
-                db.session.add(c)
             db.session.commit()
+            heads = repo.hg_heads()
+            for c in review.changesets:
+                if c.sha1 in heads:
+                    repo.hg_close_branch(c.sha1)
             flash("Review has been abandoned", "notice")
         #TODO: If inspection scheduled, target cannot change
         if request.form["action"] == "target":
@@ -246,6 +246,7 @@ def review_info(review):
                 flash(msg.format(review.target), "notice")
         #TODO: If inspection scheduled, cannot abandon changeset
         #TODO: Only active changeset or its descendant can be abandoned
+        #TODO: Abandoning active changeset should move bookmark backwards
         if request.form["action"] == "abandon_changeset":
             changeset = Changeset.query.filter(Changeset.sha1 == request.form["sha1"]).first()
             if changeset is None:

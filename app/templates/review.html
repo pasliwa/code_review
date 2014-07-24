@@ -23,6 +23,8 @@
                         <span class="label label-success">
                     {% elif review.status == "MERGED" %}
                         <span class="label label-default">
+                    {% elif review.status == "ABANDONED" %}
+                        <span class="label label-danger">
                     {% else %}
                         <span class="label label-info">
                     {% endif %}
@@ -108,6 +110,7 @@
                                 {% endif %}</td>
                         </tr>
                         {% endfor %}
+                        {% if review.status != "ABANDONED" %}
                         {% for c in descendants %}
                         <tr>
                             <td></td>
@@ -132,6 +135,7 @@
                             <td></td>
                         </tr>
                         {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
