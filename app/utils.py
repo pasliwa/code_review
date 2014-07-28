@@ -8,6 +8,7 @@ from app.perfutils import performance_monitor
 
 logger = logging.getLogger(__name__)
 
+#TODO: Move to model
 def known_build_numbers(job_name):
     query = db.session.query(Build.build_number)\
         .filter(Build.job_name == job_name)\
@@ -46,17 +47,6 @@ def update_build_status(changeset):
             else:
                 b.status = "Missing"
         db.session.commit()
-
-
-def get_admin_emails():
-    admins = []
-    try:
-        adms = User.query.join(User.roles).filter(Role.name == "admin").all()
-        for a in adms:
-            admins.append(a.email)
-    except Exception:
-        pass
-    return admins
 
 
 def get_reviews(status, page, request):
