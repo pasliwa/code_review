@@ -35,7 +35,7 @@
                 <div><span class="col-lg-2 text-right">Target branch</span><span>
                     {# TODO: If inspection scheduled, target cannot change #}
                     {% if review.targets|length > 1 %}
-                    <form method="post" action="{{ url_for("review_info", review=review.id) }}">
+                    <form method="post" action="{{ url_for("review_info", review_id=review.id) }}">
 
 
                         <div class="form-group">
@@ -117,7 +117,7 @@
                             <td>{{ c.title }}</td>
                             <td><code>{{ c.node }}</code></td>
                             <td>
-                                <form method="post" action="{{ url_for("review_info", review=review.id) }}">
+                                <form method="post" action="{{ url_for("review_info", review_id=review.id) }}">
                                     <input type="hidden" name="action" value="rework">
                                     <input type="hidden" name="sha1" value="{{ c.node }}">
                                     <button type="submit" class="btn btn-success btn-sm"><span class="glyphicon glyphicon-plus-sign"></span> Add as rework</button>
@@ -126,7 +126,7 @@
                             <td>
                                 {# TODO: If inspection scheduled, cannot abandon changeset #}
                                 {# TODO: Only active changeset or its descendant can be abandoned #}
-                                <form method="post" action="{{ url_for("review_info", review=review.id) }}">
+                                <form method="post" action="{{ url_for("review_info", review_id=review.id) }}">
                                     <input type="hidden" name="action" value="abandon_changeset">
                                     <input type="hidden" name="sha1" value="{{ c.node }}">
                                     <button type="submit" class="btn btn-danger btn-sm confirmation-needed" data-question="Are you sure you want to ABANDON this changeset?"><span class="glyphicon glyphicon-trash"></span> Abandon</button>

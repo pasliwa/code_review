@@ -73,7 +73,7 @@ def changes_new():
             review.changesets.append(changeset)
             db.session.add(review)
             db.session.commit()
-            return redirect(url_for('review_info', review=review.id))
+            return redirect(url_for('review_info', review_id=review.id))
 
         if action == "abandon":
             info = repo.revision(request.form['sha1'])
@@ -121,7 +121,8 @@ def changes_merged(page):
 def inspect_diff(cs_id):
     cs = Changeset.query.filter(Changeset.id == cs_id).first()
     if cs is None:
-        logger.error("Changeset not found: %d", cs_id)
+        flash("Changeset {} doesn't exist".format(cs_id), "error")
+        logger.error("Changeset %d doesn't exist", cs_id)
         return redirect(url_for('index'))
     redirect_url = redirect(url_for('changeset_info', sha1=cs.sha1))
     if not cs.is_active():
@@ -182,7 +183,10 @@ def jenkins_build():
 def changeset_info(sha1):
     logger.info("Requested URL /changeset/%s", sha1)
     cs = Changeset.query.filter(Changeset.sha1 == sha1).first()
-    #TODO: What if changeset doesn't exist?
+    if cs is None:
+        flash("Changeset {} doesn't exist".format(sha1), "error")
+        logger.error("Changeset %s doesn't exist", sha1)
+        return redirect(url_for("index"))
     prev = Changeset.query.filter(and_(Changeset.created_date < cs.created_date,
                                        Changeset.status == "ACTIVE",
                                        Changeset.review_id == cs.review_id))\
@@ -200,11 +204,15 @@ def changeset_info(sha1):
 
 
 
-@app.route('/review/<int:review>', methods=['POST', 'GET'])
-@performance_monitor("Request /review/<int:review>")
-def review_info(review):
-    logger.info("Requested URL /review/%d", review)
-    review = Review.query.filter(Review.id == review).first()
+@app.route('/review/<int:review_id>', methods=['POST', 'GET'])
+@performance_monitor("Request /review/<int:review_id>")
+def review_info(review_id):
+    logger.info("Requested URL /review/%d", review_id)
+    review = Review.query.filter(Review.id == review_id).first()
+    if review is None:
+        flash("Review {} doesn't exist".format(review_id), "error")
+        logger.error("Review %d doesn't exist", review_id)
+        return redirect(url_for("index"))
     if review.status == "ACTIVE":
         repo.hg_sync()
     if request.method == 'POST':
@@ -282,7 +290,7 @@ def merge_branch():
     review = Review.query.filter(Review.id == changeset.review_id).first()
     bookmark = review.target
 
-    link = url_for("review_info", review=review.id, _external=True)
+    link = url_for("review_info", review_id=review.id, _external=True)
 
     repo.hg_sync()
 

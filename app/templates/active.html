@@ -40,7 +40,7 @@
             <tr>
                 <td>{{ pagination.start_index + loop.index - 1 }}</td>
                 <td>
-                    <a href="{{ url_for("review_info", review=r.id) }}">{{ r.title }} </a>
+                    <a href="{{ url_for("review_info", review_id=r.id) }}">{{ r.title }} </a>
                 </td>
                 <td>{{ r.owner }}</td>
                 <td>{{ r.created_date }}</td>

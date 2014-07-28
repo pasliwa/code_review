@@ -56,7 +56,7 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <h3 class="panel-title">Changeset <b>{{ cs.title }}</b> <a class="btn-sm btn btn-default"
-                                                                       href="{{ url_for("review_info", review=review.id) }}"><span
+                                                                       href="{{ url_for("review_info", review_id=review.id) }}"><span
                     class="glyphicon glyphicon-home"></span> back to review</a></h3>
         </div>
         <div class="panel-body">
@@ -84,7 +84,7 @@
     <div class="panel panel-success">
         <div class="panel-heading">
             <h3 class="panel-title">Jenkins builds <a class="btn-sm btn btn-default"
-                                                      href="{{ url_for("review_info", review=review.id) }}"><span
+                                                      href="{{ url_for("review_info", review_id=review.id) }}"><span
                     class="glyphicon glyphicon-home"></span> back to review</a></h3>
         </div>
         <div class="panel-body">
@@ -143,7 +143,7 @@
     <div class="panel panel-info">
         <div class="panel-heading">
             <h3 class="panel-title">CodeCollaborator inspections <a class="btn-sm btn btn-default"
-                                                                    href="{{ url_for("review_info", review=review.id) }}"><span
+                                                                    href="{{ url_for("review_info", review_id=review.id) }}"><span
                     class="glyphicon glyphicon-home"></span> back to review</a></h3>
         </div>
         <div class="panel-body">
@@ -212,7 +212,7 @@
 
                 <div>
                     <form class="form-horizontal" method="post"
-                          action="{{ url_for("review_info", review=review.id) }}">
+                          action="{{ url_for("review_info", review_id=review.id) }}">
                         <div class="form-group">
                             <label class="col-sm-4 control-label">Abandon this review</label>
                             <button class="btn btn-danger btn-sm confirmation-needed"
@@ -251,7 +251,7 @@
                 });
             {% endif %}
             $(document).bind('keypress', 'home', function () {
-                window.location.href = "{{ url_for("review_info", review=cs.review_id) }}";
+                window.location.href = "{{ url_for("review_info", review_id=cs.review_id) }}";
             });
 
         });
