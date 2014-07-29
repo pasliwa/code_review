@@ -125,6 +125,10 @@ def inspect_diff(cs_id):
         logger.error("Changeset %d doesn't exist", cs_id)
         return redirect(url_for('index'))
     redirect_url = redirect(url_for('changeset_info', sha1=cs.sha1))
+    if current_user.cc_login is None:
+        flash("Code Collaborator login is not configured properly.", "error")
+        logger.error("User account %s cc_login is not configured", current_user.email)
+        return redirect_url
     if not cs.is_active():
         logger.error("Cannot schedule inspection. Changeset %d is not active "
                      "within review %d. Active changeset is %d",
