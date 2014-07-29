@@ -305,7 +305,7 @@ def merge_branch():
     logger.info("Merge result: {output}".format(output=output))
 
     error = False
-    subject = "Successful merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
+    subject = u"Successful merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
 
     if "abort: nothing to merge" in output:
         repo.hg_update(sha1)
@@ -316,8 +316,8 @@ def merge_branch():
         repo.hg_update("null", clean=True)
         flash("There is merge conflict. Merge with bookmark " + bookmark +
               " and try again.", "error")
-        subject = "Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1,
-                                                                             dest=review.target)
+        subject = u"Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1,
+                                                                              dest=review.target)
         error = True
     elif "abort: merging with a working directory ancestor has no effect" in output:
         repo.hg_update(sha1)
@@ -334,7 +334,7 @@ def merge_branch():
         if not "no changes found" in ex.message:
             raise
 
-    html = subject + "<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
+    html = subject + u"<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
         link=link, sha1=changeset.sha1, owner=changeset.owner)
 
     recpts = get_admin_emails()
