@@ -1,10 +1,11 @@
 #!/bin/bash
 
-export JAVA_HOME=/usr/java/jdk1.6.0_26
+export CI_HOME=/home/ci_test
 export JENKINS_HTTP_PORT=8111
-export JENKINS_PREFIX=jenkins
+export JENKINS_PREFIX=jenkins_test
 
-$JAVA_HOME/bin/java -jar jenkins-cli.jar -i ~/.ssh/id_rsa_iwd01 -s http://localhost:$JENKINS_HTTP_PORT/$JENKINS_PREFIX safe-shutdown
+export JAVA_HOME=/usr/java/jdk1.6.0_26
+$JAVA_HOME/bin/java -jar $CI_HOME/jenkins/jenkins-cli.jar -i $HOME/.ssh/id_rsa_iwd01 -s http://localhost:$JENKINS_HTTP_PORT/$JENKINS_PREFIX safe-shutdown
 
 while true; do
     if [ -z $(ps -f -u $UID | grep "jenkins.war" | grep -v grep | awk '{ print $2 }') ]
@@ -14,5 +15,5 @@ while true; do
     sleep 1
 done
 
-sudo /sbin/service jenkins_test start
+sudo /sbin/service $JENKINS_PREFIX start
 
