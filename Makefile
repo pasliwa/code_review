@@ -10,7 +10,7 @@ prd:
 	sudo /sbin/service ci start
 	rm cron/crontab || :
 	echo "30 1 * * * $(shell pwd)/cron/clear_kloTables" >> cron/crontab
-	echo "00 0 * * * $(HOME)/jenkins/restart-jenkins.sh" >> cron/crontab
+	echo "00 3 * * * $(HOME)/jenkins/restart-jenkins.sh" >> cron/crontab
 	crontab cron/crontab
 	rm cron/crontab
 
