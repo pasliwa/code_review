@@ -1,8 +1,8 @@
 #!/bin/bash
 
 export JAVA_HOME=/usr/java/jdk1.6.0_26
-export JENKINS_HTTP_PORT=8111
-export JENKINS_PREFIX=jenkins
+export JENKINS_HTTP_PORT=8110
+export JENKINS_PREFIX=jenkins_test
 
 $JAVA_HOME/bin/java -jar jenkins-cli.jar -i ~/.ssh/id_rsa_iwd01 -s http://localhost:$JENKINS_HTTP_PORT/$JENKINS_PREFIX safe-shutdown
 
