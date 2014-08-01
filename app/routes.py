@@ -18,7 +18,7 @@ from app.hgapi.hgapi import HgException
 from app.model import Build, Changeset, CodeInspection, Review, Diff
 from app.view import Pagination
 from app.utils import update_build_status, \
-    get_admin_emails, get_reviews, get_new, get_reworks, el
+    get_reviews, get_new, get_reworks, el
 from app.perfutils import performance_monitor
 from view import SearchForm
 
@@ -341,8 +341,7 @@ def merge_branch():
     html = subject + u"<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
         link=link, sha1=changeset.sha1, owner=changeset.owner)
 
-    recpts = get_admin_emails()
-    recpts.append(changeset.owner_email)
+    recpts = [changeset.owner_email]
     recpts = list(set(recpts))
 
     msg = Message(subject,

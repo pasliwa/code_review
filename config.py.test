@@ -2,6 +2,9 @@ import os
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
+# Logging settings
+ADMIN_EMAILS = ['maciej.malycha@genesys.com', 'm.malycha@gmail.com']
+
 # Database settings
 SQLALCHEMY_DATABASE_URI = "mysql://ci_test:ChangeMe@localhost/ci_test"
 

@@ -1,6 +1,9 @@
+import logging
+
 # noinspection PyUnresolvedReferences
 from flask.ext.security.utils import encrypt_password
 from app import app
+from app import logs
 from app import db, user_datastore
 
 def db_create():
@@ -24,4 +27,6 @@ def db_create():
         db.session.commit()
 
 if __name__ == '__main__':
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setHandler(logs.get_console_handler())
     db_create()
