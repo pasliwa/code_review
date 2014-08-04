@@ -78,6 +78,8 @@ class Jenkins(object):
             return build.get_status()
 
     def __get_build_request_id(self, build):
+        if build is None:
+            return None
         actions = build.get_actions()
         if not 'parameters' in actions:
             return None
@@ -86,6 +88,8 @@ class Jenkins(object):
                 return param['value']
 
     def __get_build_url(self, build):
+        if build is None:
+            return None
         return "%s/job/%s/%d/" % (self.url, build.job, build.get_number())
 
     def __get_build(self, job_name, build_number):
@@ -95,8 +99,12 @@ class Jenkins(object):
 
         logger.info("Fetching build %s:%d", job_name, build_number)
         job = self.api.get_job(job_name)
-        # jenkinsapi requires int here; SQLAlchemy returns long
-        return job.get_build(int(build_number))
+        try:
+            # jenkinsapi requires int here; SQLAlchemy returns long
+            return job.get_build(int(build_number))
+        except KeyError:
+            # Sometimes after Jenikins restart, job just disappears
+            return None
 
     @performance_monitor("get_build_status")
     def get_build_status(self, job_name, build_number):

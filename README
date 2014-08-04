@@ -1,0 +1,21 @@
+Apache configuration:
+
+In /etc/httpd/conf.d/fastcgi.conf add:
+
+	# Code Inspection test configuration
+	Alias /ci_test "/home/ci_test/code_review/code_review.fast"
+	FastCgiExternalServer "/home/ci_test/code_review/code_review.fast" -socket /tmp/ci_test.sock -idle-timeout 200
+
+	<Location /ci_test>
+	    SetHandler fastcgi-script
+	</Location>
+
+	# Code Inspection configuration
+	Alias /ci "/home/ci/code_review/code_review.fast"
+	FastCgiExternalServer "/home/ci/code_review/code_review.fast" -socket /tmp/ci.sock -idle-timeout 200
+
+	<Location /ci>
+	    SetHandler fastcgi-script
+	</Location>
+
+

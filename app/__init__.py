@@ -29,6 +29,5 @@ cc = CodeCollaborator(app.config["CC_BIN"], app.config["CC_REVIEW_URL"],
 from app import view
 from app import utils
 from app import routes
-from app import logs
 
 

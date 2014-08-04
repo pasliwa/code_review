@@ -21,6 +21,8 @@
             <div><span class="col-lg-2 text-right">Status</span>
                 {% if review.status == "ACTIVE" %}
                     <span class="label label-success">
+                {% elif review.status == "ABANDONED" %}
+                    <span class="label label-danger">
                 {% elif review.status == "MERGED" %}
                     <span class="label label-default">
                 {% else %}
@@ -54,7 +56,7 @@
     <div class="panel panel-default">
         <div class="panel-heading">
             <h3 class="panel-title">Changeset <b>{{ cs.title }}</b> <a class="btn-sm btn btn-default"
-                                                                       href="{{ url_for("review_info", review=review.id) }}"><span
+                                                                       href="{{ url_for("review_info", review_id=review.id) }}"><span
                     class="glyphicon glyphicon-home"></span> back to review</a></h3>
         </div>
         <div class="panel-body">
@@ -82,7 +84,7 @@
     <div class="panel panel-success">
         <div class="panel-heading">
             <h3 class="panel-title">Jenkins builds <a class="btn-sm btn btn-default"
-                                                      href="{{ url_for("review_info", review=review.id) }}"><span
+                                                      href="{{ url_for("review_info", review_id=review.id) }}"><span
                     class="glyphicon glyphicon-home"></span> back to review</a></h3>
         </div>
         <div class="panel-body">
@@ -91,6 +93,7 @@
                 <input type="hidden" name="back_id" value="{{ cs.sha1 }}"/>
                 <input type="hidden" name="release" value="{{ review.target }}"/>
 
+                {% if cs.status != "ABANDONED" and cs.review.status != "ABANDONED" %}
                 <div class="form-group">
                     <input type="hidden" name="src" value="{{ cs.revision }}">
                     <button class="btn btn-sm btn-success" type="submit"><span class="glyphicon glyphicon-plus"></span>
@@ -98,6 +101,7 @@
                         build
                     </button>
                 </div>
+                {% endif %}
             </form>
             <table class="table table-hover table-condensed">
                 <thead>
@@ -139,12 +143,12 @@
     <div class="panel panel-info">
         <div class="panel-heading">
             <h3 class="panel-title">CodeCollaborator inspections <a class="btn-sm btn btn-default"
-                                                                    href="{{ url_for("review_info", review=review.id) }}"><span
+                                                                    href="{{ url_for("review_info", review_id=review.id) }}"><span
                     class="glyphicon glyphicon-home"></span> back to review</a></h3>
         </div>
         <div class="panel-body">
             {% if cs.diff is none %}
-            {% if cs.is_active and cs.review.target is not none %}
+            {% if cs.review.status != "ABANDONED" and cs.is_active and cs.review.target is not none %}
             {# TODO: Should display popup window about irreversibility of creating new CI. Target cannot be changed. #}
             <form method="post" action="{{ url_for("inspect_diff", cs_id=cs.id) }}">
                 <button class="btn btn-sm btn-info" type="submit"><span class="glyphicon glyphicon-plus"></span> New
@@ -191,7 +195,7 @@
         </div>
         <div class="panel-body">
             {# merge #}
-            {% if cs.status != "ABANDONED" %}
+            {% if cs.status != "ABANDONED" and cs.review.status != "ABANDONED" %}
             {# TODO: Should display popup window about irreversibility of merge. #}
                 <div>
                     <form method="post" class="form-horizontal" action="{{ url_for("merge_branch") }}">
@@ -208,7 +212,7 @@
 
                 <div>
                     <form class="form-horizontal" method="post"
-                          action="{{ url_for("review_info", review=review.id) }}">
+                          action="{{ url_for("review_info", review_id=review.id) }}">
                         <div class="form-group">
                             <label class="col-sm-4 control-label">Abandon this review</label>
                             <button class="btn btn-danger btn-sm confirmation-needed"
@@ -247,7 +251,7 @@
                 });
             {% endif %}
             $(document).bind('keypress', 'home', function () {
-                window.location.href = "{{ url_for("review_info", review=cs.review_id) }}";
+                window.location.href = "{{ url_for("review_info", review_id=cs.review_id) }}";
             });
 
         });

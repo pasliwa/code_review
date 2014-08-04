@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block body %}
+
+
+{% include "messages.html" %}
+
+{% if form %}
+    <form class="form-inline" role="form" method="GET" action="{{ url_for("changes_active") }}">
+        {# {{ form.hidden_tag() }}  #}
+        <div class="form-group">
+            <label class="sr-only" for="title">Author</label>
+            <input type="text" class="form-control" name="title" id="title" value="{{ request.args.get('title', "") }}" placeholder="{{form.title.description}}">
+        </div>
+        <div class="form-group">
+            <label class="sr-only" for="author">Author</label>
+            <input type="text" class="form-control" name="author" id="author" value="{{ request.args.get('author', "") }}" placeholder="{{form.author.description}}">
+        </div>
+        <button type="submit" class="btn btn-default">Filter</button>
+    </form>
+{% endif %}
+
+
+<h1>Active changes</h1>
+
+    <table class="table table-hover">
+        <thead>
+        <tr>
+            <th>No.</th>
+            <th>Changeset</th>
+            <th>Author</th>
+            <th>Created</th>
+            <th>Bookmark</th>
+            <th>Target Branch</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        {% for r in reviews %}
+            <tr>
+                <td>{{ pagination.start_index + loop.index - 1 }}</td>
+                <td>
+                    <a href="{{ url_for("review_info", review_id=r.id) }}">{{ r.title }} </a>
+                </td>
+                <td>{{ r.owner }}</td>
+                <td>{{ r.created_date }}</td>
+                <td>{{ r.bookmark }}</td>
+                <td>{{ r.target }}</td>
+            </tr>
+        {% endfor %}
+        </tr>
+        </tbody>
+    </table>
+
+    {% from "_helpers.html" import render_pagination %}
+    {{ render_pagination(pagination) }}
+
+
+
+{% endblock %}

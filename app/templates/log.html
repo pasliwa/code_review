@@ -7,9 +7,27 @@
 
 
 
-<h1>Latest changes in {{ branch }} branch</h1>
+<h2>Changes between revision {{start}} and {{stop}} </h2>
 
-    <pre>{{ log }}</pre>
+<table class="table table-hover">
+
+    <thead>
+        <tr>
+            <th width="100px">JIRA</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+
+    {% for ticket in jira_list %}
+        <tr>
+            <td>{{ ticket[0] }}</td>
+            <td><pre>{{ ticket[1] }}</pre></td>
+        </tr>
+    {% endfor %}
+
+    </tbody>
+</table>
 
 
 {% endblock %}

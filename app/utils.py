@@ -8,6 +8,7 @@ from app.perfutils import performance_monitor
 
 logger = logging.getLogger(__name__)
 
+#TODO: Move to model
 def known_build_numbers(job_name):
     query = db.session.query(Build.build_number)\
         .filter(Build.job_name == job_name)\
@@ -48,17 +49,6 @@ def update_build_status(changeset):
         db.session.commit()
 
 
-def get_admin_emails():
-    admins = []
-    try:
-        adms = User.query.join(User.roles).filter(Role.name == "admin").all()
-        for a in adms:
-            admins.append(a.email)
-    except Exception:
-        pass
-    return admins
-
-
 def get_reviews(status, page, request):
     f = Review.query.filter(Review.status == status)
     author = request.args.get('author', None)
@@ -67,7 +57,10 @@ def get_reviews(status, page, request):
         f = f.filter((Review.owner.contains(author)))
     if title:
         f = f.filter((Review.title.contains(title)))
-    query = f.order_by(desc(Review.created_date)).paginate(page, app.config["PER_PAGE"], False)
+    if status == "MERGED":
+        query = f.order_by(desc(Review.close_date)).paginate(page, app.config["PER_PAGE"], False)
+    else:
+        query = f.order_by(desc(Review.created_date)).paginate(page, app.config["PER_PAGE"], False)
     total = query.total
     reviews = query.items
     pagination = Pagination(page, app.config["PER_PAGE"], total)

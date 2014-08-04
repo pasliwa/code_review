@@ -61,11 +61,22 @@ class Repo(hgapi.Repo):
         '"tags":"{tags}","desc":"{desc|urlescape}\"}\n'
     )
 
+    def revisions(self, slice_):
+        a, b = slice_
+        id_ = str(a) + "::" + str(b)
+        out = self.hg_log(identifier=id_, template=self.rev_log_tpl)
+
+        revs = []
+        for entry in out.split('\n')[:-1]:
+            revs.append(Revision(entry))
+
+        return revs
+
     def hg_merge(self, reference, preview=False):
         if preview:
             return hgapi.Repo.hg_merge(reference, True)
         try:
-            return self.hg_command("merge", "--tool", "internal:fail", reference)
+            return self.hg_command("merge", "--tool", "internal:merge", reference)
         except hgapi.HgException, ex:
             if "use 'hg resolve' to retry" in ex.message:
                 raise MergeConflictException(ex)
@@ -196,6 +207,12 @@ class Repo(hgapi.Repo):
             except hgapi.HgException, ex:
                 if not "no changes found" in ex.message:
                     raise
+
+    def hg_close_branch(self, identifier):
+        self.hg_update(identifier, clean=True)
+        self.hg_commit("Abandon changeset", close_branch=True)
+        self.hg_update("null", clean=True)
+        self.hg_push()
 
     @classmethod
     def hg_clone(cls, url, path, *args):

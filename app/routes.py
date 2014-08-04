@@ -1,5 +1,7 @@
 import logging
 import datetime
+import re
+from itertools import chain
 
 from flask import render_template, flash, redirect, url_for
 # noinspection PyUnresolvedReferences
@@ -16,7 +18,7 @@ from app.hgapi.hgapi import HgException
 from app.model import Build, Changeset, CodeInspection, Review, Diff
 from app.view import Pagination
 from app.utils import update_build_status, \
-    get_admin_emails, get_reviews, get_new, get_reworks, el
+    get_reviews, get_new, get_reworks, el
 from app.perfutils import performance_monitor
 from view import SearchForm
 
@@ -71,7 +73,7 @@ def changes_new():
             review.changesets.append(changeset)
             db.session.add(review)
             db.session.commit()
-            return redirect(url_for('review_info', review=review.id))
+            return redirect(url_for('review_info', review_id=review.id))
 
         if action == "abandon":
             info = repo.revision(request.form['sha1'])
@@ -81,6 +83,7 @@ def changes_new():
                                   "ABANDONED")
             db.session.add(changeset)
             db.session.commit()
+            repo.hg_close_branch(request.form['sha1'])
             return redirect(url_for('changes_new'))
 
     revisions = get_new(repo)
@@ -100,7 +103,7 @@ def changes_new():
 def changes_active(page):
     form = SearchForm()
     data = get_reviews("ACTIVE", page, request)
-    return render_template('changes.html', type="active", reviews=data["r"],
+    return render_template('active.html', reviews=data["r"],
                            form=form, pagination=data["p"])
 
 
@@ -109,7 +112,7 @@ def changes_active(page):
 def changes_merged(page):
     form = SearchForm()
     data = get_reviews("MERGED", page, request)
-    return render_template('changes.html', type="merged", reviews=data["r"], form=form, pagination=data["p"])
+    return render_template('merged.html', reviews=data["r"], form=form, pagination=data["p"])
 
 
 @app.route('/changeset/<int:cs_id>/inspect', methods=['POST'])
@@ -118,9 +121,14 @@ def changes_merged(page):
 def inspect_diff(cs_id):
     cs = Changeset.query.filter(Changeset.id == cs_id).first()
     if cs is None:
-        logger.error("Changeset not found: %d", cs_id)
+        flash("Changeset {} doesn't exist".format(cs_id), "error")
+        logger.error("Changeset %d doesn't exist", cs_id)
         return redirect(url_for('index'))
     redirect_url = redirect(url_for('changeset_info', sha1=cs.sha1))
+    if current_user.cc_login is None:
+        flash("Code Collaborator login is not configured properly.", "error")
+        logger.error("User account %s cc_login is not configured", current_user.email)
+        return redirect_url
     if not cs.is_active():
         logger.error("Cannot schedule inspection. Changeset %d is not active "
                      "within review %d. Active changeset is %d",
@@ -135,8 +143,7 @@ def inspect_diff(cs_id):
                   "error")
             return redirect_url
         msg = "Code Inspection is scheduled for processing"
-        tree_root = repo.hg_ancestor(cs.sha1, cs.review.target)
-        ci = CodeInspection(current_user.cc_login, tree_root, cs.review)
+        ci = CodeInspection(current_user.cc_login, cs.review)
         db.session.add(ci)
         logger.info("CodeInspection record %d has been created for review %d",
                     ci.id, cs.review.id)
@@ -147,7 +154,8 @@ def inspect_diff(cs_id):
                      "diff %d", cs.id, cs.diff.id)
         flash("Rework has been already scheduled for upload", "error")
         return redirect_url
-    diff = Diff(cs)
+    root = repo.hg_ancestor(cs.sha1, cs.review.target)
+    diff = Diff(cs, root)
     db.session.add(diff)
     logger.info("Diff record %d has been created for changeset %d",
                 diff.id, cs.id)
@@ -179,7 +187,10 @@ def jenkins_build():
 def changeset_info(sha1):
     logger.info("Requested URL /changeset/%s", sha1)
     cs = Changeset.query.filter(Changeset.sha1 == sha1).first()
-    #TODO: What if changeset doesn't exist?
+    if cs is None:
+        flash("Changeset {} doesn't exist".format(sha1), "error")
+        logger.error("Changeset %s doesn't exist", sha1)
+        return redirect(url_for("index"))
     prev = Changeset.query.filter(and_(Changeset.created_date < cs.created_date,
                                        Changeset.status == "ACTIVE",
                                        Changeset.review_id == cs.review_id))\
@@ -197,11 +208,15 @@ def changeset_info(sha1):
 
 
 
-@app.route('/review/<int:review>', methods=['POST', 'GET'])
-@performance_monitor("Request /review/<int:review>")
-def review_info(review):
-    logger.info("Requested URL /review/%d", review)
-    review = Review.query.filter(Review.id == review).first()
+@app.route('/review/<int:review_id>', methods=['POST', 'GET'])
+@performance_monitor("Request /review/<int:review_id>")
+def review_info(review_id):
+    logger.info("Requested URL /review/%d", review_id)
+    review = Review.query.filter(Review.id == review_id).first()
+    if review is None:
+        flash("Review {} doesn't exist".format(review_id), "error")
+        logger.error("Review %d doesn't exist", review_id)
+        return redirect(url_for("index"))
     if review.status == "ACTIVE":
         repo.hg_sync()
     if request.method == 'POST':
@@ -224,11 +239,11 @@ def review_info(review):
                 flash("Error - changeset already exists", "error")
         if request.form["action"] == "abandon":
             review.status = "ABANDONED"
-            db.session.add(review)
-            for c in review.changesets:
-                c.status = "ABANDONED"
-                db.session.add(c)
             db.session.commit()
+            heads = repo.hg_heads()
+            for c in review.changesets:
+                if c.sha1 in heads:
+                    repo.hg_close_branch(c.sha1)
             flash("Review has been abandoned", "notice")
         #TODO: If inspection scheduled, target cannot change
         if request.form["action"] == "target":
@@ -243,6 +258,7 @@ def review_info(review):
                 flash(msg.format(review.target), "notice")
         #TODO: If inspection scheduled, cannot abandon changeset
         #TODO: Only active changeset or its descendant can be abandoned
+        #TODO: Abandoning active changeset should move bookmark backwards
         if request.form["action"] == "abandon_changeset":
             changeset = Changeset.query.filter(Changeset.sha1 == request.form["sha1"]).first()
             if changeset is None:
@@ -255,6 +271,7 @@ def review_info(review):
             changeset.status = "ABANDONED"
             db.session.add(changeset)
             db.session.commit()
+            repo.hg_close_branch(request.form["sha1"])
             flash("Changeset '{title}' (SHA1: {sha1}) has been abandoned".format(title=changeset.title,
                                                                                  sha1=changeset.sha1), "notice")
 
@@ -277,7 +294,7 @@ def merge_branch():
     review = Review.query.filter(Review.id == changeset.review_id).first()
     bookmark = review.target
 
-    link = url_for("review_info", review=review.id, _external=True)
+    link = url_for("review_info", review_id=review.id, _external=True)
 
     repo.hg_sync()
 
@@ -292,7 +309,7 @@ def merge_branch():
     logger.info("Merge result: {output}".format(output=output))
 
     error = False
-    subject = "Successful merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
+    subject = u"Successful merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
 
     if "abort: nothing to merge" in output:
         repo.hg_update(sha1)
@@ -303,8 +320,8 @@ def merge_branch():
         repo.hg_update("null", clean=True)
         flash("There is merge conflict. Merge with bookmark " + bookmark +
               " and try again.", "error")
-        subject = "Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1,
-                                                                             dest=review.target)
+        subject = u"Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1,
+                                                                              dest=review.target)
         error = True
     elif "abort: merging with a working directory ancestor has no effect" in output:
         repo.hg_update(sha1)
@@ -321,11 +338,10 @@ def merge_branch():
         if not "no changes found" in ex.message:
             raise
 
-    html = subject + "<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
+    html = subject + u"<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
         link=link, sha1=changeset.sha1, owner=changeset.owner)
 
-    recpts = get_admin_emails()
-    recpts.append(changeset.owner_email)
+    recpts = [changeset.owner_email]
     recpts = list(set(recpts))
 
     msg = Message(subject,
@@ -342,6 +358,32 @@ def merge_branch():
         flash("Review has been closed", "notice")
 
     return redirect(url_for('index'))
+
+
+@app.route('/changelog/<start>/<stop>')
+@login_required
+@roles_required('admin')
+def changelog(start, stop):
+    repo.hg_sync()
+    rev_start = repo.revision(start)
+    rev_stop = repo.revision(stop)
+
+    rev_list = {}
+    for rev in repo.revisions([1, rev_stop.node]):
+        rev_list[rev.node] = rev
+    for rev in repo.revisions([1, rev_start.node]):
+        rev_list.pop(rev.node, None)
+
+    jira_re = re.compile("(IWD-\d+)|(EVO-\d+)|(IAP-\d+)", re.IGNORECASE)
+    jira_list = {}
+    for node, rev in rev_list.items():
+        tickets = set(chain(*jira_re.findall(rev.desc))) - set([''])
+        for ticket in tickets:
+            if ticket not in jira_list:
+                jira_list[ticket] = ''
+            jira_list[ticket] += '\n' + rev.desc
+
+    return render_template("log.html", start=start, stop=stop, jira_list=sorted(jira_list.items()))
 
 
 ############################################################################
@@ -387,7 +429,7 @@ def run_scheduled_jobs():
             if i.status == "SCHEDULED":
                 logger.error("Inspection of diff %d is still scheduled", d.id)
                 continue
-            if cc.upload_diff(i.number, i.root, d.changeset.sha1):
+            if cc.upload_diff(i.number, d.root, d.changeset.sha1):
                 d.status = "UPLOADED"
                 db.session.commit()
         except:

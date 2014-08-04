@@ -85,6 +85,9 @@ class CodeCollaborator(object):
         return None, None
 
     def add_participant(self, review_id, user_cc_login, role):
+        if user_cc_login is None:
+            logger.error("The author for review %s is 'None'.", review_id)
+            return
         self.cc_command("admin review participant assign",
                         review_id, user_cc_login, role)
 

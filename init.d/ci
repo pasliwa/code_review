@@ -1,0 +1,82 @@
+#!/bin/bash
+#
+# ci		Start/Stop the Code Inspection tool (production).
+#
+# Authors:	Maciej Malycha <maciej.malycha@genesys.com>
+#
+# chkconfig: - 84 16
+# description:	Starts the Code Inspection tool, which is
+# 		web application integrating CodeCollaborator,
+# 		Mercurial, Jenkins and Klocwork
+
+ 
+ 
+# Source function library.
+. /etc/rc.d/init.d/functions
+ 
+# Get config.
+. /etc/sysconfig/network
+ 
+# Check that networking is up.
+[ "${NETWORKING}" = "no" ] && exit 0
+
+USER=ci
+
+ci_home=/home/$USER
+startup=$ci_home/code_review/start_code_review.sh
+shutdown=$ci_home/code_review/stop_code_review.sh
+ 
+start(){
+    echo -n "Starting code_review service: "
+    runuser $USER $startup
+    RETVAL=$?
+    [ "$RETVAL" -eq 0 ] && success || failure
+    echo 
+    return $RETVAL
+}
+ 
+stop(){
+    echo -n "Stopping code_review service: "
+    runuser $USER $shutdown
+    RETVAL=$?
+    [ "$RETVAL" -eq 0 ] && success || failure
+    echo
+    return $RETVAL
+}
+ 
+status(){
+    numproc=`ps -u $USER -f | grep "[c]ode_review.fcgi" | wc -l`
+    if [ $numproc -gt 0 ]; then
+        echo "code_review is running..."
+    else
+        echo "code_review is stopped..."
+    fi
+}
+ 
+restart(){
+    stop
+    sleep 5
+    start
+}
+ 
+ 
+# See how we were called.
+case "$1" in
+start)
+    start
+    ;;
+stop)
+    stop
+    ;;
+status)
+    status
+    ;;
+restart)
+    restart
+    ;;
+*)
+    echo $"Usage: $0 {start|stop|status|restart}"
+    exit 1
+esac
+ 
+exit $?

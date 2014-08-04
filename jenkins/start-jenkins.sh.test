@@ -1,0 +1,12 @@
+#!/bin/bash
+
+CI_HOME=/home/ci_test
+JENKINS_AJP_PORT=8011
+JENKINS_HTTP_PORT=8111
+JENKINS_PREFIX=/jenkins_test
+
+JENKINS_WAR=$CI_HOME/jenkins/jenkins.war
+JENKINS_LOG=$CI_HOME/logs/jenkins.log
+
+JAVA_HOME=/usr/java/jdk1.6.0_26
+nohup nice $JAVA_HOME/bin/java -XX:PermSize=512M -XX:MaxPermSize=2048M -Xmn128M -Xms1024M -Xmx2048M -jar $JENKINS_WAR --httpPort=$JENKINS_HTTP_PORT --httpListenAddress=127.0.0.1 --ajp13Port=$JENKINS_AJP_PORT --ajp13ListenAddress=127.0.0.1 --prefix=$JENKINS_PREFIX > $JENKINS_LOG 2>&1 &

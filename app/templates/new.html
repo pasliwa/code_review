@@ -52,7 +52,11 @@
                         <input type="hidden" name="sha1" value="{{ r.node }}">
                     </form>
                     <form method="post" action="{{ url_for("changes_new") }}">
-                        <button class="btn btn-danger btn-xs" type="submit"><span class="glyphicon glyphicon-trash"></span> Abandon</button>
+                        <button class="btn btn-danger btn-xs confirmation-needed"
+                                data-question="Are you sure you want to ABANDON this changeset?"
+                                type="submit">
+                            <span class="glyphicon glyphicon-trash"></span> Abandon
+                        </button>
                         <input type="hidden" name="action" value="abandon">
                         <input type="hidden" name="sha1" value="{{ r.node }}">
                     </form>
