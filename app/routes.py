@@ -169,16 +169,26 @@ def inspect_diff(cs_id):
 @login_required
 @roles_required('user')
 def jenkins_build():
-    info = repo.revision(request.form['src'])
+    info = repo.revision(request.form["src"])
+    job_name = request.form["release"] + "-ci"
     changeset = Changeset.query.filter(Changeset.sha1 == info.node).first()
-    build = Build(changeset_id=changeset.id, status="SCHEDULED",
-                  job_name=request.form['release'] + "-ci")
+    build_info = jenkins.run_job(job_name, changeset.sha1)
+    if build_info is None:
+        flash("Scheduling Jenkins build failed", "error")
+        return redirect(url_for("changeset_info", sha1=request.form["back_id"]))
+
+    build = Build(changeset_id=changeset.id, status=build_info["status"],
+                  job_name=job_name, build_url=build_info["build_url"])
+    build.request_id = build_info["request_id"]
+    build.scheduled = build_info["scheduled"]
+    if "build_number" in build_info:
+        build.build_number = build_info["build_number"]
     db.session.add(build)
     db.session.commit()
     logger.info("Jenkins build for changeset id " + str(changeset.id) +
                 " has been added to queue. Changeset: " + str(changeset) +
                 " , build: " + str(build))
-    flash("Jenkins build has been scheduled for processing", "notice")
+    flash("Jenkins build has been added to the queue", "notice")
     return redirect(url_for('changeset_info', sha1=request.form['back_id']))
 
 
@@ -384,80 +394,6 @@ def changelog(start, stop):
             jira_list[ticket] += '\n' + rev.desc
 
     return render_template("log.html", start=start, stop=stop, jira_list=sorted(jira_list.items()))
-
-
-############################################################################
-#
-#          MAINTENANCE - DEDICATED FOR CRON JOBS
-#
-############################################################################
-
-
-
-@app.route('/run_scheduled_jobs')
-def run_scheduled_jobs():
-    # CC reviews
-    logger.info("Running scheduled jobs")
-    inspections = CodeInspection.query.filter(
-        CodeInspection.status == "SCHEDULED").all()
-    for i in inspections:
-        try:
-            logger.info("Processing inspection: %d", i.id)
-            if i.number is not None:
-                logger.error("Inspection %d with number is still scheduled.",
-                             i.id)
-                continue
-            i.number, i.url = cc.create_review(i.review.title, i.review.target)
-            if i.number is None:
-                logger.error("Creating inspection %d in CodeCollaborator "
-                             "failed.", i.id)
-                continue
-            cc.add_participant(i.number, i.author, "author")
-            i.status = "NEW"
-            #TODO: What happens if there is exception in database? Thousands of inspections will be created?
-            db.session.commit()
-        except:
-            logger.exception("Exception when processing inspection: %d", i.id)
-            db.session.rollback()
-
-    # CC diffs
-    diffs = Diff.query.filter(Diff.status == "SCHEDULED").all()
-    for d in diffs:
-        try:
-            logger.info("Processing diff: %d", d.id)
-            i = d.changeset.review.inspection
-            if i.status == "SCHEDULED":
-                logger.error("Inspection of diff %d is still scheduled", d.id)
-                continue
-            if cc.upload_diff(i.number, d.root, d.changeset.sha1):
-                d.status = "UPLOADED"
-                db.session.commit()
-        except:
-            logger.exception("Exception when uploading diff: %d", d.id)
-            db.session.rollback()
-
-    # Jenkins builds
-    builds = Build.query.filter(Build.status == "SCHEDULED").all()
-    for b in builds:
-        try:
-            logger.info("Processing build: %d", b.id)
-            build_info = jenkins.run_job(b.job_name, b.changeset.sha1)
-            if build_info is None:
-                logger.error("Build id " + str(b.id) + " has been skipped.")
-                continue
-            b.status = build_info["status"]
-            b.request_id = build_info["request_id"]
-            b.scheduled = build_info["scheduled"]
-            b.build_url = build_info["build_url"]
-            if "build_number" in build_info:
-                b.build_number = build_info["build_number"]
-            db.session.commit()
-        except:
-            logger.exception("Exception when running build: %d", b.id)
-            db.session.rollback()
-
-    logger.info("Running scheduled jobs completed")
-    return redirect(url_for('index'))
 
 
 @app.errorhandler(Exception)

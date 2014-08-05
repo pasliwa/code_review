@@ -7,6 +7,7 @@ from app import app
 
 EMAIL_LOG_TEMPLATE = '''
 Message type:       %(levelname)s
+Thread:             %(threadName)s
 Location:           %(pathname)s:%(lineno)d
 Module:             %(module)s
 Function:           %(funcName)s
@@ -17,9 +18,9 @@ Message:
 %(message)s
 '''
 
-FILE_LOG_TEMPLATE = "%(asctime)s %(levelname)s [%(name)s:%(lineno)d] %(message)s"
+FILE_LOG_TEMPLATE = "%(asctime)s <%(threadName)s> %(levelname)s [%(name)s:%(lineno)d] %(message)s"
 
-CONSOLE_LOG_TEMPLATE = "%(levelname)s [%(name)s:%(lineno)d] %(message)s"
+CONSOLE_LOG_TEMPLATE = "%(levelname)s <%(threadName)s> [%(name)s:%(lineno)d] %(message)s"
 
 def get_mail_handler():
     mail_handler = SMTPHandler('127.0.0.1',
