@@ -396,60 +396,6 @@ def changelog(start, stop):
     return render_template("log.html", start=start, stop=stop, jira_list=sorted(jira_list.items()))
 
 
-############################################################################
-#
-#          MAINTENANCE - DEDICATED FOR CRON JOBS
-#
-############################################################################
-
-
-
-@app.route('/run_scheduled_jobs')
-def run_scheduled_jobs():
-    # CC reviews
-    logger.info("Running scheduled jobs")
-    inspections = CodeInspection.query.filter(
-        CodeInspection.status == "SCHEDULED").all()
-    for i in inspections:
-        try:
-            logger.info("Processing inspection: %d", i.id)
-            if i.number is not None:
-                logger.error("Inspection %d with number is still scheduled.",
-                             i.id)
-                continue
-            i.number, i.url = cc.create_review(i.review.title, i.review.target)
-            if i.number is None:
-                logger.error("Creating inspection %d in CodeCollaborator "
-                             "failed.", i.id)
-                continue
-            cc.add_participant(i.number, i.author, "author")
-            i.status = "NEW"
-            #TODO: What happens if there is exception in database? Thousands of inspections will be created?
-            db.session.commit()
-        except:
-            logger.exception("Exception when processing inspection: %d", i.id)
-            db.session.rollback()
-
-    # CC diffs
-    diffs = Diff.query.filter(Diff.status == "SCHEDULED").all()
-    for d in diffs:
-        try:
-            logger.info("Processing diff: %d", d.id)
-            i = d.changeset.review.inspection
-            if i.status == "SCHEDULED":
-                logger.error("Inspection of diff %d is still scheduled", d.id)
-                continue
-            if cc.upload_diff(i.number, d.root, d.changeset.sha1):
-                d.status = "UPLOADED"
-                db.session.commit()
-        except:
-            logger.exception("Exception when uploading diff: %d", d.id)
-            db.session.rollback()
-
-    logger.info("Running scheduled jobs completed")
-    return redirect(url_for('index'))
-
-
 @app.errorhandler(Exception)
 def internal_error(ex):
     logger.exception(ex)

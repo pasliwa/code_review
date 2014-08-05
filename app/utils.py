@@ -1,12 +1,72 @@
+import time
 import logging
+import threading
+
 from sqlalchemy.sql import desc
-from app import jenkins, db, User, Role, app
+
+from app import jenkins, db, app
 from app.model import Build, Changeset
 from app.model import Review
 from app.view import Pagination
 from app.perfutils import performance_monitor
 
 logger = logging.getLogger(__name__)
+
+class AbortThread(Exception): pass
+
+class Anacron(threading.Thread):
+    def __init__(self, interval, function, name):
+        threading.Thread.__init__(self)
+        self.name = name
+        self.interval = interval
+        self.function = function
+        self.interrupted = threading.Event()
+
+    def stop(self):
+        self.interrupted.set()
+
+    def run(self):
+        while not self.interrupted.is_set():
+            logging.info("Executing background job")
+            try:
+                self.function()
+            except AbortThread:
+                logging.error("Fatal error in background thread. Aborting.")
+                break
+            except:
+                logging.exception("Exception in background thread")
+            delay = 60 - (time.time() % self.interval)
+            logging.info("Sleeping %d s", delay)
+            self.interrupted.wait(delay)
+
+
+class DatabaseGuard:
+
+    def __session_commit(self):
+        try:
+            db.session.commit()
+        except:
+            logger.exception("Exception in session commit. "
+                             "Rollback and kill thread.")
+            self.__session_rollback()
+            raise AbortThread()
+
+    def __session_rollback(self):
+        try:
+            db.session.rollback()
+        except:
+            logger.exception("Exception in session rollback.")
+
+    def __enter__(self):
+        return None
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            logger.error("Exception in DatabaseGuard",
+                         exc_info=(exc_type, exc_val, exc_tb))
+            raise AbortThread()
+        self.__session_commit()
+
 
 #TODO: Move to model
 def known_build_numbers(job_name):

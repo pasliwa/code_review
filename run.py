@@ -2,6 +2,17 @@ import logging
 
 from app import app
 from app import logs
+from app import background
+from app.utils import Anacron
 
 logging.getLogger().addHandler(logs.get_console_handler())
-app.run(debug=True, host=app.config["LISTEN_HOST"], threaded=app.config["ENABLE_THREADS"])
+
+schedule_cc = Anacron(60, background.schedule_cc, "schedule_cc")
+schedule_cc.start()
+
+try:
+    app.run(debug=True, host=app.config["LISTEN_HOST"], use_reloader=False,
+            threaded=app.config["ENABLE_THREADS"])
+finally:
+    schedule_cc.stop()
+    schedule_cc.join()
