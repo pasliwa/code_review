@@ -35,7 +35,7 @@ class Anacron(threading.Thread):
                 break
             except:
                 logging.exception("Exception in background thread")
-            delay = 60 - (time.time() % self.interval)
+            delay = self.interval - (time.time() % self.interval)
             logging.info("Sleeping %d s", delay)
             self.interrupted.wait(delay)
 
@@ -74,39 +74,6 @@ def known_build_numbers(job_name):
         .filter(Build.job_name == job_name)\
         .filter(Build.build_number != None)
     return [int(row.build_number) for row in query.all()]
-
-jenkins_final_states = ["FAILURE", "UNSTABLE", "SUCCESS", "ABORTED"]
-
-@performance_monitor("update_build_status")
-def update_build_status(changeset):
-    logger.info("Updating build status for changeset %s", changeset)
-    builds = Build.query.filter(Build.changeset_id == changeset).all()
-    for b in builds:
-        if b.status == "SCHEDULED":
-            logger.debug("Build scheduled. Skipping")
-            continue
-        elif b.status in jenkins_final_states:
-            logger.debug("Build %d in final state %s. Skipped", b.build_number,
-                         b.status)
-            continue
-        elif b.build_number is not None:
-            b.status = jenkins.get_build_status(b.job_name, b.build_number)
-        elif jenkins.check_queue(b.job_name, b.request_id):
-            b.status = 'Queued'
-        else:
-            builds = set(jenkins.list_builds(b.job_name)) - set(known_build_numbers(b.job_name))
-            for build_number in builds:
-                build_info = jenkins.get_build_info(b.job_name, build_number)
-                if build_info["request_id"] == b.request_id:
-                    b.status = build_info['status']
-                    b.build_number = build_number
-                    b.build_url = build_info["build_url"]
-                    logger.debug("Build found with number %d and status %s",
-                                 b.build_number, b.status)
-                    break
-            else:
-                b.status = "Missing"
-        db.session.commit()
 
 
 def get_reviews(status, page, request):

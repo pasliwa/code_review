@@ -79,7 +79,7 @@ def schedule_cc():
         try:
             logger.info("Processing diff: %d", d.id)
             i = d.changeset.review.inspection
-            if i.status == "SCHEDULED":
+            if i.number is None:
                 logger.error("Inspection of diff %d is still scheduled", d.id)
                 continue
         except:

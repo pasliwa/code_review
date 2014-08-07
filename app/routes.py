@@ -17,8 +17,7 @@ from app import app, db, repo, jenkins, cc, mail, user_datastore
 from app.hgapi.hgapi import HgException
 from app.model import Build, Changeset, CodeInspection, Review, Diff
 from app.view import Pagination
-from app.utils import update_build_status, \
-    get_reviews, get_new, get_reworks, el
+from app.utils import get_reviews, get_new, get_reworks, el
 from app.perfutils import performance_monitor
 from view import SearchForm
 
@@ -212,7 +211,6 @@ def changeset_info(sha1):
                                         Changeset.review_id == cs.review_id))\
         .order_by(Changeset.created_date).first()
     review = Review.query.filter(Review.id == cs.review_id).first()
-    update_build_status(cs.id)
     return render_template("changeset.html", review=review, cs=cs, next=next_,
                            prev=prev)
 
@@ -284,10 +282,6 @@ def review_info(review_id):
             repo.hg_close_branch(request.form["sha1"])
             flash("Changeset '{title}' (SHA1: {sha1}) has been abandoned".format(title=changeset.title,
                                                                                  sha1=changeset.sha1), "notice")
-
-    if review.status == "ACTIVE":
-        for c in review.changesets:
-            update_build_status(c.id)
 
     return render_template("review.html", review=review,
                            descendants=get_reworks(repo, review))
