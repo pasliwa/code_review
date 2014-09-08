@@ -2,8 +2,7 @@ import os
 import os.path
 import shutil
 
-from proboscis import test
-from proboscis.asserts import assert_equal, assert_true, assert_false
+import unittest
 from dingus import patch, Dingus
 
 from sandbox import REPO_MASTER, config
@@ -16,7 +15,6 @@ from test.mercurial import MercurialBase, FILE_3
 
 
 
-@test
 class MercurialTest(MercurialBase):
 
     def login(self, username, password):
@@ -60,7 +58,7 @@ class MercurialTest(MercurialBase):
     def detektyw_login(self):
         """ Login into Detektyw """
         rv = self.login("maciej.malycha@genesyslab.com", "password")
-        assert_true("Active changes" in rv.data)
+        self.assertTrue("Active changes" in rv.data)
 
     def review_open(self, node):
         """ Open new review """
@@ -122,21 +120,21 @@ class MercurialTest(MercurialBase):
         self.commit_master("IWD-0005: Rework 1.1")
         self.commit_master("IWD-0005: Rework 2.0", bmk="rev2", rev="IWD-0005")
         # Verify, that they don't show up as new changes
-        assert_equal(len(self.new_list()), 0)
+        self.assertEqual(len(self.new_list()), 0)
         # But show up as reworks
         revisions = self.rework_list()
-        assert_equal(len(revisions), 2)
-        assert_equal(revisions[0].title, "IWD-0005: Rework 2.0")
-        assert_equal(revisions[1].title, "IWD-0005: Rework 1.1")
+        self.assertEqual(len(revisions), 2)
+        self.assertEqual(revisions[0].title, "IWD-0005: Rework 2.0")
+        self.assertEqual(revisions[1].title, "IWD-0005: Rework 1.1")
         # Create new changeset out of one revision
         self.rework_create(revisions[1].node)
         # Verify, that second one is not rework candidate
         #TODO: Check if full chain of revisions is sent to collaborator
-        assert_equal(len(self.rework_list()), 0)
+        self.assertEqual(len(self.rework_list()), 0)
         # But new revision
         revisions = self.new_list()
-        assert_equal(len(revisions), 1)
-        assert_equal(revisions[0].title, "IWD-0005: Rework 2.0")
+        self.assertEqual(len(revisions), 1)
+        self.assertEqual(revisions[0].title, "IWD-0005: Rework 2.0")
 
     def test_revision_from_old_changeset(self):
         """Push revision originating from older changeset
@@ -150,16 +148,16 @@ class MercurialTest(MercurialBase):
         self.detektyw_login()
         # Verify, that IWD-0006 revision is on list of new revisions
         revisions = self.new_list()
-        assert_equal(len(revisions), 1)
-        assert_true(revisions[0].title.startswith("IWD-0006"))
+        self.assertEqual(len(revisions), 1)
+        self.assertTrue(revisions[0].title.startswith("IWD-0006"))
         review_sha1 = revisions[0].node
         self.review_open(review_sha1)
         # Commit new revision on top of IWD-0006
         self.commit_master("IWD-0006: Newer changeset")
         # Verify, that it shows up as rework
         revisions = self.rework_list()
-        assert_equal(len(revisions), 1)
-        assert_equal(revisions[0].title, "IWD-0006: Newer changeset")
+        self.assertEqual(len(revisions), 1)
+        self.assertEqual(revisions[0].title, "IWD-0006: Newer changeset")
         rework_sha1 = revisions[0].node
         # Make it changeset
         self.rework_create(rework_sha1)
@@ -167,18 +165,18 @@ class MercurialTest(MercurialBase):
         self.commit_master("IWD-0006: Side branch", rev=review_sha1)
         # Verify, that it is on list of new revisions
         revisions = self.new_list()
-        assert_equal(len(revisions), 1)
-        assert_equal(revisions[0].title, "IWD-0006: Side branch")
+        self.assertEqual(len(revisions), 1)
+        self.assertEqual(revisions[0].title, "IWD-0006: Side branch")
         # But not on the review list
-        assert_equal(len(self.rework_list()), 0)
+        self.assertEqual(len(self.rework_list()), 0)
         # Abandon active changeset
         self.rework_abandon(rework_sha1)
         # Verify, that side branch is not on new
-        assert_equal(len(self.new_list()), 0)
+        self.assertEqual(len(self.new_list()), 0)
         # But listed as rework
         revisions = self.rework_list()
-        assert_equal(len(revisions), 1)
-        assert_equal(revisions[0].title, "IWD-0006: Side branch")
+        self.assertEqual(len(revisions), 1)
+        self.assertEqual(revisions[0].title, "IWD-0006: Side branch")
 
     def test_dangling_heads(self):
         """Merge review with dangling heads (true merge)
@@ -195,8 +193,8 @@ class MercurialTest(MercurialBase):
         self.detektyw_login()
         # Verify, that IWD-0009 revision is on list of new revisions
         revisions = self.new_list()
-        assert_equal(len(revisions), 1)
-        assert_true(revisions[0].title.startswith("IWD-0009"))
+        self.assertEqual(len(revisions), 1)
+        self.assertTrue(revisions[0].title.startswith("IWD-0009"))
         review_sha1 = revisions[0].node
         self.review_open(review_sha1)
         # Commit two rework branches to IWD-0009
@@ -204,23 +202,23 @@ class MercurialTest(MercurialBase):
         self.commit_master("IWD-0009: Rework 1.1")
         self.commit_master("IWD-0009: Rework 2.0", bmk="rev2", rev="IWD-0009")
         # Verify, that they don't show up as new changes
-        assert_equal(len(self.new_list()), 0)
+        self.assertEqual(len(self.new_list()), 0)
         # But show up as reworks
-        assert_equal(len(self.rework_list()), 2)
+        self.assertEqual(len(self.rework_list()), 2)
         # Merge IWD-0009 but not the reworks
         self.review_merge(review_sha1)
         # Verify, that merge, commit and push was done
-        assert_false("iwd-8.5.000" in self.slave.revision(review_sha1).bookmarks)
-        assert_false("iwd-8.5.000" in self.slave.revision(head_id).bookmarks)
-        assert_false("iwd-8.5.000" in self.master.revision(review_sha1).bookmarks)
-        assert_false("iwd-8.5.000" in self.master.revision(head_id).bookmarks)
+        self.assertFalse("iwd-8.5.000" in self.slave.revision(review_sha1).bookmarks)
+        self.assertFalse("iwd-8.5.000" in self.slave.revision(head_id).bookmarks)
+        self.assertFalse("iwd-8.5.000" in self.master.revision(review_sha1).bookmarks)
+        self.assertFalse("iwd-8.5.000" in self.master.revision(head_id).bookmarks)
         # Verify, that reworks show up on new
         revisions = self.new_list()
-        assert_equal(len(revisions), 2)
-        assert_equal(revisions[0].title, "IWD-0009: Rework 2.0")
-        assert_equal(revisions[1].title, "IWD-0009: Rework 1.1")
+        self.assertEqual(len(revisions), 2)
+        self.assertEqual(revisions[0].title, "IWD-0009: Rework 2.0")
+        self.assertEqual(revisions[1].title, "IWD-0009: Rework 1.1")
         # But not on the review page
-        assert_equal(len(self.rework_list()), 0)
+        self.assertEqual(len(self.rework_list()), 0)
 
     def test_diverged_merge(self):
         """Merge review with conflicting changes (diverged)
@@ -243,16 +241,16 @@ class MercurialTest(MercurialBase):
         self.review_open(rev2_node)
         rv_data = self.review_merge(rev2_node)
         # Verify, that user is informed
-        assert_true("There is merge conflict. Merge with bookmark "
+        self.assertTrue("There is merge conflict. Merge with bookmark "
                     "iwd-8.0.002 and try again." in rv_data)
         # Verify, that merge is not done
-        assert_true("iwd-8.0.002" in self.master.revision(rev1_node).bookmarks)
-        assert_true("iwd-8.0.002" in self.slave.revision(rev1_node).bookmarks)
-        assert_equal(self.review_get(2).status, "ACTIVE")
+        self.assertTrue("iwd-8.0.002" in self.master.revision(rev1_node).bookmarks)
+        self.assertTrue("iwd-8.0.002" in self.slave.revision(rev1_node).bookmarks)
+        self.assertEqual(self.review_get(2).status, "ACTIVE")
         # Verify, that repository has recovered
         for key, value in self.slave.hg_status().items():
-            assert_equal(value, [])
-        assert_equal(self.slave.hg_id(), "000000000000")
+            self.assertEqual(value, [])
+        self.assertEqual(self.slave.hg_id(), "000000000000")
 
     def test_merge_with_ancestor(self):
         """Merge review with official branch being descendant of active
@@ -271,19 +269,15 @@ class MercurialTest(MercurialBase):
                                  bmk="iwd-8.1.101")
         child_node = self.master.revision(rev).node
         # Verify, that official branch is not recognized as rework
-        assert_equal(len(self.rework_list()), 0)
+        self.assertEqual(len(self.rework_list()), 0)
         # And can be merged without problem
         self.review_merge(parent_node)
         # Review is merged
-        assert_equal(self.review_get(1).status, "MERGED")
+        self.assertEqual(self.review_get(1).status, "MERGED")
         # And official bookmark didn't move
         child_revision = self.master.revision(child_node)
-        assert_true("iwd-8.1.101" in child_revision.bookmarks)
+        self.assertTrue("iwd-8.1.101" in child_revision.bookmarks)
 
-
-def run_tests():
-    from proboscis import TestProgram
-    TestProgram().run_and_exit()
 
 if __name__ == "__main__":
-    run_tests()
+    unittest.main()
