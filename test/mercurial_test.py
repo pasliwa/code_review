@@ -65,8 +65,7 @@ class MercurialTest(MercurialBase):
     def review_open(self, node):
         """ Open new review """
         # TODO: sha1 -> node
-        rv = self.app.post("/changes/new", data={"action": "start",
-                                                 "sha1": node})
+        rv = self.app.post("/review", data={"node": node})
 
     def review_merge(self, node):
         """ Merge review """
@@ -83,6 +82,8 @@ class MercurialTest(MercurialBase):
 
     def rework_list(self):
         """ Get list of reworks for first review """
+        #TODO: Separate refresh method
+        self.app.post("/changes/refresh", data={})
         with patch("flask.templating._render", Dingus(return_value='')):
             rv = self.app.get("/review/1")
             revisions = flask.templating._render.calls[0].args[1]['descendants']
@@ -90,15 +91,14 @@ class MercurialTest(MercurialBase):
 
     def rework_create(self, node):
         """ Create new rework """
-        self.app.post("/review/1", data={"action": "rework",
-                                         "sha1": node})
+        self.app.post("/review/1", data={"node": node})
 
     def rework_abandon(self, node):
-        self.app.post("/review/1", data={"action": "abandon_changeset",
-                                         "sha1": node})
+        self.app.post("/revision/%s/abandon" % node, data={})
 
     def new_list(self):
         """ Get list of new review candidates """
+        self.app.post("/changes/refresh", data={})
         with patch("flask.templating._render", Dingus(return_value='')):
             rv = self.app.get("/changes/new")
             revisions = flask.templating._render.calls[0].args[1]['revisions']

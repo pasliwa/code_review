@@ -9,6 +9,14 @@ from app import db
 
 logger = logging.getLogger(__name__)
 
+#TODO: Cleanup utils, move there after cleanup.
+def el(set_):
+    l = list(set_)
+    if len(l) == 0:
+        return None
+    else:
+        return l[0]
+
 # Define models
 roles_users = db.Table(
     'roles_users',
@@ -55,6 +63,31 @@ class Changeset(db.Model):
 
     def is_active(self):
         return self.review.active_changeset().id == self.id
+
+    def __str__(self):
+        return str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))
+
+
+class Head(db.Model):
+    __tablename__ = 'heads'
+    node = db.Column(db.String(40), primary_key=True)
+    author = db.Column(db.String(50))
+    author_email = db.Column(db.String(120))
+    created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    bookmarks = db.Column(db.String(120))
+    title = db.Column(db.String(120))
+    targets = db.Column(db.String(120))
+    review_id = db.Column(db.Integer, db.ForeignKey('review.id'))
+
+    def __init__(self, revision):
+        self.node = revision.node
+        self.author = revision.name
+        self.author_email = revision.email
+        self.created_date = revision.date
+        self.bookmarks = el(revision.bookmarks)
+        self.title = revision.title
+        self.targets = ", ".join(revision.targets)
+        self.review_id = revision.review_id
 
     def __str__(self):
         return str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))

@@ -1,0 +1,77 @@
+1. Spoofed URL redirects to index
+* Create page on different server with link pointing to /changes/refresh
+* Click Submit
+* Verify, that refresh works and you are redirected to index page
+
+2. New changes page behavior
+* Load 'New changes' page
+* Verify, that pager works
+* Submit new head and reload page. Verify it is not displayed.
+* Click refresh button
+* Reload new page in other window. Verify, that it waits for refresh completion.
+* Reload review info page in new window. Verify, that it waits for refresh completion.
+* Reload changelog page in new window. Verify, that it waits for refresh completion.
+* Create new review in other window. Verify, that it waits for refresh completion.
+* Create rework in other window. Verify, that it waits for refresh completion.
+* Merge changeset in other window. Verify, that it waits for refresh completion.
+* Verify, that refresh returns to 'New changes page'
+
+3. New review behavior
+* Load 'New changes' page
+* Push new revision on top of existing new revision
+* Click 'New review'. Verify, that error is displayed and review is not started
+* Click 'New review' again. Verify, that this time operation is successful and changeset page is loaded.
+* Load 'New changes' page. Verify, that revision disappeared from the page.
+
+4. Abandon revision behavior
+* Load 'New changes' page
+* Push new revision on top of existing new revision
+* Click 'Abandon'. Verify, that error is displayed and review is not started
+* Click 'Abandon' again. Verify, that this time operation is successful and 'New changes' is loaded. 
+* Verify, that revision disappeared from the page.
+* Verify, that branch has been closed
+
+5. Verify, that all views can be accessed without login.
+
+6. Verify, that all actions require login.
+
+7. Rework behavior
+* Open non-existing review. Verify, that error is displayed and index is loaded.
+* Open existing review with two rework candidates. Verify, that changesets are displayed in descending order with reworks on top.
+* Push new revision on top of rework.
+* Click 'rework'. Verify that error is displayed and review page gets refreshed.
+* Click 'rework' again. Verify, that this time operation is successful and changeset page is loaded.
+* Go back to review. Verify, that both reworks disappeared from candidates list.
+* Go to new changes page. Verify that second rework is there.
+
+8. Abandon review behavior
+* Open existing review.
+* Push new revision on top of active changeset.
+* Click abandon review.
+* Verify, that active changes page is loaded and review is not displayed.
+* Verify, that pushed revision appears on 'New changes' and branch is not closed.
+* Open existing review without any reworks.
+* Click abandon review.
+* Verify, that active changes page is loaded and review is not displayed.
+* Verify, that active changeset is closed.
+
+9. Set target behavior
+* Open existing review with multiple targets.
+* Select target.
+* Verify, that target is set.
+* Verify, that review info is displayed.
+
+10. Abandon rework behavior
+* Load existing review with reworks
+* Push new revision on top of existing rework
+* Click 'Abandon'. Verify, that error is displayed and review is not started
+* Click 'Abandon' again. Verify, that this time operation is successful and 'review info' is loaded. 
+* Verify, that revision disappeared from the page.
+* Verify, that branch has been closed
+
+11. Merge behavior
+* Open existing review with rework candidate
+* Merge review
+* Verify, that merge candidate disappeared from review_info
+* Verify, that merge candidate appeared on 'New changes'
+

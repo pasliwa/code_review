@@ -212,20 +212,18 @@
 
                 <div>
                     <form class="form-horizontal" method="post"
-                          action="{{ url_for("review_info", review_id=review.id) }}">
+                          action="{{ url_for("review_abandon", review_id=review.id) }}">
                         <div class="form-group">
                             <label class="col-sm-4 control-label">Abandon this review</label>
                             <button class="btn btn-danger btn-sm confirmation-needed"
                                     data-question="Are you sure you want to ABANDON this review?" type="submit"><span
                                     class="glyphicon glyphicon-trash"></span> Abandon
                             </button>
-                            <input type="hidden" name="action" value="abandon">
-                            <input type="hidden" name="sha1" value="{{ cs.sha1 }}">
                         </div>
                     </form>
                 </div>
             {% else %}
-                This changeset is abanodned.
+                This changeset is abandoned.
             {% endif %}
         </div>
     </div>

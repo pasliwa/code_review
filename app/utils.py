@@ -101,6 +101,7 @@ def get_active_changesets():
         for changeset in review.changesets:
             if changeset.status == "ACTIVE":
                 changesets.append(changeset)
+                logger.debug("Active changeset: %s", changeset)
                 break
     return changesets
 
@@ -112,47 +113,61 @@ def is_descendant(repo, node, parents):
     return False
 
 
-def get_new(repo):
-    heads = [repo.revision(node) for node in repo.hg_heads()]
+def get_parents(repo, node, candidates):
+    result = []
+    for chset in candidates:
+        if repo.hg_ancestor(node, chset) == chset:
+            result.append(chset)
+    return result
+
+
+def get_revision_status(repo, revision):
+    heads = repo.hg_heads()
     active = [changeset.sha1 for changeset in get_active_changesets()]
+    changesets = set([changeset.sha1 for changeset in Changeset.query.all()])
+    abandoned = set([changeset.sha1 for changeset in
+                    Changeset.query.filter(Changeset.status == "ABANDONED")])
+    product_bookmarks = app.config["PRODUCT_BRANCHES"]
+    ignored_bookmarks = app.config["IGNORED_BRANCHES"]
+
+    if revision.bookmarks & product_bookmarks:
+        return "merged"
+    if revision.bookmarks & ignored_bookmarks:
+        return "ignored"
+    if revision.node not in heads:
+        return "not head"
+    if revision.node in abandoned:
+        return "abandoned"
+    if revision.node in changesets:
+        return "changeset"
+    if is_descendant(repo, revision.node, active):
+        return "rework"
+    return "new"
+
+
+
+def get_heads(repo):
+    heads = [repo.revision(node) for node in repo.hg_heads()]
+    active = dict([(changeset.sha1, changeset) for changeset in get_active_changesets()])
     abandoned = set([changeset.sha1 for changeset in
                     Changeset.query.filter(Changeset.status == "ABANDONED")])
     ignored_bookmarks = app.config["IGNORED_BRANCHES"] | \
                         app.config["PRODUCT_BRANCHES"]
-
-    result = []
-    for h in heads:
-        if h.bookmarks & ignored_bookmarks:
-            continue
-        if h.node in abandoned:
-            continue
-        if is_descendant(repo, h.node, active):
-            continue
-        result.append(h)
-
-    return result
-
-
-def get_reworks(repo, review):
-    if review.status != "ACTIVE":
-        return []
-    active = review.active_changeset()
-    if active is None:
-        return []
-
-    heads = [repo.revision(node) for node in repo.hg_heads()]
-    changesets = set([changeset.sha1 for changeset in Changeset.query.all()])
-    ignored_bookmarks = app.config["IGNORED_BRANCHES"] | \
-                        app.config["PRODUCT_BRANCHES"]
-
     result = []
     for head in heads:
         if head.bookmarks & ignored_bookmarks:
             continue
-        if head.node in changesets:
+        if head.node in abandoned:
             continue
-        if not is_descendant(repo, head.node, [active.sha1]):
-            continue
+        parents = get_parents(repo, head.node, active.keys())
+        if parents:
+            if len(parents) > 1:
+                logger.warning("Head %s has multiple parents: ", head.node, ", ".join(parents))
+            head.review_id = active[parents[0]].review_id
+            head.targets = []
+        else:
+            head.review_id = None
+            head.targets = repo.hg_targets(head.node, app.config["PRODUCT_BRANCHES"])
         result.append(head)
     return result
 

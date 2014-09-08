@@ -76,6 +76,29 @@
                         <th>Last build</th>
                     </thead>
                     <tbody>
+                        {% if review.status != "ABANDONED" %}
+                        {% for c in descendants %}
+                        <tr>
+                            <td></td>
+                            <td>{{ c.title }}</td>
+                            <td><code>{{ c.node }}</code></td>
+                            <td>
+                                <form method="post" action="{{ url_for("review_rework", review_id=review.id) }}">
+                                    <input type="hidden" name="node" value="{{ c.node }}">
+                                    <button type="submit" class="btn btn-success btn-sm"><span class="glyphicon glyphicon-plus-sign"></span> Add as rework</button>
+                                </form>
+                            </td>
+                            <td>
+                                {# TODO: If inspection scheduled, cannot abandon changeset #}
+                                {# TODO: Only active changeset or its descendant can be abandoned #}
+                                <form method="post" action="{{ url_for("revision_abandon", node=c.node) }}">
+                                    <button type="submit" class="btn btn-danger btn-sm confirmation-needed" data-question="Are you sure you want to ABANDON this changeset?"><span class="glyphicon glyphicon-trash"></span> Abandon</button>
+                                </form>
+                            </td>
+                            <td></td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
                         {% for c in review.changesets %}
                         <tr>
                             <td>{{ c.id }}</td>
@@ -110,32 +133,6 @@
                                 {% endif %}</td>
                         </tr>
                         {% endfor %}
-                        {% if review.status != "ABANDONED" %}
-                        {% for c in descendants %}
-                        <tr>
-                            <td></td>
-                            <td>{{ c.title }}</td>
-                            <td><code>{{ c.node }}</code></td>
-                            <td>
-                                <form method="post" action="{{ url_for("review_info", review_id=review.id) }}">
-                                    <input type="hidden" name="action" value="rework">
-                                    <input type="hidden" name="sha1" value="{{ c.node }}">
-                                    <button type="submit" class="btn btn-success btn-sm"><span class="glyphicon glyphicon-plus-sign"></span> Add as rework</button>
-                                </form>
-                            </td>
-                            <td>
-                                {# TODO: If inspection scheduled, cannot abandon changeset #}
-                                {# TODO: Only active changeset or its descendant can be abandoned #}
-                                <form method="post" action="{{ url_for("review_info", review_id=review.id) }}">
-                                    <input type="hidden" name="action" value="abandon_changeset">
-                                    <input type="hidden" name="sha1" value="{{ c.node }}">
-                                    <button type="submit" class="btn btn-danger btn-sm confirmation-needed" data-question="Are you sure you want to ABANDON this changeset?"><span class="glyphicon glyphicon-trash"></span> Abandon</button>
-                                </form>
-                            </td>
-                            <td></td>
-                        </tr>
-                        {% endfor %}
-                        {% endif %}
                     </tbody>
                 </table>
             </div>
