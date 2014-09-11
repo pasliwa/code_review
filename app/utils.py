@@ -149,6 +149,7 @@ def get_revision_status(repo, revision):
 def get_heads(repo):
     heads = [repo.revision(node) for node in repo.hg_heads()]
     active = dict([(changeset.sha1, changeset) for changeset in get_active_changesets()])
+    changesets = set([changeset.sha1 for changeset in Changeset.query.all()])
     abandoned = set([changeset.sha1 for changeset in
                     Changeset.query.filter(Changeset.status == "ABANDONED")])
     ignored_bookmarks = app.config["IGNORED_BRANCHES"] | \
@@ -158,6 +159,8 @@ def get_heads(repo):
         if head.bookmarks & ignored_bookmarks:
             continue
         if head.node in abandoned:
+            continue
+        if head.node in changesets:
             continue
         parents = get_parents(repo, head.node, active.keys())
         if parents:

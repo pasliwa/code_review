@@ -27,7 +27,7 @@ class JenkinsTest(unittest.TestCase):
         self.app = app.test_client()
         db_create()
 
-    def run_job_exceptions(self):
+    def test_run_job_exceptions(self):
         with HTTMock(jenkins_next_build_number, jenkins_schedule_error):
             result = jenkins.run_job("iwd-8.5.000-ci", "100")
         self.assertIsNotNone(result)

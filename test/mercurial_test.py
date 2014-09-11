@@ -1,14 +1,16 @@
 import os
 import os.path
 import shutil
-
+import logging
 import unittest
+
 from dingus import patch, Dingus
 
 from sandbox import REPO_MASTER, config
 
 import flask.templating
 from app import app, db
+from app.model import Changeset
 from db_create import db_create
 
 from test.mercurial import MercurialBase, FILE_3
@@ -91,8 +93,8 @@ class MercurialTest(MercurialBase):
         """ Create new rework """
         self.app.post("/review/1", data={"node": node})
 
-    def rework_abandon(self, node):
-        self.app.post("/revision/%s/abandon" % node, data={})
+    def changeset_abandon(self, cid):
+        self.app.post("/changeset/%d/abandon" % cid, data={})
 
     def new_list(self):
         """ Get list of new review candidates """
@@ -130,6 +132,7 @@ class MercurialTest(MercurialBase):
         self.rework_create(revisions[1].node)
         # Verify, that second one is not rework candidate
         #TODO: Check if full chain of revisions is sent to collaborator
+        #TODO: Test both cases also without refresh
         self.assertEqual(len(self.rework_list()), 0)
         # But new revision
         revisions = self.new_list()
@@ -170,7 +173,8 @@ class MercurialTest(MercurialBase):
         # But not on the review list
         self.assertEqual(len(self.rework_list()), 0)
         # Abandon active changeset
-        self.rework_abandon(rework_sha1)
+        rework_changeset = Changeset.query.filter(Changeset.sha1 == rework_sha1).first()
+        self.changeset_abandon(rework_changeset.id)
         # Verify, that side branch is not on new
         self.assertEqual(len(self.new_list()), 0)
         # But listed as rework

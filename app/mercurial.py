@@ -88,6 +88,9 @@ class Repo(hgapi.Repo):
         else:
             self.hg_command("push", "-f", destination)
 
+    def hg_purge(self):
+        self.hg_command("purge")
+
     def hg_incoming_bookmarks(self, source=None):
         try:
             if source is None:

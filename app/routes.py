@@ -257,7 +257,7 @@ def jenkins_build():
 #TODO: Abandoning active changeset should move bookmark backwards
 def changeset_abandon(changeset_id):
     logger.info("Requested URL /changeset/%d/abandon [POST]", changeset_id)
-    changeset = Changeset.query.filter(Changeset.id == changeset_id)
+    changeset = Changeset.query.filter(Changeset.id == changeset_id).first()
     if changeset is None:
         flash("Changeset {0} doesn't exist".format(changeset_id), "error")
         logger.error("Changeset %d doesn't exist", changeset_id)
@@ -412,7 +412,7 @@ def review_info(review_id):
         flash("Review {0} doesn't exist".format(review_id), "error")
         logger.error("Review %d doesn't exist", review_id)
         return redirect(url_for("index"))
-    reworks = Head.query.filter(Head.review_id == review.id)
+    reworks = Head.query.filter(Head.review_id == review.id).all()
     return render_template("review.html", review=review, descendants=reworks)
 
 
@@ -452,7 +452,6 @@ def merge_branch():
         logger.info(result)
         flash("Changeset has been merged", "notice")
     elif "use 'hg resolve' to retry unresolved" in output:
-        repo.hg_update("null", clean=True)
         flash("There is merge conflict. Merge with bookmark " + bookmark +
               " and try again.", "error")
         subject = u"Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1,
@@ -465,10 +464,13 @@ def merge_branch():
         flash("Changeset has been merged", "notice")
     else:
         repo.hg_commit("Merged with {target}".format(target=review.target))
-        repo.hg_update("null")
+
+    repo.hg_update("null", clean=True)
+    repo.hg_purge()
 
     try:
-        repo.hg_push()
+        if not error:
+            repo.hg_push()
     except HgException, ex:
         if not "no changes found" in ex.message:
             raise
