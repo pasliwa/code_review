@@ -17,7 +17,7 @@ PER_PAGE = 3
 
 # Code Collaborator settings
 CC_BIN = "/usr/local/bin/ccollab"
-CC_REVIEW_URL = "http://rd-w2k8.us.int.genesyslab.com:9090/go?page=ReviewDisplay&reviewid={reviewId}"
+CC_REVIEW_URL = "http://rd-w2k8-01.us.int.genesyslab.com:9090/ui#review:id={reviewId}"
 
 # Jenkins settings
 JENKINS_URL = "http://pl-byd-srv01.emea.int.genesyslab.com/jenkins_test"
