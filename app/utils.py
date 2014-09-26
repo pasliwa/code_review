@@ -101,7 +101,6 @@ def get_active_changesets():
         for changeset in review.changesets:
             if changeset.status == "ACTIVE":
                 changesets.append(changeset)
-                logger.debug("Active changeset: %s", changeset)
                 break
     return changesets
 

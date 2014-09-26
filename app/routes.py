@@ -54,7 +54,7 @@ def refresh_heads():
     Head.query.delete()
     for repo_head in get_heads(repo):
         head = Head(repo_head)
-        logger.debug("Adding head: %s", head)
+        logger.debug("Adding head: %s", head.title)
         db.session.add(head)
     db.session.commit()
 
@@ -62,17 +62,26 @@ def refresh_heads():
 #TODO: Split and redesign routes
 #TODO: No JIRA support
 
-# /
-# /changes/new              [GET, start, abandon]
-# /changes/active
-# /changes/active/<page>
-# /changes/merged
-# /changes/merged/<page>
-# /changeset/<id>/inspect   [POST]
-# /build                    [POST]
-# /changeset/<id>
-# /review/<id>              [GET, target, rework, abandon, abandon_changeset]
-# /merge
+# /                         [GET]   -> /changes/active
+# /changes/refresh          [POST]
+# /revision/<node>/abandon  [POST]                                  admin
+# /changes/new              [GET]
+# /changes/new/<page>       [GET]
+# /changes/active           [GET]
+# /changes/active/<page>    [GET]
+# /changes/merged           [GET]
+# /changes/merged/<page>    [GET]
+# /changeset/<id>/inspect   [POST]                                  login
+# /build                    [POST]                                  login
+# /changeset/<id>/abandon   [POST]                                  admin
+# /changeset/<node>         [GET]
+# /review                   [POST]                                  login
+# /review/<id>              [POST]                                  login
+# /review/<id>/abandon      [POST]                                  admin
+# /review/<id>/target       [POST]                                  login
+# /review/<id>              [GET]
+# /merge                    [POST]                                  admin
+# /changelog/<start>/<stop> [GET]
 
 # /review/new/<page>                (/changes/new)
 # /review/active/<page>             (/changes/active)
@@ -89,6 +98,9 @@ def refresh_heads():
 # /changeset/<id>/build     [POST]
 # /changeset/<id>/abandon   [POST]  (/review/<id>?action=abandon_changeset)
 # /revision/<node>/abandon  [POST]  (/changes/new?action=abandon)
+
+# TODO: Login pages should redirect to something exsiting (GET must pair every POST)
+# TODO: Refresh button not available on Review page.
 
 
 @app.route('/')
@@ -110,6 +122,7 @@ def changes_refresh():
 
 @app.route("/revision/<node>/abandon", methods=["POST"])
 @login_required
+@roles_required('admin')
 @repo_write
 @rework_db_write
 @performance_monitor("Request /revision/<node>/abandon [POST]")
@@ -250,6 +263,7 @@ def jenkins_build():
 
 @app.route("/changeset/<int:changeset_id>/abandon", methods=["POST"])
 @login_required
+@roles_required('admin')
 @repo_write
 @performance_monitor("Request /changeset/<changeset_id>/abandon [POST]")
 #TODO: If inspection scheduled, cannot abandon changeset
@@ -331,6 +345,7 @@ def review_new():
 
 
 @app.route('/review/<int:review_id>', methods=["POST"])
+@login_required
 @repo_write
 @rework_db_write
 @performance_monitor("Request /review/<int:review_id> [POST]")
@@ -363,6 +378,8 @@ def review_rework(review_id):
 
 @app.route('/review/<int:review_id>/abandon', methods=["POST"])
 @repo_write
+@login_required
+@roles_required('admin')
 @performance_monitor("Request /review/<int:review_id>/abandon [POST]")
 def review_abandon(review_id):
     logger.info("Requested URL /review/%d/abandon [POST]", review_id)
@@ -384,6 +401,8 @@ def review_abandon(review_id):
 
 
 @app.route("/review/<int:review_id>/target", methods=["POST"])
+@login_required
+@performance_monitor("Request /review/<id>/target")
 def review_set_target(review_id):
     logger.info("Requested URL /review/%d/target [POST]", review_id)
     review = Review.query.filter(Review.id == review_id).first()
@@ -498,8 +517,6 @@ def merge_branch():
 
 
 @app.route('/changelog/<start>/<stop>')
-@login_required
-@roles_required('admin')
 @repo_read
 def changelog(start, stop):
     repo.hg_sync()
