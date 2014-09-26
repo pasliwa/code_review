@@ -6,7 +6,7 @@ from app import logs
 from app import jenkins
 from app import cc
 from app.model import Build, CodeInspection, Diff
-from app.utils import known_build_numbers, DatabaseGuard
+from app.utils import known_build_numbers, DatabaseGuard, AbortThread
 from app.perfutils import performance_monitor
 
 logger = logging.getLogger()
@@ -69,7 +69,7 @@ def schedule_cc():
             cc.add_participant(i.number, i.author, "author")
         except:
             logger.exception("Exception when processing inspection: %d", i.id)
-            continue
+            raise AbortThread()
         with DatabaseGuard():
             i.status = "NEW"
 
@@ -81,19 +81,19 @@ def schedule_cc():
             i = d.changeset.review.inspection
             if i.number is None:
                 logger.error("Inspection of diff %d is still scheduled", d.id)
-                continue
+                raise AbortThread()
         except:
             logger.exception("Exception when checking inspection status for diff %d", d.id)
-            continue
+            raise AbortThread()
         with DatabaseGuard():
             d.status = "UPLOADING"
         try:
             if not cc.upload_diff(i.number, d.root, d.changeset.sha1):
                 logger.error("Diff %d upload failed", d.id)
-                continue
+                raise AbortThread()
         except:
             logger.exception("Exception when uploading diff: %d", d.id)
-            continue
+            raise AbortThread()
         with DatabaseGuard():
             d.status = "UPLOADED"
 
