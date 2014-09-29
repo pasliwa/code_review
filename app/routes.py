@@ -59,11 +59,10 @@ def refresh_heads():
     db.session.commit()
 
 
-#TODO: Split and redesign routes
 #TODO: No JIRA support
 
 # /                         [GET]   -> /changes/active
-# /changes/refresh          [POST]
+# /changes/refresh          [GET]   -> refrrer
 # /revision/<node>/abandon  [POST]                                  admin
 # /changes/new              [GET]
 # /changes/new/<page>       [GET]
@@ -71,36 +70,17 @@ def refresh_heads():
 # /changes/active/<page>    [GET]
 # /changes/merged           [GET]
 # /changes/merged/<page>    [GET]
-# /changeset/<id>/inspect   [POST]                                  login
-# /build                    [POST]                                  login
-# /changeset/<id>/abandon   [POST]                                  admin
-# /changeset/<node>         [GET]
-# /review                   [POST]                                  login
-# /review/<id>              [POST]                                  login
-# /review/<id>/abandon      [POST]                                  admin
-# /review/<id>/target       [POST]                                  login
+# /changeset/<id>/inspect   [POST] -> /changeset/<id>               login
+# /changeset/<id>/build     [POST] -> /changeset/<id>               login
+# /changeset/<id>/abandon   [POST] -> /changeset/<id>               admin
+# /changeset/<id>           [GET]
+# /review                   [POST] -> /changes/new                  login
+# /review/<id>              [POST] -> /review/<id>                  login
+# /review/<id>/abandon      [POST] -> /review/<id>                  admin
+# /review/<id>/target       [POST] -> /review/<id>                  login
 # /review/<id>              [GET]
-# /merge                    [POST]                                  admin
+# /changeset/<id>/merge     [POST] -> /changeset/<id>               admin
 # /changelog/<start>/<stop> [GET]
-
-# /review/new/<page>                (/changes/new)
-# /review/active/<page>             (/changes/active)
-# /review/merged/<page>             (/changes/merged)
-# /review/abandoned/<page>
-# /review                   [POST]  (/changes/new?action=start)
-# /review/<id>
-# /review/<id>              [POST]  (/review/<id>?action=rework)
-# /review/<id>/abandon      [POST]  (/review/<id>?action=abandon)
-# /review/<id>/merge        [POST]  (/merge)
-# /review/<id>/target       [POST]  (/review/<id>?action=target)
-# /changeset/<id>
-# /changeset/<id>/inspect   [POST]
-# /changeset/<id>/build     [POST]
-# /changeset/<id>/abandon   [POST]  (/review/<id>?action=abandon_changeset)
-# /revision/<node>/abandon  [POST]  (/changes/new?action=abandon)
-
-# TODO: Login pages should redirect to something exsiting (GET must pair every POST)
-# TODO: Refresh button not available on Review page.
 
 
 @app.route('/')
@@ -108,7 +88,7 @@ def index():
     return redirect(url_for('changes_active'))
 
 
-@app.route('/changes/refresh', methods=["POST"])
+@app.route('/changes/refresh')
 @repo_write
 @rework_db_write
 @performance_monitor("Request /changes/refresh")
@@ -118,6 +98,17 @@ def changes_refresh():
     if is_safe_url(request.referrer):
         return redirect(request.referrer)
     return redirect(url_for('changes_active'))
+
+
+@app.route("/revision/<node>/abandon")
+def revision_abandon_login_redirect(node):
+    head = Head.query.filter(Head.node == node).first()
+    if head is None:
+        return redirect(url_for("index"))
+    elif head.review_id is None:
+        return redirect(url_for("changes_new"))
+    else:
+        return redirect(url_for("review_info", review_id=head.review_id))
 
 
 @app.route("/revision/<node>/abandon", methods=["POST"])
@@ -182,6 +173,11 @@ def changes_merged(page):
     return render_template('merged.html', reviews=data["r"], form=form, pagination=data["p"])
 
 
+@app.route('/changeset/<int:cs_id>/inspect')
+def inspect_diff_login_redirect(cs_id):
+    return redirect(url_for('changeset_info', cs_id=cs_id))
+
+
 @app.route('/changeset/<int:cs_id>/inspect', methods=['POST'])
 @login_required
 @repo_read
@@ -192,7 +188,7 @@ def inspect_diff(cs_id):
         flash("Changeset {0} doesn't exist".format(cs_id), "error")
         logger.error("Changeset %d doesn't exist", cs_id)
         return redirect(url_for('index'))
-    redirect_url = redirect(url_for('changeset_info', sha1=cs.sha1))
+    redirect_url = redirect(url_for('changeset_info', cs_id=cs_id))
     if current_user.cc_login is None:
         flash("Code Collaborator login is not configured properly.", "error")
         logger.error("User account %s cc_login is not configured", current_user.email)
@@ -233,18 +229,27 @@ def inspect_diff(cs_id):
     return redirect_url
 
 
-@app.route('/build', methods=['POST'])
+@app.route('/changeset/<int:cs_id>/build')
+def jenkins_build_login_redirect(cs_id):
+    return redirect(url_for('changeset_info', cs_id=cs_id))
+
+
+@app.route('/changeset/<int:cs_id>/build', methods=['POST'])
 @login_required
 @repo_read
 @roles_required('user')
-def jenkins_build():
-    info = repo.revision(request.form["src"])
+def jenkins_build(cs_id):
+    logger.info("Requested URL /changeset/%d/build [POST]", cs_id)
+    changeset = Changeset.query.filter(Changeset.id == cs_id).first()
+    if changeset is None:
+        flash("Changeset {0} doesn't exist".format(cs_id), "error")
+        logger.error("Changeset %d doesn't exist", cs_id)
+        return redirect(url_for('index'))
     job_name = request.form["release"] + "-ci"
-    changeset = Changeset.query.filter(Changeset.sha1 == info.node).first()
     build_info = jenkins.run_job(job_name, changeset.sha1)
     if build_info is None:
         flash("Scheduling Jenkins build failed", "error")
-        return redirect(url_for("changeset_info", sha1=request.form["back_id"]))
+        return redirect(url_for("changeset_info", cs_id=cs_id))
 
     build = Build(changeset_id=changeset.id, status=build_info["status"],
                   job_name=job_name, build_url=build_info["build_url"])
@@ -258,28 +263,33 @@ def jenkins_build():
                 " has been added to queue. Changeset: " + str(changeset) +
                 " , build: " + str(build))
     flash("Jenkins build has been added to the queue", "notice")
-    return redirect(url_for('changeset_info', sha1=request.form['back_id']))
+    return redirect(url_for('changeset_info', cs_id=cs_id))
 
 
-@app.route("/changeset/<int:changeset_id>/abandon", methods=["POST"])
+@app.route('/changeset/<int:cs_id>/abandon')
+def changeset_abandon_login_redirect(cs_id):
+    return redirect(url_for('changeset_info', cs_id=cs_id))
+
+
+@app.route("/changeset/<int:cs_id>/abandon", methods=["POST"])
 @login_required
 @roles_required('admin')
 @repo_write
-@performance_monitor("Request /changeset/<changeset_id>/abandon [POST]")
+@performance_monitor("Request /changeset/<cs_id>/abandon [POST]")
 #TODO: If inspection scheduled, cannot abandon changeset
 #TODO: Only active changeset or its descendant can be abandoned
 #TODO: Abandoning active changeset should move bookmark backwards
-def changeset_abandon(changeset_id):
-    logger.info("Requested URL /changeset/%d/abandon [POST]", changeset_id)
-    changeset = Changeset.query.filter(Changeset.id == changeset_id).first()
+def changeset_abandon(cs_id):
+    logger.info("Requested URL /changeset/%d/abandon [POST]", cs_id)
+    changeset = Changeset.query.filter(Changeset.id == cs_id).first()
     if changeset is None:
-        flash("Changeset {0} doesn't exist".format(changeset_id), "error")
-        logger.error("Changeset %d doesn't exist", changeset_id)
+        flash("Changeset {0} doesn't exist".format(cs_id), "error")
+        logger.error("Changeset %d doesn't exist", cs_id)
         return redirect(url_for('index'))
     if not changeset.is_active():
         flash("Not active changeset cannot be abandoned", "error")
-        logger.error("Changeset %d is not active and cannot be abandoned", changeset_id)
-        return redirect(url_for('changeset_info', sha1=changeset.sha1))
+        logger.error("Changeset %d is not active and cannot be abandoned", cs_id)
+        return redirect(url_for('changeset_info', cs_id=cs_id))
     changeset.status = "ABANDONED"
     db.session.commit()
     repo.hg_sync()
@@ -290,14 +300,14 @@ def changeset_abandon(changeset_id):
     return redirect(url_for("review_info", review_id=changeset.review_id))
 
 
-@app.route('/changeset/<sha1>')
-@performance_monitor("Request /changeset/<sha1>")
-def changeset_info(sha1):
-    logger.info("Requested URL /changeset/%s", sha1)
-    cs = Changeset.query.filter(Changeset.sha1 == sha1).first()
+@app.route('/changeset/<int:cs_id>')
+@performance_monitor("Request /changeset/<cs_id>")
+def changeset_info(cs_id):
+    logger.info("Requested URL /changeset/%d", cs_id)
+    cs = Changeset.query.filter(Changeset.id == cs_id).first()
     if cs is None:
-        flash("Changeset {0} doesn't exist".format(sha1), "error")
-        logger.error("Changeset %s doesn't exist", sha1)
+        flash("Changeset {0} doesn't exist".format(cs_id), "error")
+        logger.error("Changeset %d doesn't exist", cs_id)
         return redirect(url_for("index"))
     prev = Changeset.query.filter(and_(Changeset.created_date < cs.created_date,
                                        Changeset.status == "ACTIVE",
@@ -312,6 +322,11 @@ def changeset_info(sha1):
     review = Review.query.filter(Review.id == cs.review_id).first()
     return render_template("changeset.html", review=review, cs=cs, next=next_,
                            prev=prev)
+
+
+@app.route('/review')
+def review_new_login_redirect():
+    return redirect(url_for('changes_new'))
 
 
 @app.route("/review", methods=["POST"])
@@ -341,7 +356,7 @@ def review_new():
     db.session.add(review)
     Head.query.filter(Head.node == revision.node).delete()
     db.session.commit()
-    return redirect(url_for('changeset_info', sha1=revision.node))
+    return redirect(url_for('changeset_info', cs_id=changeset.id))
 
 
 @app.route('/review/<int:review_id>', methods=["POST"])
@@ -373,7 +388,12 @@ def review_rework(review_id):
     db.session.commit()
     flash("Changeset '{title}' (SHA1: {sha1}) has been marked as rework".format(title=changeset.title, sha1=changeset.sha1),
           "notice")
-    return redirect(url_for('changeset_info', sha1=revision.node))
+    return redirect(url_for('changeset_info', cs_id=changeset.id))
+
+
+@app.route('/review/<int:review_id>/abandon')
+def review_abandon_login_redirect(review_id):
+    return redirect(url_for('review_info', review_id=review_id))
 
 
 @app.route('/review/<int:review_id>/abandon', methods=["POST"])
@@ -400,6 +420,11 @@ def review_abandon(review_id):
     return redirect(url_for('changes_active'))
 
 
+@app.route('/review/<int:review_id>/target')
+def review_set_target_login_redirect(review_id):
+    return redirect(url_for('review_info', review_id=review_id))
+
+
 @app.route("/review/<int:review_id>/target", methods=["POST"])
 @login_required
 @performance_monitor("Request /review/<id>/target")
@@ -421,7 +446,7 @@ def review_set_target(review_id):
     return redirect(url_for('review_info', review_id=review.id))
 
 
-@app.route('/review/<int:review_id>', methods=['GET'])
+@app.route('/review/<int:review_id>')
 @performance_monitor("Request /review/<int:review_id>")
 @rework_db_read
 def review_info(review_id):
@@ -435,15 +460,23 @@ def review_info(review_id):
     return render_template("review.html", review=review, descendants=reworks)
 
 
-@app.route('/merge', methods=['POST'])
+@app.route('/changeset/<int:cs_id>/merge')
+def merge_branch_login_redirect(cs_id):
+    return redirect(url_for('changeset_info', cs_id=cs_id))
+
+
+@app.route('/changeset/<int:cs_id>/merge', methods=['POST'])
 @login_required
 @roles_required('admin')
 @repo_write
-@performance_monitor("Request /merge")
-def merge_branch():
-    sha1 = request.form['sha1']
-    logger.info("Requested URL /merge for sha1=%s", sha1)
-    changeset = Changeset.query.filter(Changeset.sha1 == sha1).first()
+@performance_monitor("Request /changeset/<cs_id>/merge")
+def merge_branch(cs_id):
+    logger.info("Requested URL /changeset/%d/merge", cs_id)
+    changeset = Changeset.query.filter(Changeset.id == cs_id).first()
+    if changeset is None:
+        flash("Changeset {0} doesn't exist".format(cs_id), "error")
+        logger.error("Changeset %d doesn't exist", cs_id)
+        return redirect(url_for("index"))
     review = Review.query.filter(Review.id == changeset.review_id).first()
     bookmark = review.target
 
@@ -452,11 +485,11 @@ def merge_branch():
     refresh_heads()
     #TODO: Only active changeset can be merged
 
-    logger.info("Merging %s into %s", sha1, review.target)
+    logger.info("Merging %s into %s", changeset.sha1, review.target)
     repo.hg_update(bookmark)
 
     try:
-        output = repo.hg_merge(sha1)
+        output = repo.hg_merge(changeset.sha1)
     except HgException as e:
         output = str(e)
 
@@ -466,7 +499,7 @@ def merge_branch():
     subject = u"Successful merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
 
     if "abort: nothing to merge" in output:
-        repo.hg_update(sha1)
+        repo.hg_update(changeset.sha1)
         result = repo.hg_bookmark(bookmark, force=True)
         logger.info(result)
         flash("Changeset has been merged", "notice")
@@ -477,7 +510,7 @@ def merge_branch():
                                                                               dest=review.target)
         error = True
     elif "abort: merging with a working directory ancestor has no effect" in output:
-        repo.hg_update(sha1)
+        repo.hg_update(changeset.sha1)
         result = repo.hg_bookmark(bookmark, force=True)
         logger.info(result)
         flash("Changeset has been merged", "notice")

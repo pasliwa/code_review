@@ -33,9 +33,26 @@
 
 5. Verify, that all views can be accessed without login.
 
-6. Verify, that all actions require login.
+6. Verify, that all actions require login (new, rework, target, build, inspect, merge, abandon)
+* Click action without login
+* Verify, that login page is displayed
+* Log in
+* Verify, that referrer page was displayed
 
-7. Rework behavior
+7. Login interaction with abandon revision
+* Logout
+* Abandon revision on 'new changes' page
+* Verify, that login page is displayed
+* Log in
+* Verify, that 'new changes' page is displayed
+* Logout
+* Abandon revision on 'review' page
+* Verify, that login page is displayed
+* Log in
+* Verify, that 'review' page is displayed
+* Issue /revision/<node>/abandon for non-existing node. Verify, that index is displayed
+
+8. Rework behavior
 * Open non-existing review. Verify, that error is displayed and index is loaded.
 * Open existing review with two rework candidates. Verify, that changesets are displayed in descending order with reworks on top.
 * Push new revision on top of rework.
@@ -44,7 +61,7 @@
 * Go back to review. Verify, that both reworks disappeared from candidates list.
 * Go to new changes page. Verify that second rework is there.
 
-8. Abandon review behavior
+9. Abandon review behavior
 * Open existing review.
 * Push new revision on top of active changeset.
 * Click abandon review.
@@ -55,13 +72,13 @@
 * Verify, that active changes page is loaded and review is not displayed.
 * Verify, that active changeset is closed.
 
-9. Set target behavior
+10. Set target behavior
 * Open existing review with multiple targets.
 * Select target.
 * Verify, that target is set.
 * Verify, that review info is displayed.
 
-10. Abandon rework behavior
+11. Abandon rework behavior
 * Load existing review with reworks
 * Push new revision on top of existing rework
 * Click 'Abandon'. Verify, that error is displayed and review is not started
@@ -69,9 +86,13 @@
 * Verify, that revision disappeared from the page.
 * Verify, that branch has been closed
 
-11. Merge behavior
+12. Merge behavior
 * Open existing review with rework candidate
 * Merge review
 * Verify, that merge candidate disappeared from review_info
 * Verify, that merge candidate appeared on 'New changes'
 
+13. Navigation
+* On review page click changeset
+* On changeset page click prev, next, button left, button right
+* On changeset page click build, inspect

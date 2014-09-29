@@ -20,11 +20,11 @@
     </form>
 {% endif %}
 
-    <form class="form-inline" role="form" method="POST" action="{{ url_for('changes_refresh') }}">
-        <button type="submit" class="btn btn-default">Refresh</button>
-    </form>
-
-<h1>New changes</h1>
+<h1>New changes
+    <a class="btn btn-default pull-right" href="{{ url_for('changes_refresh') }}">
+        <span class="glyphicon glyphicon-refresh"></span>
+    </a>
+</h1>
 
     <table class="table table-hover">
         <thead>

@@ -63,7 +63,11 @@
 
         <div class="panel panel-info">
             <div class="panel-heading">
-                <h3 class="panel-title">Changesets</h3>
+                <h3 class="panel-title">Changesets
+                    <a class="btn btn-default btn-xs pull-right" href="{{ url_for('changes_refresh') }}">
+                        <span class="glyphicon glyphicon-refresh"></span>
+                    </a>
+                </h3>
             </div>
             <div class="panel-body">
                 <table class="table table-hover">
@@ -103,7 +107,7 @@
                         <tr>
                             <td>{{ c.id }}</td>
                             <td>{{ c.title }}</td>
-                            <td><a href="{{ url_for("changeset_info", sha1=c.sha1) }}"><code>{{ c.sha1 }}</code></a></td>
+                            <td><a href="{{ url_for("changeset_info", cs_id=c.id) }}"><code>{{ c.sha1 }}</code></a></td>
                             <td>{{ c.created_date }}</td>
                             <td>
                                 {% if c.status == "ACTIVE" %}
