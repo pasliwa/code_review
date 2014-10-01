@@ -189,7 +189,7 @@ class Repo(hgapi.Repo):
                     self.hg_update(core_bookmark)
                     try:
                         self.hg_merge(b)
-                        self.hg_commit("Merge of divergent branch {}".format(b))
+                        self.hg_commit("Merge of divergent branch {0}".format(b))
                         logger.warn("Merge of diverged bookmark %s successful.", b)
                     except:
                         logger.error("Unsuccessful merge of diverged bookmark %s",
