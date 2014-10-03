@@ -81,7 +81,7 @@
 11. Abandon rework behavior
 * Load existing review with reworks
 * Push new revision on top of existing rework
-* Click 'Abandon'. Verify, that error is displayed and review is not started
+* Click 'Abandon'. Verify, that error is displayed and revision is not abandoned
 * Click 'Abandon' again. Verify, that this time operation is successful and 'review info' is loaded. 
 * Verify, that revision disappeared from the page.
 * Verify, that branch has been closed

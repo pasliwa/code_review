@@ -125,7 +125,9 @@ def revision_abandon(node):
     if rev_status != "new" and rev_status != "rework":
         flash("Revision {0} is {1} and cannot be abandoned. Refresh list of revisions.".format(revision.node, rev_status), "error")
         logger.info("Revision {0} is {1} and cannot be abandoned".format(revision.node, rev_status))
-        return redirect(url_for('changes_new'))
+        if is_safe_url(request.referrer):
+            return redirect(request.referrer)
+        return redirect(url_for('index'))
     #TODO: Multiple bookmarks
     changeset = Changeset(revision.name, revision.email, revision.title,
                           revision.node, el(revision.bookmarks),
@@ -136,7 +138,7 @@ def revision_abandon(node):
     repo.hg_close_branch(revision.node)
     if is_safe_url(request.referrer):
         return redirect(request.referrer)
-    return redirect(url_for("changes_active"))
+    return redirect(url_for("index"))
 
 
 @app.route('/changes/new', defaults={'page': 1})
