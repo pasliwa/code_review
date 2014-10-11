@@ -1,6 +1,6 @@
 1. Spoofed URL redirects to index
 * Create page on different server with link pointing to /changes/refresh
-* Click Submit
+* Click link
 * Verify, that refresh works and you are redirected to index page
 
 2. New changes page behavior
