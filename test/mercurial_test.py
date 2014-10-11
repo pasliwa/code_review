@@ -64,13 +64,16 @@ class MercurialTest(MercurialBase):
 
     def review_open(self, node):
         """ Open new review """
-        # TODO: sha1 -> node
-        rv = self.app.post("/review", data={"node": node})
+        with patch("flask.templating._render", Dingus(return_value='')):
+            rv = self.app.post("/review", data={"node": node},
+                               follow_redirects=True)
+            cs = flask.templating._render.calls[0].args[1]['cs']
+        return cs.id
 
-    def review_merge(self, node):
+    def review_merge(self, cs_id):
         """ Merge review """
         # TODO: Review should be merged, not changeset
-        rv = self.app.post("/merge", data={"sha1": node},
+        rv = self.app.post("/changeset/%d/merge" % cs_id, data={},
                            follow_redirects=True)
         return rv.data
 
@@ -83,7 +86,7 @@ class MercurialTest(MercurialBase):
     def rework_list(self):
         """ Get list of reworks for first review """
         #TODO: Separate refresh method
-        self.app.post("/changes/refresh", data={})
+        self.app.get("/changes/refresh")
         with patch("flask.templating._render", Dingus(return_value='')):
             rv = self.app.get("/review/1")
             revisions = flask.templating._render.calls[0].args[1]['descendants']
@@ -98,7 +101,7 @@ class MercurialTest(MercurialBase):
 
     def new_list(self):
         """ Get list of new review candidates """
-        self.app.post("/changes/refresh", data={})
+        self.app.get("/changes/refresh")
         with patch("flask.templating._render", Dingus(return_value='')):
             rv = self.app.get("/changes/new")
             revisions = flask.templating._render.calls[0].args[1]['revisions']
@@ -200,7 +203,7 @@ class MercurialTest(MercurialBase):
         self.assertEqual(len(revisions), 1)
         self.assertTrue(revisions[0].title.startswith("IWD-0009"))
         review_sha1 = revisions[0].node
-        self.review_open(review_sha1)
+        cs_id = self.review_open(review_sha1)
         # Commit two rework branches to IWD-0009
         self.commit_master("IWD-0009: Rework 1.0", bmk="rev1", rev="IWD-0009")
         self.commit_master("IWD-0009: Rework 1.1")
@@ -210,7 +213,7 @@ class MercurialTest(MercurialBase):
         # But show up as reworks
         self.assertEqual(len(self.rework_list()), 2)
         # Merge IWD-0009 but not the reworks
-        self.review_merge(review_sha1)
+        self.review_merge(cs_id)
         # Verify, that merge, commit and push was done
         self.assertFalse("iwd-8.5.000" in self.slave.revision(review_sha1).bookmarks)
         self.assertFalse("iwd-8.5.000" in self.slave.revision(head_id).bookmarks)
@@ -239,11 +242,11 @@ class MercurialTest(MercurialBase):
         rev2_node = self.master.revision(rev2).node
         self.detektyw_login()
         # Open review for first revision and merge it
-        self.review_open(rev1_node)
-        self.app.post("/merge", data={"sha1": rev1_node})
+        cs_id = self.review_open(rev1_node)
+        self.review_merge(cs_id)
         # Open review for second revision and try to merge it
-        self.review_open(rev2_node)
-        rv_data = self.review_merge(rev2_node)
+        cs_id = self.review_open(rev2_node)
+        rv_data = self.review_merge(cs_id)
         # Verify, that user is informed
         self.assertTrue("There is merge conflict. Merge with bookmark "
                     "iwd-8.0.002 and try again." in rv_data)
@@ -267,7 +270,7 @@ class MercurialTest(MercurialBase):
                                  bmk="IWD-0012", rev="iwd-8.1.101")
         parent_node = self.master.revision(rev).node
         self.detektyw_login()
-        self.review_open(parent_node)
+        parent_cs_id = self.review_open(parent_node)
         # Add new commit and move official branch there
         rev = self.commit_master("IWD-0012: Descendant being official branch",
                                  bmk="iwd-8.1.101")
@@ -275,7 +278,7 @@ class MercurialTest(MercurialBase):
         # Verify, that official branch is not recognized as rework
         self.assertEqual(len(self.rework_list()), 0)
         # And can be merged without problem
-        self.review_merge(parent_node)
+        self.review_merge(parent_cs_id)
         # Review is merged
         self.assertEqual(self.review_get(1).status, "MERGED")
         # And official bookmark didn't move
