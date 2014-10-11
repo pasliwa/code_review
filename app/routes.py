@@ -529,17 +529,20 @@ def merge_branch(cs_id):
         if not "no changes found" in ex.message:
             raise
 
-    html = subject + u"<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
-        link=link, sha1=changeset.sha1, owner=changeset.owner)
+    try:
+        html = subject + u"<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
+            link=link, sha1=changeset.sha1, owner=changeset.owner)
 
-    recpts = [changeset.owner_email]
-    recpts = list(set(recpts))
+        recpts = [changeset.owner_email]
+        recpts = list(set(recpts))
 
-    msg = Message(subject,
-                  sender=app.config["SECURITY_EMAIL_SENDER"],
-                  recipients=recpts)
-    msg.html = html
-    mail.send(msg)
+        msg = Message(subject,
+                      sender=app.config["SECURITY_EMAIL_SENDER"],
+                      recipients=recpts)
+        msg.html = html
+        mail.send(msg)
+    except:
+	logger.exception("Exception when sending confirmation e-mail regarding review %d merge", review.id)
 
     if not error:
         review.status = "MERGED"
