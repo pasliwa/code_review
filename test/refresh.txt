@@ -19,8 +19,8 @@
 3. New review behavior
 * Load 'New changes' page
 * Push new revision on top of existing new revision
-* Click 'New review'. Verify, that error is displayed and review is not started
-* Click 'New review' again. Verify, that this time operation is successful and changeset page is loaded.
+* Click 'Start review'. Verify, that error is displayed and review is not started
+* Click 'Start review' again. Verify, that this time operation is successful and changeset page is loaded.
 * Load 'New changes' page. Verify, that revision disappeared from the page.
 
 4. Abandon revision behavior
@@ -31,9 +31,9 @@
 * Verify, that revision disappeared from the page.
 * Verify, that branch has been closed
 
-5. Verify, that all views can be accessed without login.
+5. Verify, that all views can be accessed without login. (new, active, merged, review, changeset, refresh)
 
-6. Verify, that all actions require login (new, rework, target, build, inspect, merge, abandon)
+6. Verify, that all actions require login (new, rework, target, build, inspect, merge, abandon, abandon changeset)
 * Click action without login
 * Verify, that login page is displayed
 * Log in
