@@ -94,5 +94,5 @@
 
 13. Navigation
 * On review page click changeset
-* On changeset page click prev, next, button left, button right
+* On changeset page click prev, next, home, button left, button right, button home
 * On changeset page click build, inspect
