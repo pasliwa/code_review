@@ -28,5 +28,5 @@ def db_create():
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
-    logging.getLogger().setHandler(logs.get_console_handler())
+    logging.getLogger().addHandler(logs.get_console_handler())
     db_create()

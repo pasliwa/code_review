@@ -41,12 +41,12 @@
     <div class="row">
       <div class="col-md-6">
           {% if prev %}
-              <a href="{{ url_for("changeset_info", sha1=prev.sha1) }}" class="btn btn-primary"><span class="glyphicon glyphicon-arrow-left"></span> previous changeset</a>
+              <a href="{{ url_for("changeset_info", cs_id=prev.id) }}" class="btn btn-primary"><span class="glyphicon glyphicon-arrow-left"></span> previous changeset</a>
           {% endif %}
       </div>
       <div class="col-md-6" style="text-align: right">
           {% if next %}
-              <a href="{{ url_for("changeset_info", sha1=next.sha1) }}" class="btn btn-primary">next changeset <span class="glyphicon glyphicon-arrow-right"></span></a>
+              <a href="{{ url_for("changeset_info", cs_id=next.id) }}" class="btn btn-primary">next changeset <span class="glyphicon glyphicon-arrow-right"></span></a>
           {% endif %}
       </div>
     </div>
@@ -88,9 +88,7 @@
                     class="glyphicon glyphicon-home"></span> back to review</a></h3>
         </div>
         <div class="panel-body">
-            <form method="post" action="{{ url_for("jenkins_build") }}">
-                <input type="hidden" name="src" value="{{ cs.sha1 }}"/>
-                <input type="hidden" name="back_id" value="{{ cs.sha1 }}"/>
+            <form method="post" action="{{ url_for('jenkins_build', cs_id=cs.id) }}">
                 <input type="hidden" name="release" value="{{ review.target }}"/>
 
                 {% if cs.status != "ABANDONED" and cs.review.status != "ABANDONED" %}
@@ -198,11 +196,10 @@
             {% if cs.status != "ABANDONED" and cs.review.status != "ABANDONED" %}
             {# TODO: Should display popup window about irreversibility of merge. #}
                 <div>
-                    <form method="post" class="form-horizontal" action="{{ url_for("merge_branch") }}">
+                    <form method="post" class="form-horizontal" action="{{ url_for("merge_branch", cs_id=cs.id) }}">
                         <div class="form-group">
                             <label class="col-sm-4 control-label">Merge this changeset with "{{ review.target }}"
                                 branch</label>
-                            <input type="hidden" name="sha1" value="{{ cs.sha1 }}">
                             <button class="btn btn-danger btn-sm" type="submit"><span
                                     class="glyphicon glyphicon-check"></span> merge
                             </button>
@@ -212,20 +209,18 @@
 
                 <div>
                     <form class="form-horizontal" method="post"
-                          action="{{ url_for("review_info", review_id=review.id) }}">
+                          action="{{ url_for("review_abandon", review_id=review.id) }}">
                         <div class="form-group">
                             <label class="col-sm-4 control-label">Abandon this review</label>
                             <button class="btn btn-danger btn-sm confirmation-needed"
                                     data-question="Are you sure you want to ABANDON this review?" type="submit"><span
                                     class="glyphicon glyphicon-trash"></span> Abandon
                             </button>
-                            <input type="hidden" name="action" value="abandon">
-                            <input type="hidden" name="sha1" value="{{ cs.sha1 }}">
                         </div>
                     </form>
                 </div>
             {% else %}
-                This changeset is abanodned.
+                This changeset is abandoned.
             {% endif %}
         </div>
     </div>
@@ -237,17 +232,18 @@
 
 
 {% block more_js %}
+    {# TODO: This script is not working #}
     <script>
         $(function () {
 
             {% if prev %}
                 $(document).bind('keypress', 'left', function () {
-                    window.location.href = "{{ url_for("changeset_info", sha1=prev.sha1) }}";
+                    window.location.href = "{{ url_for("changeset_info", cs_id=prev.id) }}";
                 });
             {% endif %}
             {% if next %}
                 $(document).bind('keypress', 'right', function () {
-                    window.location.href = "{{ url_for("changeset_info", sha1=next.sha1) }}";
+                    window.location.href = "{{ url_for("changeset_info", cs_id=next.id) }}";
                 });
             {% endif %}
             $(document).bind('keypress', 'home', function () {

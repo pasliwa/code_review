@@ -2,11 +2,11 @@ import logging
 
 from app import db
 from app import repo
-from app import logs
 from app import jenkins
 from app import cc
 from app.model import Build, CodeInspection, Diff
 from app.utils import known_build_numbers, DatabaseGuard, AbortThread
+from app.locks import repo_read
 from app.perfutils import performance_monitor
 
 logger = logging.getLogger()
@@ -48,6 +48,7 @@ def update_jenkins():
 
 
 # Schedule CodeCollaborator
+@repo_read
 @performance_monitor("schedule_cc")
 def schedule_cc():
     inspections = CodeInspection.query.filter(

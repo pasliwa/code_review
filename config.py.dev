@@ -6,7 +6,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 ADMIN_EMAILS = []
 
 # Database settings
-SQLALCHEMY_DATABASE_URI = "sqlite:///../testing.db"       # testing
+SQLALCHEMY_DATABASE_URI = "sqlite:///../../testing.db"       # testing
 
 # Flask settings
 PROPAGATE_EXCEPTIONS = True  # change to False to get email notifications upon app errors

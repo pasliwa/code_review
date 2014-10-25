@@ -2,6 +2,7 @@ import logging
 import datetime
 import re
 from itertools import chain
+from urlparse import urlparse, urljoin
 
 from flask import render_template, flash, redirect, url_for
 # noinspection PyUnresolvedReferences
@@ -13,11 +14,12 @@ from flask.globals import request
 from flask.ext.security import login_required, roles_required, user_registered
 from sqlalchemy.sql.expression import and_
 
-from app import app, db, repo, jenkins, cc, mail, user_datastore
+from app import app, db, repo, jenkins, mail, user_datastore
 from app.hgapi.hgapi import HgException
-from app.model import Build, Changeset, CodeInspection, Review, Diff
+from app.model import Build, Changeset, CodeInspection, Review, Diff, Head
 from app.view import Pagination
-from app.utils import get_reviews, get_new, get_reworks, el
+from app.utils import get_reviews, get_revision_status, get_heads, el
+from app.locks import repo_read, repo_write, rework_db_read, rework_db_write
 from app.perfutils import performance_monitor
 from view import SearchForm
 
@@ -39,66 +41,125 @@ def new_user_registered(sender, **extra):
 
 user_registered.connect(new_user_registered, app)
 
-#TODO: Split and redesign routes
+
+def is_safe_url(target):
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return test_url.scheme in ('http', 'https') and \
+           ref_url.netloc == test_url.netloc
+
+
+def refresh_heads():
+    repo.hg_sync()
+    Head.query.delete()
+    for repo_head in get_heads(repo):
+        head = Head(repo_head)
+        logger.debug("Adding head: %s", head.title)
+        db.session.add(head)
+    db.session.commit()
+
+
 #TODO: No JIRA support
+
+# /                         [GET]   -> /changes/active
+# /changes/refresh          [GET]   -> refrrer
+# /revision/<node>/abandon  [POST]                                  admin
+# /changes/new              [GET]
+# /changes/new/<page>       [GET]
+# /changes/active           [GET]
+# /changes/active/<page>    [GET]
+# /changes/merged           [GET]
+# /changes/merged/<page>    [GET]
+# /changeset/<id>/inspect   [POST] -> /changeset/<id>               login
+# /changeset/<id>/build     [POST] -> /changeset/<id>               login
+# /changeset/<id>/abandon   [POST] -> /changeset/<id>               admin
+# /changeset/<id>           [GET]
+# /review                   [POST] -> /changes/new                  login
+# /review/<id>              [POST] -> /review/<id>                  login
+# /review/<id>/abandon      [POST] -> /review/<id>                  admin
+# /review/<id>/target       [POST] -> /review/<id>                  login
+# /review/<id>              [GET]
+# /changeset/<id>/merge     [POST] -> /changeset/<id>               admin
+# /changelog/<start>/<stop> [GET]
+
 
 @app.route('/')
 def index():
     return redirect(url_for('changes_active'))
 
 
-@app.route('/changes/new', methods=['GET', 'POST'])
+@app.route('/changes/refresh')
+@repo_write
+@rework_db_write
+@performance_monitor("Request /changes/refresh")
+def changes_refresh():
+    logger.info("Requested URL /changes/refresh")
+    refresh_heads()
+    if is_safe_url(request.referrer):
+        return redirect(request.referrer)
+    return redirect(url_for('changes_active'))
+
+
+@app.route("/revision/<node>/abandon")
+def revision_abandon_login_redirect(node):
+    head = Head.query.filter(Head.node == node).first()
+    if head is None:
+        return redirect(url_for("index"))
+    elif head.review_id is None:
+        return redirect(url_for("changes_new"))
+    else:
+        return redirect(url_for("review_info", review_id=head.review_id))
+
+
+@app.route("/revision/<node>/abandon", methods=["POST"])
 @login_required
+@roles_required('admin')
+@repo_write
+@rework_db_write
+@performance_monitor("Request /revision/<node>/abandon [POST]")
+def revision_abandon(node):
+    logger.info("Requested URL /revision/%s/abandon [POST]", node)
+    refresh_heads()
+    revision = repo.revision(node)
+    rev_status = get_revision_status(repo, revision)
+    if rev_status != "new" and rev_status != "rework":
+        flash("Revision {0} is {1} and cannot be abandoned. Refresh list of revisions.".format(revision.node, rev_status), "error")
+        logger.info("Revision {0} is {1} and cannot be abandoned".format(revision.node, rev_status))
+        if is_safe_url(request.referrer):
+            return redirect(request.referrer)
+        return redirect(url_for('index'))
+    #TODO: Multiple bookmarks
+    changeset = Changeset(revision.name, revision.email, revision.title,
+                          revision.node, el(revision.bookmarks),
+                          "ABANDONED")
+    db.session.add(changeset)
+    Head.query.filter(Head.node == revision.node).delete()
+    db.session.commit()
+    repo.hg_close_branch(revision.node)
+    if is_safe_url(request.referrer):
+        return redirect(request.referrer)
+    return redirect(url_for("index"))
+
+
+@app.route('/changes/new', defaults={'page': 1})
+@app.route('/changes/new/<int:page>')
+@rework_db_read
 @performance_monitor("Request /changes/new")
-def changes_new():
+def changes_new(page):
     logger.info("Requested URL /changes/new")
-    repo.hg_sync()
 
-    if request.method == "POST":
-        action = request.form['action']
-
-        if action == "start":
-            info = repo.revision(request.form['sha1'])
-            #TODO: Multiple bookmarks
-            review = Review(owner=info.name, owner_email=info.email,
-                            title=info.title, bookmark=el(info.bookmarks),
-                            status="ACTIVE")
-            targets = repo.hg_targets(info.rev, app.config['PRODUCT_BRANCHES'])
-            review.add_targets(targets)
-            #TODO: Multiple bookmarks
-            changeset = Changeset(info.name, info.email, info.title,
-                                  request.form['sha1'], el(info.bookmarks),
-                                  "ACTIVE")
-            review.changesets.append(changeset)
-            db.session.add(review)
-            db.session.commit()
-            return redirect(url_for('review_info', review_id=review.id))
-
-        if action == "abandon":
-            info = repo.revision(request.form['sha1'])
-            #TODO: Multiple bookmarks
-            changeset = Changeset(info.name, info.email, info.title,
-                                  request.form['sha1'], el(info.bookmarks),
-                                  "ABANDONED")
-            db.session.add(changeset)
-            db.session.commit()
-            repo.hg_close_branch(request.form['sha1'])
-            return redirect(url_for('changes_new'))
-
-    revisions = get_new(repo)
-    for revision in revisions:
-        revision.targets = repo.hg_targets(revision.node,
-                                           app.config["PRODUCT_BRANCHES"])
-
-    pagination = Pagination(1, 1, 1)
+    query = Head.query.filter(Head.review_id == None)
+    query = query.order_by(Head.created_date).paginate(page, app.config["PER_PAGE"])
+    total = query.total
+    revisions = query.items
+    pagination = Pagination(page, app.config["PER_PAGE"], total)
 
     return render_template('new.html', revisions=revisions,
                            pagination=pagination)
 
 
-@app.route('/changes/active', methods=['GET', 'POST'], defaults={'page': 1})
+@app.route('/changes/active', defaults={'page': 1})
 @app.route('/changes/active/<int:page>')
-@login_required
 def changes_active(page):
     form = SearchForm()
     data = get_reviews("ACTIVE", page, request)
@@ -106,7 +167,7 @@ def changes_active(page):
                            form=form, pagination=data["p"])
 
 
-@app.route('/changes/merged', methods=['GET', 'POST'], defaults={'page': 1})
+@app.route('/changes/merged', defaults={'page': 1})
 @app.route('/changes/merged/<int:page>')
 def changes_merged(page):
     form = SearchForm()
@@ -114,8 +175,14 @@ def changes_merged(page):
     return render_template('merged.html', reviews=data["r"], form=form, pagination=data["p"])
 
 
+@app.route('/changeset/<int:cs_id>/inspect')
+def inspect_diff_login_redirect(cs_id):
+    return redirect(url_for('changeset_info', cs_id=cs_id))
+
+
 @app.route('/changeset/<int:cs_id>/inspect', methods=['POST'])
 @login_required
+@repo_read
 @roles_required('user')
 def inspect_diff(cs_id):
     cs = Changeset.query.filter(Changeset.id == cs_id).first()
@@ -123,7 +190,7 @@ def inspect_diff(cs_id):
         flash("Changeset {0} doesn't exist".format(cs_id), "error")
         logger.error("Changeset %d doesn't exist", cs_id)
         return redirect(url_for('index'))
-    redirect_url = redirect(url_for('changeset_info', sha1=cs.sha1))
+    redirect_url = redirect(url_for('changeset_info', cs_id=cs_id))
     if current_user.cc_login is None:
         flash("Code Collaborator login is not configured properly.", "error")
         logger.error("User account %s cc_login is not configured", current_user.email)
@@ -164,17 +231,27 @@ def inspect_diff(cs_id):
     return redirect_url
 
 
-@app.route('/build', methods=['POST'])
+@app.route('/changeset/<int:cs_id>/build')
+def jenkins_build_login_redirect(cs_id):
+    return redirect(url_for('changeset_info', cs_id=cs_id))
+
+
+@app.route('/changeset/<int:cs_id>/build', methods=['POST'])
 @login_required
+@repo_read
 @roles_required('user')
-def jenkins_build():
-    info = repo.revision(request.form["src"])
+def jenkins_build(cs_id):
+    logger.info("Requested URL /changeset/%d/build [POST]", cs_id)
+    changeset = Changeset.query.filter(Changeset.id == cs_id).first()
+    if changeset is None:
+        flash("Changeset {0} doesn't exist".format(cs_id), "error")
+        logger.error("Changeset %d doesn't exist", cs_id)
+        return redirect(url_for('index'))
     job_name = request.form["release"] + "-ci"
-    changeset = Changeset.query.filter(Changeset.sha1 == info.node).first()
     build_info = jenkins.run_job(job_name, changeset.sha1)
     if build_info is None:
         flash("Scheduling Jenkins build failed", "error")
-        return redirect(url_for("changeset_info", sha1=request.form["back_id"]))
+        return redirect(url_for("changeset_info", cs_id=cs_id))
 
     build = Build(changeset_id=changeset.id, status=build_info["status"],
                   job_name=job_name, build_url=build_info["build_url"])
@@ -188,17 +265,51 @@ def jenkins_build():
                 " has been added to queue. Changeset: " + str(changeset) +
                 " , build: " + str(build))
     flash("Jenkins build has been added to the queue", "notice")
-    return redirect(url_for('changeset_info', sha1=request.form['back_id']))
+    return redirect(url_for('changeset_info', cs_id=cs_id))
 
 
-@app.route('/changeset/<sha1>', methods=['POST', 'GET'])
-@performance_monitor("Request /changeset/<sha1>")
-def changeset_info(sha1):
-    logger.info("Requested URL /changeset/%s", sha1)
-    cs = Changeset.query.filter(Changeset.sha1 == sha1).first()
+@app.route('/changeset/<int:cs_id>/abandon')
+def changeset_abandon_login_redirect(cs_id):
+    return redirect(url_for('changeset_info', cs_id=cs_id))
+
+
+@app.route("/changeset/<int:cs_id>/abandon", methods=["POST"])
+@login_required
+@roles_required('admin')
+@repo_write
+@performance_monitor("Request /changeset/<cs_id>/abandon [POST]")
+#TODO: If inspection scheduled, cannot abandon changeset
+#TODO: Only active changeset or its descendant can be abandoned
+#TODO: Abandoning active changeset should move bookmark backwards
+def changeset_abandon(cs_id):
+    logger.info("Requested URL /changeset/%d/abandon [POST]", cs_id)
+    changeset = Changeset.query.filter(Changeset.id == cs_id).first()
+    if changeset is None:
+        flash("Changeset {0} doesn't exist".format(cs_id), "error")
+        logger.error("Changeset %d doesn't exist", cs_id)
+        return redirect(url_for('index'))
+    if not changeset.is_active():
+        flash("Not active changeset cannot be abandoned", "error")
+        logger.error("Changeset %d is not active and cannot be abandoned", cs_id)
+        return redirect(url_for('changeset_info', cs_id=cs_id))
+    changeset.status = "ABANDONED"
+    db.session.commit()
+    repo.hg_sync()
+    if changeset.sha1 in repo.hg_heads():
+        repo.hg_close_branch(changeset.sha1)
+    flash("Changeset '{title}' (SHA1: {sha1}) has been abandoned".format(title=changeset.title,
+                                                                         sha1=changeset.sha1), "notice")
+    return redirect(url_for("review_info", review_id=changeset.review_id))
+
+
+@app.route('/changeset/<int:cs_id>')
+@performance_monitor("Request /changeset/<cs_id>")
+def changeset_info(cs_id):
+    logger.info("Requested URL /changeset/%d", cs_id)
+    cs = Changeset.query.filter(Changeset.id == cs_id).first()
     if cs is None:
-        flash("Changeset {0} doesn't exist".format(sha1), "error")
-        logger.error("Changeset %s doesn't exist", sha1)
+        flash("Changeset {0} doesn't exist".format(cs_id), "error")
+        logger.error("Changeset %d doesn't exist", cs_id)
         return redirect(url_for("index"))
     prev = Changeset.query.filter(and_(Changeset.created_date < cs.created_date,
                                        Changeset.status == "ACTIVE",
@@ -215,9 +326,131 @@ def changeset_info(sha1):
                            prev=prev)
 
 
+@app.route('/review')
+def review_new_login_redirect():
+    return redirect(url_for('changes_new'))
 
-@app.route('/review/<int:review_id>', methods=['POST', 'GET'])
+
+@app.route("/review", methods=["POST"])
+@login_required
+@repo_write
+@rework_db_write
+@performance_monitor("Request /review [POST]")
+def review_new():
+    logger.info("Requested URL /review [POST]")
+    refresh_heads()
+    revision = repo.revision(request.form['node'])
+    rev_status = get_revision_status(repo, revision)
+    if rev_status != "new":
+        flash("Revision {0} is {1} and cannot be inspected. Refresh list of revisions.".format(revision.node, rev_status), "error")
+        logger.info("Revision {0} is {1} and cannot be inspected.".format(revision.node, rev_status))
+        return redirect(url_for('changes_new'))
+    #TODO: Multiple bookmarks
+    review = Review(owner=revision.name, owner_email=revision.email, title=revision.title,
+                    bookmark=el(revision.bookmarks), status="ACTIVE")
+    targets = repo.hg_targets(revision.rev, app.config['PRODUCT_BRANCHES'])
+    review.add_targets(targets)
+    #TODO: Multiple bookmarks
+    changeset = Changeset(revision.name, revision.email, revision.title,
+                          revision.node, el(revision.bookmarks),
+                          "ACTIVE")
+    review.changesets.append(changeset)
+    db.session.add(review)
+    Head.query.filter(Head.node == revision.node).delete()
+    db.session.commit()
+    return redirect(url_for('changeset_info', cs_id=changeset.id))
+
+
+@app.route('/review/<int:review_id>', methods=["POST"])
+@login_required
+@repo_write
+@rework_db_write
+@performance_monitor("Request /review/<int:review_id> [POST]")
+def review_rework(review_id):
+    logger.info("Requested URL /review/%d [POST]", review_id)
+    review = Review.query.filter(Review.id == review_id).first()
+    if review is None:
+        flash("Review {0} doesn't exist".format(review_id), "error")
+        logger.error("Review %d doesn't exist", review_id)
+        return redirect(url_for("index"))
+    refresh_heads()
+    revision = repo.revision(request.form["node"])
+    rev_status = get_revision_status(repo, revision)
+    if rev_status != "rework":
+        flash("Revision {0} is {1} and cannot be inspected. Refresh list of revisions.".format(revision.node, rev_status), "error")
+        logger.info("Revision {0} is {1} and cannot be inspected.".format(revision.node, rev_status))
+        return redirect(url_for('review_info', review_id=review.id))
+    #TODO: Multiple bookmarks
+    changeset = Changeset(revision.name, revision.email, revision.title,
+                          revision.node, el(revision.bookmarks), "ACTIVE")
+    changeset.review_id = review.id
+    db.session.add(changeset)
+    Head.query.filter(Head.node == revision.node).delete()
+    Head.query.filter(Head.review_id == review.id).update({'review_id': None})
+    db.session.commit()
+    flash("Changeset '{title}' (SHA1: {sha1}) has been marked as rework".format(title=changeset.title, sha1=changeset.sha1),
+          "notice")
+    return redirect(url_for('changeset_info', cs_id=changeset.id))
+
+
+@app.route('/review/<int:review_id>/abandon')
+def review_abandon_login_redirect(review_id):
+    return redirect(url_for('review_info', review_id=review_id))
+
+
+@app.route('/review/<int:review_id>/abandon', methods=["POST"])
+@repo_write
+@login_required
+@roles_required('admin')
+@performance_monitor("Request /review/<int:review_id>/abandon [POST]")
+def review_abandon(review_id):
+    logger.info("Requested URL /review/%d/abandon [POST]", review_id)
+    review = Review.query.filter(Review.id == review_id).first()
+    if review is None:
+        flash("Review {0} doesn't exist".format(review_id), "error")
+        logger.error("Review %d doesn't exist", review_id)
+        return redirect(url_for("index"))
+    review.status = "ABANDONED"
+    Head.query.filter(Head.review_id == review.id).update({'review_id': None})
+    db.session.commit()
+    repo.hg_sync()
+    heads = repo.hg_heads()
+    for c in review.changesets:
+        if c.sha1 in heads:
+            repo.hg_close_branch(c.sha1)
+    flash("Review has been abandoned", "notice")
+    return redirect(url_for('changes_active'))
+
+
+@app.route('/review/<int:review_id>/target')
+def review_set_target_login_redirect(review_id):
+    return redirect(url_for('review_info', review_id=review_id))
+
+
+@app.route("/review/<int:review_id>/target", methods=["POST"])
+@login_required
+@performance_monitor("Request /review/<id>/target")
+def review_set_target(review_id):
+    logger.info("Requested URL /review/%d/target [POST]", review_id)
+    review = Review.query.filter(Review.id == review_id).first()
+    if review is None:
+        flash("Review {0} doesn't exist".format(review_id), "error")
+        logger.error("Review %d doesn't exist", review_id)
+        return redirect(url_for("index"))
+    #TODO: If inspection scheduled, target cannot change
+    try:
+        review.set_target(request.form['target'])
+    except Exception, ex:
+        flash(str(ex), "error")
+    else:
+        db.session.commit()
+        flash("Target branch has been set to <b>{0}</b>".format(review.target), "notice")
+    return redirect(url_for('review_info', review_id=review.id))
+
+
+@app.route('/review/<int:review_id>')
 @performance_monitor("Request /review/<int:review_id>")
+@rework_db_read
 def review_info(review_id):
     logger.info("Requested URL /review/%d", review_id)
     review = Review.query.filter(Review.id == review_id).first()
@@ -225,88 +458,40 @@ def review_info(review_id):
         flash("Review {0} doesn't exist".format(review_id), "error")
         logger.error("Review %d doesn't exist", review_id)
         return redirect(url_for("index"))
-    if review.status == "ACTIVE":
-        repo.hg_sync()
-    if request.method == 'POST':
-        if request.form["action"] == "rework":
-            # make sure cs doesnt exist
-            cs = Changeset.query.filter(Changeset.sha1 == request.form["sha1"]).first()
-            if cs is None:
-                info = repo.revision(request.form["sha1"])
-                #TODO: Multiple bookmarks
-                cs = Changeset(info.name, info.email, info.title,
-                               info.node, el(info.bookmarks),
-                               "ACTIVE")
-                cs.review_id = review.id
-                db.session.add(cs)
-                db.session.commit()
-                flash(
-                    "Changeset '{title}' (SHA1: {sha1}) has been marked as rework".format(title=cs.title, sha1=cs.sha1),
-                    "notice")
-            else:
-                flash("Error - changeset already exists", "error")
-        if request.form["action"] == "abandon":
-            review.status = "ABANDONED"
-            db.session.commit()
-            heads = repo.hg_heads()
-            for c in review.changesets:
-                if c.sha1 in heads:
-                    repo.hg_close_branch(c.sha1)
-            flash("Review has been abandoned", "notice")
-        #TODO: If inspection scheduled, target cannot change
-        if request.form["action"] == "target":
-            try:
-                review.set_target(request.form['target'])
-            except Exception, ex:
-                flash(str(ex), "error")
-            else:
-                db.session.add(review)
-                db.session.commit()
-                msg = "Target branch has been set to <b>{0}</b>"
-                flash(msg.format(review.target), "notice")
-        #TODO: If inspection scheduled, cannot abandon changeset
-        #TODO: Only active changeset or its descendant can be abandoned
-        #TODO: Abandoning active changeset should move bookmark backwards
-        if request.form["action"] == "abandon_changeset":
-            changeset = Changeset.query.filter(Changeset.sha1 == request.form["sha1"]).first()
-            if changeset is None:
-                info = repo.revision(request.form["sha1"])
-                #TODO: Multiple bookmarks
-                changeset = Changeset(info.name, info.email,
-                                      info.title, info.node,
-                                      el(info.bookmarks))
-                changeset.review_id = review.id
-            changeset.status = "ABANDONED"
-            db.session.add(changeset)
-            db.session.commit()
-            repo.hg_close_branch(request.form["sha1"])
-            flash("Changeset '{title}' (SHA1: {sha1}) has been abandoned".format(title=changeset.title,
-                                                                                 sha1=changeset.sha1), "notice")
-
-    return render_template("review.html", review=review,
-                           descendants=get_reworks(repo, review))
+    reworks = Head.query.filter(Head.review_id == review.id).all()
+    return render_template("review.html", review=review, descendants=reworks)
 
 
-@app.route('/merge', methods=['POST'])
+@app.route('/changeset/<int:cs_id>/merge')
+def merge_branch_login_redirect(cs_id):
+    return redirect(url_for('changeset_info', cs_id=cs_id))
+
+
+@app.route('/changeset/<int:cs_id>/merge', methods=['POST'])
 @login_required
 @roles_required('admin')
-@performance_monitor("Request /merge")
-def merge_branch():
-    sha1 = request.form['sha1']
-    logger.info("Requested URL /merge for sha1=%s", sha1)
-    changeset = Changeset.query.filter(Changeset.sha1 == sha1).first()
+@repo_write
+@performance_monitor("Request /changeset/<cs_id>/merge")
+def merge_branch(cs_id):
+    logger.info("Requested URL /changeset/%d/merge", cs_id)
+    changeset = Changeset.query.filter(Changeset.id == cs_id).first()
+    if changeset is None:
+        flash("Changeset {0} doesn't exist".format(cs_id), "error")
+        logger.error("Changeset %d doesn't exist", cs_id)
+        return redirect(url_for("index"))
     review = Review.query.filter(Review.id == changeset.review_id).first()
     bookmark = review.target
 
     link = url_for("review_info", review_id=review.id, _external=True)
 
-    repo.hg_sync()
+    refresh_heads()
+    #TODO: Only active changeset can be merged
 
-    logger.info("Merging %s into %s", sha1, review.target)
+    logger.info("Merging %s into %s", changeset.sha1, review.target)
     repo.hg_update(bookmark)
 
     try:
-        output = repo.hg_merge(sha1)
+        output = repo.hg_merge(changeset.sha1)
     except HgException as e:
         output = str(e)
 
@@ -316,28 +501,30 @@ def merge_branch():
     subject = u"Successful merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
 
     if "abort: nothing to merge" in output:
-        repo.hg_update(sha1)
+        repo.hg_update(changeset.sha1)
         result = repo.hg_bookmark(bookmark, force=True)
         logger.info(result)
         flash("Changeset has been merged", "notice")
     elif "use 'hg resolve' to retry unresolved" in output:
-        repo.hg_update("null", clean=True)
         flash("There is merge conflict. Merge with bookmark " + bookmark +
               " and try again.", "error")
         subject = u"Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1,
                                                                               dest=review.target)
         error = True
     elif "abort: merging with a working directory ancestor has no effect" in output:
-        repo.hg_update(sha1)
+        repo.hg_update(changeset.sha1)
         result = repo.hg_bookmark(bookmark, force=True)
         logger.info(result)
         flash("Changeset has been merged", "notice")
     else:
         repo.hg_commit("Merged with {target}".format(target=review.target))
-        repo.hg_update("null")
+
+    repo.hg_update("null", clean=True)
+    repo.hg_purge()
 
     try:
-        repo.hg_push()
+        if not error:
+            repo.hg_push()
     except HgException, ex:
         if not "no changes found" in ex.message:
             raise
@@ -360,7 +547,7 @@ def merge_branch():
     if not error:
         review.status = "MERGED"
         review.close_date = datetime.datetime.utcnow()
-        db.session.add(review)
+        Head.query.filter(Head.review_id == review.id).update({'review_id': None})
         db.session.commit()
         flash("Review has been closed", "notice")
 
@@ -368,8 +555,7 @@ def merge_branch():
 
 
 @app.route('/changelog/<start>/<stop>')
-@login_required
-@roles_required('admin')
+@repo_read
 def changelog(start, stop):
     repo.hg_sync()
     rev_start = repo.revision(start)

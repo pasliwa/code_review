@@ -34,20 +34,20 @@
                 </div>
                 <div><span class="col-lg-2 text-right">Target branch</span><span>
                     {# TODO: If inspection scheduled, target cannot change #}
+                    {# TODO: Target can change only for active reviews (not merged and not abandoned) #}
                     {% if review.targets|length > 1 %}
-                    <form method="post" action="{{ url_for("review_info", review_id=review.id) }}">
+                    <form method="post" action="{{ url_for("review_set_target", review_id=review.id) }}">
 
 
                         <div class="form-group">
                             <div class="col-sm-2">
-                                <select id="inputEmail4" class="form-control" name="target">
+                                <select class="form-control" name="target">
                                     {% for target in review.targets %}
                                         <option {% if review.target == target.name %}selected{% endif %} value="{{ target.name }}">{{ target.name }}</option>
                                     {% endfor %}
                                 </select>
 
                             </div>
-                            <input type="hidden" name="action" value="target">
                             <button class="btn btn-sm btn-info" type="submit"><span
                                     class="glyphicon glyphicon-save"></span>
                                Save
@@ -63,7 +63,11 @@
 
         <div class="panel panel-info">
             <div class="panel-heading">
-                <h3 class="panel-title">Changesets</h3>
+                <h3 class="panel-title">Changesets
+                    <a class="btn btn-default btn-xs pull-right" href="{{ url_for('changes_refresh') }}">
+                        <span class="glyphicon glyphicon-refresh"></span>
+                    </a>
+                </h3>
             </div>
             <div class="panel-body">
                 <table class="table table-hover">
@@ -76,11 +80,34 @@
                         <th>Last build</th>
                     </thead>
                     <tbody>
+                        {% if review.status != "ABANDONED" %}
+                        {% for c in descendants %}
+                        <tr>
+                            <td></td>
+                            <td>{{ c.title }}</td>
+                            <td><code>{{ c.node }}</code></td>
+                            <td>
+                                <form method="post" action="{{ url_for("review_rework", review_id=review.id) }}">
+                                    <input type="hidden" name="node" value="{{ c.node }}">
+                                    <button type="submit" class="btn btn-success btn-sm"><span class="glyphicon glyphicon-plus-sign"></span> Add as rework</button>
+                                </form>
+                            </td>
+                            <td>
+                                {# TODO: If inspection scheduled, cannot abandon changeset #}
+                                {# TODO: Only active changeset or its descendant can be abandoned #}
+                                <form method="post" action="{{ url_for("revision_abandon", node=c.node) }}">
+                                    <button type="submit" class="btn btn-danger btn-sm confirmation-needed" data-question="Are you sure you want to ABANDON this changeset?"><span class="glyphicon glyphicon-trash"></span> Abandon</button>
+                                </form>
+                            </td>
+                            <td></td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
                         {% for c in review.changesets %}
                         <tr>
                             <td>{{ c.id }}</td>
                             <td>{{ c.title }}</td>
-                            <td><a href="{{ url_for("changeset_info", sha1=c.sha1) }}"><code>{{ c.sha1 }}</code></a></td>
+                            <td><a href="{{ url_for("changeset_info", cs_id=c.id) }}"><code>{{ c.sha1 }}</code></a></td>
                             <td>{{ c.created_date }}</td>
                             <td>
                                 {% if c.status == "ACTIVE" %}
@@ -110,32 +137,6 @@
                                 {% endif %}</td>
                         </tr>
                         {% endfor %}
-                        {% if review.status != "ABANDONED" %}
-                        {% for c in descendants %}
-                        <tr>
-                            <td></td>
-                            <td>{{ c.title }}</td>
-                            <td><code>{{ c.node }}</code></td>
-                            <td>
-                                <form method="post" action="{{ url_for("review_info", review_id=review.id) }}">
-                                    <input type="hidden" name="action" value="rework">
-                                    <input type="hidden" name="sha1" value="{{ c.node }}">
-                                    <button type="submit" class="btn btn-success btn-sm"><span class="glyphicon glyphicon-plus-sign"></span> Add as rework</button>
-                                </form>
-                            </td>
-                            <td>
-                                {# TODO: If inspection scheduled, cannot abandon changeset #}
-                                {# TODO: Only active changeset or its descendant can be abandoned #}
-                                <form method="post" action="{{ url_for("review_info", review_id=review.id) }}">
-                                    <input type="hidden" name="action" value="abandon_changeset">
-                                    <input type="hidden" name="sha1" value="{{ c.node }}">
-                                    <button type="submit" class="btn btn-danger btn-sm confirmation-needed" data-question="Are you sure you want to ABANDON this changeset?"><span class="glyphicon glyphicon-trash"></span> Abandon</button>
-                                </form>
-                            </td>
-                            <td></td>
-                        </tr>
-                        {% endfor %}
-                        {% endif %}
                     </tbody>
                 </table>
             </div>

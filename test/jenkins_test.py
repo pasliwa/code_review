@@ -1,8 +1,4 @@
-import os
-import tempfile
-
-from proboscis import test, before_class, after_class
-from proboscis.asserts import assert_is_not_none
+import unittest
 from httmock import urlmatch, HTTMock
 
 import config
@@ -25,28 +21,17 @@ def jenkins_schedule_error(url, request):
     return {"status_code": 500, "content": "\xc2".encode("utf-8")}
 
 
-@test
-class JenkinsTest:
+class JenkinsTest(unittest.TestCase):
 
-    @before_class
-    def setup(self):
+    def setUp(self):
         self.app = app.test_client()
         db_create()
 
-    @after_class
-    def tear_down(self):
-        pass
-
-    @test
-    def run_job_exceptions(self):
+    def test_run_job_exceptions(self):
         with HTTMock(jenkins_next_build_number, jenkins_schedule_error):
             result = jenkins.run_job("iwd-8.5.000-ci", "100")
-        assert_is_not_none(result)
+        self.assertIsNotNone(result)
 
-
-def run_tests():
-    from proboscis import TestProgram
-    TestProgram().run_and_exit()
 
 if __name__ == "__main__":
-    run_tests()
+    unittest.main()

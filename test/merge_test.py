@@ -1,8 +1,5 @@
 import os
-
-from proboscis import test
-from proboscis.asserts import fail, assert_true, assert_false, assert_raises,\
-    assert_equal
+import unittest
 
 from app.hgapi.hgapi import HgException
 from app.mercurial import MergeConflictException
@@ -11,7 +8,6 @@ from test.mercurial import config, MercurialBase
 FILE_3 = os.path.join(config.REPO_PATH, "file2.txt")
 
 
-@test
 class MergeTest(MercurialBase):
 
     def test_failed_push_recovery(self):
@@ -23,8 +19,8 @@ class MergeTest(MercurialBase):
         rev2 = self.commit_slave("Non-pushed commit in local repo",
                                  rev="iwd-8.5.000")
         self.slave.hg_sync()
-        assert_true("iwd-8.5.000" in self.master.revision(rev2).bookmarks)
-        assert_true("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
+        self.assertTrue("iwd-8.5.000" in self.master.revision(rev2).bookmarks)
+        self.assertTrue("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
 
     def test_advance_branch_recovery(self):
         self.init_repos()
@@ -34,8 +30,8 @@ class MergeTest(MercurialBase):
         self.slave.hg_pull()
         rev2 = self.commit_master("Advance commit in official repo")
         self.slave.hg_sync()
-        assert_true("iwd-8.5.000" in self.master.revision(rev2).bookmarks)
-        assert_true("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
+        self.assertTrue("iwd-8.5.000" in self.master.revision(rev2).bookmarks)
+        self.assertTrue("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
 
     def test_conflicting_changes_during_sync(self):
         self.init_repos()
@@ -46,15 +42,15 @@ class MergeTest(MercurialBase):
                                  rev="iwd-8.5.000")
         try:
             self.slave.hg_sync()
-            fail("conflicting changes during sync didn't raise exception")
+            self.fail("conflicting changes during sync didn't raise exception")
         except MergeConflictException, ex:
             pass
         else:
             fail("Exception raised, but not MergeConflict.")
-        assert_true("iwd-8.5.000" in self.master.revision(rev1).bookmarks)
-        assert_raises(HgException, self.master.revision, rev2)
-        assert_true("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
-        assert_true("iwd-8.5.000@default" in self.slave.revision(rev1).bookmarks)
+        self.assertTrue("iwd-8.5.000" in self.master.revision(rev1).bookmarks)
+        self.assertRaises(HgException, self.master.revision, rev2)
+        self.assertTrue("iwd-8.5.000" in self.slave.revision(rev2).bookmarks)
+        self.assertTrue("iwd-8.5.000@default" in self.slave.revision(rev1).bookmarks)
 
     def test_diverged_branches_recovery(self):
         self.init_repos()
@@ -64,14 +60,14 @@ class MergeTest(MercurialBase):
         rev2 = self.commit_slave("Non-conflicting change in slave",
                                  rev="iwd-8.5.000", file_name=FILE_3)
         self.slave.hg_sync()
-        assert_equal(self.master.revision(rev1).bookmarks, set([]))
-        assert_equal(self.master.revision(rev2).bookmarks, set([]))
-        assert_equal(self.slave.revision(rev1).bookmarks, set([]))
-        assert_equal(self.slave.revision(rev2).bookmarks, set([]))
+        self.assertEqual(self.master.revision(rev1).bookmarks, set([]))
+        self.assertEqual(self.master.revision(rev2).bookmarks, set([]))
+        self.assertEqual(self.slave.revision(rev1).bookmarks, set([]))
+        self.assertEqual(self.slave.revision(rev2).bookmarks, set([]))
         rev3 = self.master.revision("iwd-8.5.000").node
-        assert_true("iwd-8.5.000" in self.slave.revision(rev3).bookmarks)
-        assert_false("iwd-8.5.000@default" in self.master.hg_bookmarks().keys())
-        assert_false("iwd-8.5.000@default" in self.slave.hg_bookmarks().keys())
+        self.assertTrue("iwd-8.5.000" in self.slave.revision(rev3).bookmarks)
+        self.assertFalse("iwd-8.5.000@default" in self.master.hg_bookmarks().keys())
+        self.assertFalse("iwd-8.5.000@default" in self.slave.hg_bookmarks().keys())
 
     def test_multiple_failed_branches(self):
         self.init_repos()
@@ -89,28 +85,23 @@ class MergeTest(MercurialBase):
         rev6 = self.commit_slave("Official non-pushed commit",
                                  rev="iwd-8.5.000")
         self.slave.hg_sync()
-        assert_equal(self.master.revision(rev1).bookmarks, set([]))
-        assert_equal(self.slave.revision(rev1).bookmarks, set([]))
-        assert_equal(self.master.revision(rev2).bookmarks, set([]))
-        assert_equal(self.slave.revision(rev2).bookmarks, set([]))
+        self.assertEqual(self.master.revision(rev1).bookmarks, set([]))
+        self.assertEqual(self.slave.revision(rev1).bookmarks, set([]))
+        self.assertEqual(self.master.revision(rev2).bookmarks, set([]))
+        self.assertEqual(self.slave.revision(rev2).bookmarks, set([]))
         rev7 = self.master.revision("iwd-8.0.003").node
-        assert_true("iwd-8.0.003" in self.slave.revision(rev7).bookmarks)
-        assert_false("iwd-8.0.003@default" in self.master.hg_bookmarks().keys())
-        assert_false("iwd-8.0.003@default" in self.slave.hg_bookmarks().keys())
-        assert_equal(self.master.revision(rev3).bookmarks, set([]))
-        assert_equal(self.slave.revision(rev3).bookmarks, set([]))
-        assert_true("iwd-8.1.101" in self.master.revision(rev4).bookmarks)
-        assert_true("iwd-8.1.101" in self.slave.revision(rev4).bookmarks)
-        assert_equal(self.master.revision(rev5).bookmarks, set([]))
-        assert_equal(self.slave.revision(rev5).bookmarks, set([]))
-        assert_true("iwd-8.5.000" in self.master.revision(rev6).bookmarks)
-        assert_true("iwd-8.5.000" in self.slave.revision(rev6).bookmarks)
-
-
-def run_tests():
-    from proboscis import TestProgram
-    TestProgram().run_and_exit()
+        self.assertTrue("iwd-8.0.003" in self.slave.revision(rev7).bookmarks)
+        self.assertFalse("iwd-8.0.003@default" in self.master.hg_bookmarks().keys())
+        self.assertFalse("iwd-8.0.003@default" in self.slave.hg_bookmarks().keys())
+        self.assertEqual(self.master.revision(rev3).bookmarks, set([]))
+        self.assertEqual(self.slave.revision(rev3).bookmarks, set([]))
+        self.assertTrue("iwd-8.1.101" in self.master.revision(rev4).bookmarks)
+        self.assertTrue("iwd-8.1.101" in self.slave.revision(rev4).bookmarks)
+        self.assertEqual(self.master.revision(rev5).bookmarks, set([]))
+        self.assertEqual(self.slave.revision(rev5).bookmarks, set([]))
+        self.assertTrue("iwd-8.5.000" in self.master.revision(rev6).bookmarks)
+        self.assertTrue("iwd-8.5.000" in self.slave.revision(rev6).bookmarks)
 
 
 if __name__ == "__main__":
-    run_tests()
+    unittest.main()
