@@ -247,7 +247,10 @@ def jenkins_build(cs_id):
         flash("Changeset {0} doesn't exist".format(cs_id), "error")
         logger.error("Changeset %d doesn't exist", cs_id)
         return redirect(url_for('index'))
-    job_name = request.form["release"] + "-ci"
+    if changeset.review.mapping in app.config["BRANCH_MAPPING"]:
+        job_name = app.config["BRANCH_MAPPING"][changeset.review.target]
+    else:
+        job_name = changeset.review.target + "-ci"
     build_info = jenkins.run_job(job_name, changeset.sha1)
     if build_info is None:
         flash("Scheduling Jenkins build failed", "error")
