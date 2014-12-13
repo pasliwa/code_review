@@ -98,7 +98,9 @@ def schedule_cc():
         with DatabaseGuard():
             d.status = "UPLOADED"
 
-    # Update status
+
+@performance_monitor("update_cc")
+def update_cc():
     inspections = CodeInspection.query.filter(
         CodeInspection.status != "Completed").filter(
         CodeInspection.status != "Unknown").all()

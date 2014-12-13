@@ -17,10 +17,12 @@ from app.utils import Anacron
 if __name__ == '__main__':
     logging.getLogger().addHandler(logs.get_file_handler("code_review.log"))
     logging.getLogger().addHandler(logs.get_mail_handler())
-    schedule_cc = Anacron(900, background.schedule_cc, "schedule_cc")
+    schedule_cc = Anacron(15, background.schedule_cc, "schedule_cc")
     schedule_cc.start()
     update_jenkins = Anacron(60, background.update_jenkins, "update_jenkins")
     update_jenkins.start()
+    update_cc = Anacron(900, background.update_cc, "update_cc")
+    update_cc.start()
     try:
         username = getpass.getuser()
         WSGIServer(app, bindAddress='/tmp/' + username + '.sock').run()

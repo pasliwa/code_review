@@ -7,11 +7,14 @@ from app.utils import Anacron
 
 logging.getLogger().addHandler(logs.get_console_handler())
 
-schedule_cc = Anacron(900, background.schedule_cc, "schedule_cc")
+schedule_cc = Anacron(15, background.schedule_cc, "schedule_cc")
 schedule_cc.start()
 
 update_jenkins = Anacron(60, background.update_jenkins, "update_jenkins")
 update_jenkins.start()
+
+update_cc = Anacron(900, background.update_cc, "update_cc")
+update_cc.start()
 
 try:
     app.run(debug=True, host=app.config["LISTEN_HOST"], use_reloader=False,
