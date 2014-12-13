@@ -105,6 +105,8 @@ def schedule_cc():
     for i in inspections:
         try:
             status = cc.fetch_status(i.number)
+            if status == "":
+                status = "Unknown"
             logger.info("Updating status of review %d from %s to %s", i.number, i.status, status)
             with DatabaseGuard():
                 i.status = status

@@ -48,30 +48,31 @@
                 <td>{{ r.bookmark }}</td>
                 <td>{{ r.target }}</td>
                 <td>
-                    {% if r.changesets|length > 0 and r.changesets[-1].builds|length > 0 %}
-                        {% if r.changesets[-1].builds[-1].status == "Running" %}
-                            <span class="label label-info">{{ r.changesets[-1].builds[-1].status }}</span>
-                        {% elif r.changesets[-1].builds[-1].status == "SUCCESS" %}
-                            <span class="label label-success">{{ r.changesets[-1].builds[-1].status }}</span>
-                        {% elif r.changesets[-1].builds[-1].status == "UNSTABLE" %}
-                            <span class="label label-warning">{{ r.changesets[-1].builds[-1].status }}</span>
-                        {% elif r.changesets[-1].builds[-1].status == "FAILURE" %}
-                            <span class="label label-danger">{{ r.changesets[-1].builds[-1].status }}</span>
+                    {% if r.active_changeset != None and r.active_changeset.builds|length > 0 %}
+                        {% set build = r.active_changeset.builds[-1] %}
+                        {% if build.status == "Running" %}
+                            <span class="label label-info">{{ build.status }}</span>
+                        {% elif build.status == "SUCCESS" %}
+                            <span class="label label-success">{{ build.status }}</span>
+                        {% elif build.status == "UNSTABLE" %}
+                            <span class="label label-warning">{{ build.status }}</span>
+                        {% elif build.status == "FAILURE" %}
+                            <span class="label label-danger">{{ build.status }}</span>
                         {% else %}
-                            <span class="label label-default">{{ r.changesets[-1].builds[-1].status }}</span>
+                            <span class="label label-default">{{ build.status }}</span>
                         {% endif %}
                     {% else %}
                         <span class="label label-default">None</span>
                     {% endif %}
                     <br/>
-                    {% if review.inspection == None %}
+                    {% if r.inspection == None %}
                         <span class="label label-default">None</span>
-                    {% elif review.inspection.status == "Completed" %}
-                        <span class="label label-success">{{ review.inspection.status }}</span>
-                    {% elif review.inspection.status == "SCHEDULED" or review.inspection.status == "NEW" %}
-                        <span class="label label-default">{{ review.inspection.status }}</span>
+                    {% elif r.inspection.status == "Completed" %}
+                        <span class="label label-success">{{ r.inspection.status }}</span>
+                    {% elif r.inspection.status == "SCHEDULED" or r.inspection.status == "NEW" %}
+                        <span class="label label-default">{{ r.inspection.status }}</span>
                     {% else %}
-                        <span class="label label-warning">{{ review.inspection.status }}</span>
+                        <span class="label label-warning">{{ r.inspection.status }}</span>
                     {% endif %}
                 </td>
             </tr>

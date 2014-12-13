@@ -177,6 +177,7 @@ class Review(db.Model):
                             target, self.id)
         self.target = target
 
+    @property
     def active_changeset(self):
         for changeset in self.changesets:
             if changeset.status == "ACTIVE":
