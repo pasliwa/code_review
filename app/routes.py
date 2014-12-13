@@ -247,7 +247,7 @@ def jenkins_build(cs_id):
         flash("Changeset {0} doesn't exist".format(cs_id), "error")
         logger.error("Changeset %d doesn't exist", cs_id)
         return redirect(url_for('index'))
-    if changeset.review.mapping in app.config["BRANCH_MAPPING"]:
+    if changeset.review.target in app.config["BRANCH_MAPPING"]:
         job_name = app.config["BRANCH_MAPPING"][changeset.review.target]
     else:
         job_name = changeset.review.target + "-ci"
