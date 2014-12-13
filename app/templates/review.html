@@ -30,7 +30,17 @@
                     {% endif %}
                     {{ review.status }}
                     </span>
-
+                </div>
+                <div><span class="col-lg-2 text-right">Inspection</span>
+                    {% if review.inspection == None %}
+                        <span class="label label-default">None</span>
+                    {% elif review.inspection.status == "Completed" %}
+                        <span class="label label-success">{{ review.inspection.status }}</span>
+                    {% elif review.inspection.status == "SCHEDULED" or review.inspection.status == "NEW" %}
+                        <span class="label label-default">{{ review.inspection.status }}</span>
+                    {% else %}
+                        <span class="label label-warning">{{ review.inspection.status }}</span>
+                    {% endif %}
                 </div>
                 <div><span class="col-lg-2 text-right">Target branch</span><span>
                     {# TODO: If inspection scheduled, target cannot change #}

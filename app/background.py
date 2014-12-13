@@ -98,3 +98,18 @@ def schedule_cc():
         with DatabaseGuard():
             d.status = "UPLOADED"
 
+    # Update status
+    inspections = CodeInspection.query.filter(
+        CodeInspection.status != "Completed").filter(
+        CodeInspection.status != "Unknown").all()
+    for i in inspections:
+        try:
+            status = cc.fetch_status(i.number)
+            logger.info("Updating status of review %d from %s to %s", i.number, i.status, status)
+            with DatabaseGuard():
+                i.status = status
+        except:
+            logger.exception("Exception when updating status of inspection %d", i.number)
+            logger.info("Updating status of review %d from %s to Unknown", i.number, i.status)
+            with DatabaseGuard():
+                i.status = "Unknown"

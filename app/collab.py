@@ -101,3 +101,8 @@ class CodeCollaborator(object):
                          review_id, output)
             return False
         return True
+
+    def fetch_status(self, review_id):
+        output = self.cc_command("admin review-xml", str(review_id),
+                                 "--xpath '//reviews/review/general/phase/text()")
+        return output

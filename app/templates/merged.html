@@ -32,6 +32,7 @@
             <th>Merged</th>
             <th>Bookmark</th>
             <th>Target Branch</th>
+            <th>Status</th>
         </tr>
         </thead>
         <tbody>
@@ -46,6 +47,33 @@
                 <td>{{ r.close_date }}</td>
                 <td>{{ r.bookmark }}</td>
                 <td>{{ r.target }}</td>
+                <td>
+                    {% if r.changesets|length > 0 and r.changesets[-1].builds|length > 0 %}
+                        {% if r.changesets[-1].builds[-1].status == "Running" %}
+                            <span class="label label-info">{{ r.changesets[-1].builds[-1].status }}</span>
+                        {% elif r.changesets[-1].builds[-1].status == "SUCCESS" %}
+                            <span class="label label-success">{{ r.changesets[-1].builds[-1].status }}</span>
+                        {% elif r.changesets[-1].builds[-1].status == "UNSTABLE" %}
+                            <span class="label label-warning">{{ r.changesets[-1].builds[-1].status }}</span>
+                        {% elif r.changesets[-1].builds[-1].status == "FAILURE" %}
+                            <span class="label label-danger">{{ r.changesets[-1].builds[-1].status }}</span>
+                        {% else %}
+                            <span class="label label-default">{{ r.changesets[-1].builds[-1].status }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="label label-default">None</span>
+                    {% endif %}
+                    <br/>
+                    {% if review.inspection == None %}
+                        <span class="label label-default">None</span>
+                    {% elif review.inspection.status == "Completed" %}
+                        <span class="label label-success">{{ review.inspection.status }}</span>
+                    {% elif review.inspection.status == "SCHEDULED" or review.inspection.status == "NEW" %}
+                        <span class="label label-default">{{ review.inspection.status }}</span>
+                    {% else %}
+                        <span class="label label-warning">{{ review.inspection.status }}</span>
+                    {% endif %}
+                </td>
             </tr>
         {% endfor %}
         </tr>

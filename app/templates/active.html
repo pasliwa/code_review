@@ -32,6 +32,7 @@
             <th>Created</th>
             <th>Bookmark</th>
             <th>Target Branch</th>
+            <th>Status</th>
         </tr>
         </thead>
         <tbody>
@@ -46,6 +47,33 @@
                 <td>{{ r.created_date }}</td>
                 <td>{{ r.bookmark }}</td>
                 <td>{{ r.target }}</td>
+                <td>
+                    {% if r.changesets|length > 0 and r.changesets[-1].builds|length > 0 %}
+                        {% if r.changesets[-1].builds[-1].status == "Running" %}
+                            <span class="label label-info">{{ r.changesets[-1].builds[-1].status }}</span>
+                        {% elif r.changesets[-1].builds[-1].status == "SUCCESS" %}
+                            <span class="label label-success">{{ r.changesets[-1].builds[-1].status }}</span>
+                        {% elif r.changesets[-1].builds[-1].status == "UNSTABLE" %}
+                            <span class="label label-warning">{{ r.changesets[-1].builds[-1].status }}</span>
+                        {% elif r.changesets[-1].builds[-1].status == "FAILURE" %}
+                            <span class="label label-danger">{{ r.changesets[-1].builds[-1].status }}</span>
+                        {% else %}
+                            <span class="label label-default">{{ r.changesets[-1].builds[-1].status }}</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="label label-default">None</span>
+                    {% endif %}
+                    <br/>
+                    {% if r.inspection == None %}
+                        <span class="label label-default">None</span>
+                    {% elif r.inspection.status == "Completed" %}
+                        <span class="label label-success">{{ r.inspection.status }}</span>
+                    {% elif r.inspection.status == "SCHEDULED" or r.inspection.status == "NEW" %}
+                        <span class="label label-default">{{ r.inspection.status }}</span>
+                    {% else %}
+                        <span class="label label-warning">{{ r.inspection.status }}</span>
+                    {% endif %}
+                </td>
             </tr>
         {% endfor %}
         </tr>
