@@ -247,6 +247,7 @@ class MercurialTest(MercurialBase):
         # Open review for second revision and try to merge it
         cs_id = self.review_open(rev2_node)
         rv_data = self.review_merge(cs_id)
+        rev1_node = self.master.revision("iwd-8.0.002").node               # Remember bookmark location before merge
         # Verify, that user is informed
         self.assertTrue("There is merge conflict. Merge with bookmark "
                     "iwd-8.0.002 and try again." in rv_data)

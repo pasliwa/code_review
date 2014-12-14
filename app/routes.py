@@ -1,6 +1,7 @@
 import logging
 import datetime
 import re
+import os.path
 from itertools import chain
 from urlparse import urlparse, urljoin
 
@@ -504,15 +505,29 @@ def merge_branch(cs_id):
     subject = u"Successful merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1, dest=review.target)
 
     if "abort: nothing to merge" in output:
-        repo.hg_update(changeset.sha1)
-        result = repo.hg_bookmark(bookmark, force=True)
-        logger.info(result)
-        flash("Changeset has been merged", "notice")
-    elif "use 'hg resolve' to retry unresolved" in output:
+        logger.info("Creating dummy commit for merge of {review} into {target}".format(review=review.id, target=review.target))
+        open(os.path.join(app.config["REPO_PATH"], "dummy.txt"), "a").close()
+        repo.hg_add("dummy.txt")
+        repo.hg_commit("Prepare for merge with {target}".format(target=review.target))
+        repo.hg_remove("dummy.txt")
+        repo.hg_commit("Prepare for merge with {target}".format(target=review.target), amend=True)
+        try:
+            output = repo.hg_merge(changeset.sha1)
+        except HgException as e:
+            output = str(e)
+        logger.info("Merge result: {output}".format(output=output))
+
+    if "abort: nothing to merge" in output:
+        flash("Unexpeced merge problem - administrator has been contacted")
+        subject = u"Unexpected merge problem - can't merge '{name}' with {dest}".format(name=review.title,
+                                                                                        dest=review.target)
+        logger.error("Conflict when trying descendant merge of review {review} - unexpected conflict".format(
+            review=review.id))
+        error = True
+    if "use 'hg resolve' to retry unresolved" in output:
         flash("There is merge conflict. Merge with bookmark " + bookmark +
               " and try again.", "error")
-        subject = u"Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, sha1=changeset.sha1,
-                                                                              dest=review.target)
+        subject = u"Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, dest=review.target)
         error = True
     elif "abort: merging with a working directory ancestor has no effect" in output:
         repo.hg_update(changeset.sha1)
@@ -545,7 +560,7 @@ def merge_branch(cs_id):
         msg.html = html
         mail.send(msg)
     except:
-	logger.exception("Exception when sending confirmation e-mail regarding review %d merge", review.id)
+        logger.exception("Exception when sending confirmation e-mail regarding review %d merge", review.id)
 
     if not error:
         review.status = "MERGED"
