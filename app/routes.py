@@ -198,7 +198,7 @@ def inspect_diff(cs_id):
     if not cs.is_active():
         logger.error("Cannot schedule inspection. Changeset %d is not active "
                      "within review %d. Active changeset is %d",
-                     cs.id, cs.review.id, cs.review.active_changeset().id)
+                     cs.id, cs.review.id, cs.review.active_changeset.id)
         flash("Changeset is not active. Cannot schedule inspection.", "error")
         return redirect_url
     if cs.review.inspection is None:

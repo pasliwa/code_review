@@ -21,13 +21,13 @@ CC_REVIEW_URL = "http://rd-w2k8-01.us.int.genesyslab.com:9090/ui#review:id={revi
 
 # Jenkins settings
 JENKINS_URL = "http://pl-byd-srv01.emea.int.genesyslab.com/jenkins_test"
-BRANCH_MAPPING = { "mgr-cleanup": "iwd-8.5.100-ci"}
+BRANCH_MAPPING = {}
 
 # Mercurial settings
 REPO_PATH = "../repository/iwd8"
 HG_PROD = "http://pl-byd-srv01.emea.int.genesyslab.com/hg/iwd8"
-PRODUCT_BRANCHES = set(["iwd-8.5.100", "iwd-8.5.000", "iwd-8.1.101", "iwd-8.1.001",
-                        "iwd-8.0.003", "iwd-8.0.002", "mgr-cleanup"])
+PRODUCT_BRANCHES = set(["iwd-8.5.000", "iwd-8.1.101", "iwd-8.1.001",
+                        "iwd-8.0.003", "iwd-8.0.002"])
 IGNORED_BRANCHES = set(["test", "iwd-rest", "iwd-history-nosql", "iwd-8.0.001",
                         "multi-bp-list", "iwd-history", "iwd-8.1.000"])
 

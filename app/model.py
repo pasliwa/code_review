@@ -62,7 +62,7 @@ class Changeset(db.Model):
         self.status = status
 
     def is_active(self):
-        return self.review.active_changeset().id == self.id
+        return self.review.active_changeset.id == self.id
 
     def __str__(self):
         return str(dict((name, getattr(self, name)) for name in dir(self) if not name.startswith('_')))
