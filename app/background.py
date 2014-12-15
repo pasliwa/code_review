@@ -1,5 +1,6 @@
 import logging
 
+from app import app
 from app import db
 from app import repo
 from app import jenkins
@@ -62,7 +63,8 @@ def schedule_cc():
                 logger.error("Inspection %d with number is still scheduled.",
                              i.id)
                 continue
-            i.number, i.url = cc.create_review(i.review.title, i.review.target)
+            release = app.config["CC_RELEASE_MAPPING"][i.review.target]
+            i.number, i.url = cc.create_review(i.review.title, release)
             if i.number is None:
                 logger.error("Creating inspection %d in CodeCollaborator "
                              "failed.", i.id)

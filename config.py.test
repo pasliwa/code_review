@@ -18,6 +18,10 @@ PER_PAGE = 10
 # Code Collaborator settings
 CC_BIN = "/home/ci_test/ccollab-client/ccollab"
 CC_REVIEW_URL = "http://rd-w2k8-01.us.int.genesyslab.com:9090/ui#review:id={reviewId}"
+CC_RELEASE_MAPPING = {'iwd-8.5.100': '8.5.1', 'iwd-8.5.000': '8.5.0',
+                      'iwd-8.1.101': '8.1.1', 'iwd-8.1.001': '8.1.0',
+                      'iwd-8.0.003': '8.0.0', 'iwd-8.0.002': '8.0.0',
+                      'mgr-cleanup': '8.5.1'}
 
 # Jenkins settings
 JENKINS_URL = "http://pl-byd-srv01.emea.int.genesyslab.com/jenkins_test"
