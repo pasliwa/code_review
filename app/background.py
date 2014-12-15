@@ -105,6 +105,7 @@ def schedule_cc():
 def update_cc():
     inspections = CodeInspection.query.filter(
         CodeInspection.status != "Completed").filter(
+        CodeInspection.status != "SCHEDULED").filter(
         CodeInspection.status != "Unknown").all()
     for i in inspections:
         try:
