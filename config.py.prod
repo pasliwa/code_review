@@ -25,7 +25,7 @@ CC_RELEASE_MAPPING = {'iwd-8.5.100': '8.5.1', 'iwd-8.5.000': '8.5.0',
 
 # Jenkins settings
 JENKINS_URL = "http://pl-byd-srv01.emea.int.genesyslab.com/jenkins"
-BRANCH_MAPPING = { "mgr-cleanup": "iwd-8.5.100-ci"}
+BRANCH_MAPPING = { "mgr-cleanup": "iwd-8.5.100-ci", "history-node": "iwd-8.5.100-ci" }
 
 # Mercurial settings
 REPO_PATH = "/home/ci/repository/iwd8"
