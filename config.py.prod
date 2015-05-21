@@ -21,17 +21,19 @@ CC_REVIEW_URL = "http://rd-w2k8-01.us.int.genesyslab.com:9090/ui#review:id={revi
 CC_RELEASE_MAPPING = {'iwd-8.5.100': '8.5.1', 'iwd-8.5.000': '8.5.0',
                       'iwd-8.1.101': '8.1.1', 'iwd-8.1.001': '8.1.0',
                       'iwd-8.0.003': '8.0.0', 'iwd-8.0.002': '8.0.0',
-                      'mgr-cleanup': '8.5.1', 'history-node': '8.5.1'}
+                      'mgr-cleanup': '8.5.1', 'history-node': '8.5.1',
+                      'cfgaudit': '8.5.1'}
 
 # Jenkins settings
 JENKINS_URL = "http://pl-byd-srv01.emea.int.genesyslab.com/jenkins"
-BRANCH_MAPPING = { "mgr-cleanup": "iwd-8.5.100-ci", "history-node": "iwd-8.5.100-ci" }
+BRANCH_MAPPING = { "mgr-cleanup": "iwd-8.5.100-ci", "history-node": "iwd-8.5.100-ci", 'cfgaudit': 'iwd-8.5.100-ci' }
 
 # Mercurial settings
 REPO_PATH = "/home/ci/repository/iwd8"
 HG_PROD = "http://hg.genesyslab.com/iwd8"
 PRODUCT_BRANCHES = set(["iwd-8.5.100", "iwd-8.5.000", "iwd-8.1.101", "iwd-8.1.001",
-                        "iwd-8.0.003", "iwd-8.0.002", "mgr-cleanup", "history-node"])
+                        "iwd-8.0.003", "iwd-8.0.002", "mgr-cleanup", "history-node",
+                        "cfgaudit"])
 IGNORED_BRANCHES = set(["test", "iwd-rest", "iwd-8.0.001", "multi-bp-list", "iwd-8.1.000"])
 
 # Flask-Security
