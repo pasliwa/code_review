@@ -585,14 +585,15 @@ def changelog(start, stop):
     for rev in repo.revisions([1, rev_start.node]):
         rev_list.pop(rev.node, None)
 
-    jira_re = re.compile("(IWD-\d+)|(EVO-\d+)|(IAP-\d+)", re.IGNORECASE)
+    jira_re = re.compile("(IWD-\d{3,5})|(EVO-\d+)|(IAP-\d+)", re.IGNORECASE)
     jira_list = {}
     for node, rev in rev_list.items():
         tickets = set(chain(*jira_re.findall(rev.desc))) - set([''])
         for ticket in tickets:
-            if ticket not in jira_list:
-                jira_list[ticket] = ''
-            jira_list[ticket] += '\n' + rev.desc
+            key = ticket.upper()
+            if key not in jira_list:
+                jira_list[key] = ''
+            jira_list[key] += '\n' + rev.desc
 
     return render_template("log.html", start=start, stop=stop, jira_list=sorted(jira_list.items()))
 
