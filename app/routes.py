@@ -546,7 +546,11 @@ def merge_branch(cs_id):
     except HgException, ex:
         if not "no changes found" in ex.message:
             raise
-
+	try:
+		jira_integrate(cs_id, current_user)
+	except:
+		logger.exception("Exception when integrating with JIRA regarding review %d merge", review.id)
+		
     try:
         html = subject + u"<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
             link=link, sha1=changeset.sha1, owner=changeset.owner)
