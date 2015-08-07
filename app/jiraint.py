@@ -25,11 +25,11 @@ def jira_comment(login, password, options, issue_num, author, date,
 	
 	jira.add_comment(issue, comment)
 
-def jira_integrate(Changeset, Review, user):
+def jira_integrate(changeset, user):
 	""" Add comment to all relevant JIRA tickets """
 	now = datetime.datetime.now()
-	for token in token_search(Changeset.title):
+	for token in token_search(changeset.title):
 		current_date = "{day}/{month}/{year}".format(day=now.day, month=now.month, year=now.year)
 		jira_comment(user.jira_login, user.jira_password, {'server': 'https://jira.genesys.com'}, 
-						token, Changeset.owner, current_date, 'IWD', Review.target,
-						Changeset.sha1, Changeset.review_id, Changeset.title)
+						token, changeset.owner, current_date, 'IWD', changeset.review.target,
+						changeset.sha1, changeset.review_id, changeset.title)
