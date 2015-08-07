@@ -25,8 +25,9 @@ def jira_comment(login, password, options, issue_num, author, date,
 	
 	jira.add_comment(issue, comment)
 
-def jira_integrate(changeset, user):
+def jira_integrate(cs_id, user):
 	""" Add comment to all relevant JIRA tickets """
+	changeset = Changeset.query.filter(Changeset.id == cs_id).first()
 	now = datetime.datetime.now()
 	for token in token_search(changeset.title):
 		current_date = "{day}/{month}/{year}".format(day=now.day, month=now.month, year=now.year)
