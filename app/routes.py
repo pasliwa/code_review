@@ -14,6 +14,7 @@ from flask.globals import request
 # noinspection PyUnresolvedReferences
 from flask.ext.security import login_required, roles_required, user_registered
 from sqlalchemy.sql.expression import and_
+from flask.ext.security.utils import encrypt_password
 
 from app import app, db, repo, jenkins, mail, user_datastore
 from app.hgapi.hgapi import HgException
@@ -334,7 +335,7 @@ def jira_register():
     if request.method == 'GET':
         return render_template('jira_credentials.html')
     current_user.jira_login = request.form['jira_login']
-    current_user.jira_password = request.form['jira_password']
+    current_user.jira_password = encrypt_password(request.form['jira_password'])
     db.session.commit()
     flash('User successfully registered')
     return redirect(url_for('index'))
