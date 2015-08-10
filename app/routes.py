@@ -333,10 +333,11 @@ def changeset_info(cs_id):
 def jira_register():
     if request.method == 'GET':
         return render_template('jira_credentials.html')
-    user = User(request.form['jira_username'] , request.form['jira_password'])
-    db.session.add(user)
+    current_user.jira_login = request.form['jira_login']
+    current_user.jira_password = request.form['jira_password']
     db.session.commit()
     flash('User successfully registered')
+    return redirect(url_for('index'))
     
 @app.route('/review')
 def review_new_login_redirect():
