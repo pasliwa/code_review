@@ -329,7 +329,15 @@ def changeset_info(cs_id):
     return render_template("changeset.html", review=review, cs=cs, next=next_,
                            prev=prev)
 
-
+@app.route('/jira_register' , methods=['GET','POST'])
+def jira_register():
+    if request.method == 'GET':
+        return render_template('jira_credentials.html')
+    user = User(request.form['jira_username'] , request.form['jira_password'])
+    db.session.add(user)
+    db.session.commit()
+    flash('User successfully registered')
+    
 @app.route('/review')
 def review_new_login_redirect():
     return redirect(url_for('changes_new'))
@@ -545,7 +553,8 @@ def merge_branch(cs_id):
             repo.hg_push()
     except HgException, ex:
         if not "no changes found" in ex.message:
-            raise
+            raise 
+            
 	try:
 		jira_integrate(cs_id, current_user)
 	except:
