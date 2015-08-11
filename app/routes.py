@@ -14,7 +14,6 @@ from flask.globals import request
 # noinspection PyUnresolvedReferences
 from flask.ext.security import login_required, roles_required, user_registered
 from sqlalchemy.sql.expression import and_
-from flask.ext.security.utils import encrypt_password
 
 from app import app, db, repo, jenkins, mail, user_datastore
 from app.hgapi.hgapi import HgException
@@ -25,6 +24,7 @@ from app.locks import repo_read, repo_write, rework_db_read, rework_db_write
 from app.perfutils import performance_monitor
 from view import SearchForm
 from app.jiraint import jira_integrate
+from Crypto.Cipher import AES
 
 
 logger = logging.getLogger(__name__)
@@ -559,7 +559,7 @@ def merge_branch(cs_id):
             raise 
             
     try:
-          jira_integrate(cs_id, current_user)
+          jira_integrate(changeset, current_user)
     except:
           logger.exception("Exception when integrating with JIRA regarding review %d merge", review.id)
           
@@ -613,6 +613,19 @@ def changelog(start, stop):
 
     return render_template("log.html", start=start, stop=stop, jira_list=sorted(jira_list.items()))
 
+@app.route('/user_preferences' , methods=['GET','POST'])
+@login_required
+def user_preferences():
+    if request.method == 'GET':
+        return render_template('jira_credentials.html', user=current_user)
+    current_user.cc_login = request.form['cc_login']
+    current_user.jira_login = request.form['jira_login']
+    obj = AES.new('&]PV1y7{l?P+k_a', AES.MODE_ECB)
+    current_user.jira_password = obj.encrypt(request.form['jira_password'])
+    db.session.commit()
+    flash('User successfully updated his preferences')
+    logger.info('User {email} successfully updated preferences.'.format(email=current_user.email))
+    return redirect(url_for('/user_preferences'))
 
 @app.errorhandler(Exception)
 def internal_error(ex):
