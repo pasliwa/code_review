@@ -24,6 +24,7 @@ from app.utils import get_reviews, get_revision_status, get_heads, el
 from app.locks import repo_read, repo_write, rework_db_read, rework_db_write
 from app.perfutils import performance_monitor
 from view import SearchForm
+from app.jiraint import jira_integrate
 
 
 logger = logging.getLogger(__name__)
@@ -61,7 +62,6 @@ def refresh_heads():
     db.session.commit()
 
 
-#TODO: No JIRA support
 
 # /                         [GET]   -> /changes/active
 # /changes/refresh          [GET]   -> refrrer
@@ -333,12 +333,13 @@ def changeset_info(cs_id):
 @app.route('/jira_register' , methods=['GET','POST'])
 def jira_register():
     if request.method == 'GET':
-        return render_template('jira_credentials.html')
+        return render_template('jira_credentials.html', user=current_user)
+    current_user.cc_login = request.form['cc_login']
     current_user.jira_login = request.form['jira_login']
     current_user.jira_password = encrypt_password(request.form['jira_password'])
     db.session.commit()
     flash('User successfully registered')
-    return redirect(url_for('index'))
+    return redirect(url_for('/jira_register'))
     
 @app.route('/review')
 def review_new_login_redirect():
@@ -557,11 +558,11 @@ def merge_branch(cs_id):
         if not "no changes found" in ex.message:
             raise 
             
-	try:
-		jira_integrate(cs_id, current_user)
-	except:
-		logger.exception("Exception when integrating with JIRA regarding review %d merge", review.id)
-		
+    try:
+          jira_integrate(cs_id, current_user)
+    except:
+          logger.exception("Exception when integrating with JIRA regarding review %d merge", review.id)
+          
     try:
         html = subject + u"<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
             link=link, sha1=changeset.sha1, owner=changeset.owner)
