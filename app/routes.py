@@ -23,7 +23,7 @@ from app.utils import get_reviews, get_revision_status, get_heads, el
 from app.locks import repo_read, repo_write, rework_db_read, rework_db_write
 from app.perfutils import performance_monitor
 from view import SearchForm
-from app.jiraint import jira_integrate
+from app.jira import jira_integrate
 from crypto import encryption
 
 

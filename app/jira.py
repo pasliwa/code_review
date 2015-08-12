@@ -1,8 +1,10 @@
+from __future__ import absolute_import
+
 from jira import JIRA
 import re
 import datetime
 import logging
-from crypto import decryption
+from app.crypto import decryption
 
 logger = logging.getLogger(__name__)
 
