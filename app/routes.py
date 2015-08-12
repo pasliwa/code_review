@@ -82,6 +82,7 @@ def refresh_heads():
 # /review/<id>              [GET]
 # /changeset/<id>/merge     [POST] -> /changeset/<id>               admin
 # /changelog/<start>/<stop> [GET]
+# /user_preferences         [POST] -> /user_preferences             login
 
 
 @app.route('/')
