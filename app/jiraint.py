@@ -2,7 +2,6 @@ from jira import JIRA
 import re
 import datetime
 import logging
-from Crypto.Cipher import AES
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +34,7 @@ def jira_integrate(changeset, user):
     
     now = datetime.datetime.now()
     current_date = "{day}/{month}/{year}".format(day=now.day, month=now.month, year=now.year)
-    obj = AES.new('&]PV1y7{l?P+k_a', AES.MODE_ECB)
-    jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(user.jira_login, obj.decrypt(user.jira_password)))
+    jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(user.jira_login, user.jira_password))
     
     for token in token_search(changeset.title):
         jira_comment(token, changeset.owner, current_date, 'IWD', 
