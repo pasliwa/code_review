@@ -24,6 +24,7 @@ from app.locks import repo_read, repo_write, rework_db_read, rework_db_write
 from app.perfutils import performance_monitor
 from view import SearchForm
 from app.jiraint import jira_integrate
+from crypto import encryption
 
 
 logger = logging.getLogger(__name__)
@@ -620,7 +621,7 @@ def user_preferences():
         return render_template('jira_credentials.html', user=current_user)
     current_user.cc_login = request.form['cc_login']
     current_user.jira_login = request.form['jira_login']
-    current_user.jira_password = request.form['jira_password']
+    current_user.jira_password = encryption(request.form['jira_password'])
     db.session.commit()
     flash('User successfully updated his preferences')
     logger.info('User {email} successfully updated preferences.'.format(email=current_user.email))
