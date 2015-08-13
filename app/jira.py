@@ -2,7 +2,6 @@ from __future__ import absolute_import
 
 from jira import JIRA
 import re
-import datetime
 import logging
 from app.crypto import decryption
 
@@ -14,6 +13,14 @@ def token_search(commit):
     EVO = re.findall(r'[eE][vV][oO]-[0-9]{1,}', commit)
     IAP = re.findall(r'[iI][aA][pP]-[0-9]{1,}', commit)
     return IWD + EVO + IAP
+    
+def comment_added(sha1, comments):
+    """ Search for sha1 in comments """
+    for comment in comments:
+        if sha1 in comment:
+            return True
+    return False
+
 
 def jira_comment(issue_num, author, date, project, branch,
                                 link_hgweb, link_detektyw, commit_msg):
@@ -35,10 +42,23 @@ def jira_comment(issue_num, author, date, project, branch,
 def jira_integrate(changeset, user):
     """ Add comment to all relevant JIRA tickets """
     
-    now = datetime.datetime.now()
-    current_date = "{day}/{month}/{year}".format(day=now.day, month=now.month, year=now.year)
     jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(user.jira_login, decryption(user.jira_password)))
     
     for token in token_search(changeset.title):
-        jira_comment(token, changeset.owner, current_date, 'IWD', 
-                    changeset.review.target,changeset.sha1, changeset.review_id, changeset.title)
+        jira_comment(token, changeset.owner, changeset.created_date, 'IWD', 
+                        changeset.review.target, changeset.sha1, changeset.review_id, changeset.title)
+
+def integrate_all_old(jira_login, enc_jira_password):
+    """ Add comment to all relevant historical JIRA tickets """
+    
+    jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(jira_login, decryption(enc_jira_password)))
+    
+    for changeset in Changeset.query.filter(Changeset.status == "MERGED"):
+        for token in token_search(changeset.title):
+            issue = jira.issue(token)
+            comments = [comment for comment in issue.fields.comment.comments]
+            if not comment_added(changeset.sha1, comments):
+                jira_comment(token, changeset.owner, changeset.created_date, 'IWD', 
+                                changeset.review.target, changeset.sha1, changeset.review_id, changeset.title)
+
+            
