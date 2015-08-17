@@ -22,7 +22,7 @@ def comment_added(sha1, comments):
     return False
 
 
-def jira_comment(issue_num, author, date, project, branch,
+def jira_comment(jira, issue_num, author, date, project, branch,
                                 link_hgweb, link_detektyw, commit_msg):
     """ Add comment to single relevant JIRA ticket """
     
@@ -45,7 +45,7 @@ def jira_integrate(changeset, user):
     jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(user.jira_login, decryption(user.jira_password)))
     
     for token in token_search(changeset.title):
-        jira_comment(token, changeset.owner, changeset.created_date, 'IWD', 
+        jira_comment(jira, token, changeset.owner, changeset.created_date, 'IWD', 
                         changeset.review.target, changeset.sha1, changeset.review_id, changeset.title)
 
 def integrate_all_old(jira_login, enc_jira_password):
@@ -56,9 +56,8 @@ def integrate_all_old(jira_login, enc_jira_password):
     for changeset in Changeset.query.filter(Changeset.status == "MERGED"):
         for token in token_search(changeset.title):
             issue = jira.issue(token)
-            comments = [comment for comment in issue.fields.comment.comments]
-            if not comment_added(changeset.sha1, comments):
-                jira_comment(token, changeset.owner, changeset.created_date, 'IWD', 
+            if not comment_added(changeset.sha1, issue.fields.comment.comments):
+                jira_comment(jira, token, changeset.owner, changeset.created_date, 'IWD', 
                                 changeset.review.target, changeset.sha1, changeset.review_id, changeset.title)
 
             
