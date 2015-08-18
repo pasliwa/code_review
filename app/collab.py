@@ -58,7 +58,7 @@ class CodeCollaborator(object):
         logger.info("Executing command: %s", cmd)
         try:
             output = subprocess.check_output(cmd, cwd=self.repo_path,
-                                             shell=True)
+                                             stderr=subprocess.STDOUT, shell=True)
         except subprocess.CalledProcessError, cpe:
             logger.error("Shell command returned non-zero status:\n"
                          "Command: %s\nOutput: %s\nReturn code: %s",
