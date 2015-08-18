@@ -53,7 +53,7 @@ def integrate_all_old(jira_login, enc_jira_password):
     
     jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(jira_login, decryption(enc_jira_password)))
     
-    for changeset in Changeset.query.filter(Changeset.status == "MERGED"):
+    for changeset in Changeset.query.filter(Changeset.Review.status == "MERGED").order_by(Changeset.created_date.asc()):
         for token in token_search(changeset.title):
             issue = jira.issue(token)
             if not comment_added(changeset.sha1, issue.fields.comment.comments):
