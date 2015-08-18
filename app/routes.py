@@ -350,7 +350,7 @@ def review_new():
         logger.info("Revision {0} is {1} and cannot be inspected.".format(revision.node, rev_status))
         return redirect(url_for('changes_new'))
     #TODO: Multiple bookmarks
-    review = Review(owner=revision.name, owner_email=revision.email, title=revision.title,
+    review = Review(owner=current_user.name, owner_email=current_user.email, title=revision.title,
                     bookmark=el(revision.bookmarks), status="ACTIVE")
     targets = repo.hg_targets(revision.rev, app.config['PRODUCT_BRANCHES'])
     review.add_targets(targets)
@@ -551,7 +551,7 @@ def merge_branch(cs_id):
         html = subject + u"<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
             link=link, sha1=changeset.sha1, owner=changeset.owner)
 
-        recpts = [changeset.owner_email]
+        recpts = [review.owner_email]
         recpts = list(set(recpts))
 
         msg = Message(subject,
