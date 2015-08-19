@@ -177,6 +177,14 @@ def changes_merged(page):
     form = SearchForm()
     data = get_reviews("MERGED", page, request)
     return render_template('merged.html', reviews=data["r"], form=form, pagination=data["p"])
+    
+    
+@app.route('/changes/abandoned', defaults={'page': 1})
+@app.route('/changes/abandoned/<int:page>')
+def changes_abandoned(page):
+    form = SearchForm()
+    data = get_reviews("ABANDONED", page, request)
+    return render_template('abandoned.html', reviews=data["r"], form=form, pagination=data["p"])
 
 
 @app.route('/changeset/<int:cs_id>/inspect')
@@ -418,6 +426,7 @@ def review_abandon(review_id):
         logger.error("Review %d doesn't exist", review_id)
         return redirect(url_for("index"))
     review.status = "ABANDONED"
+    review.abandoned_date = datetime.datetime.utcnow()
     Head.query.filter(Head.review_id == review.id).update({'review_id': None})
     db.session.commit()
     repo.hg_sync()
@@ -609,7 +618,7 @@ def changelog(start, stop):
 @login_required
 def user_preferences():
     if request.method == 'GET':
-        return render_template('jira_credentials.html', user=current_user)
+        return render_template('preferences.html', user=current_user)
     current_user.name = request.form['name']
     current_user.cc_login = request.form['cc_login']
     current_user.jira_login = request.form['jira_login']

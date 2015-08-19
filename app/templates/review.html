@@ -116,8 +116,8 @@
                         {% for c in review.changesets %}
                         <tr>
                             <td>{{ c.id }}</td>
-                            <td>{{ c.title }}</td>
-                            <td><a href="{{ url_for("changeset_info", cs_id=c.id) }}"><code>{{ c.sha1 }}</code></a></td>
+                            <td><a href="{{ url_for("changeset_info", cs_id=c.id) }}">{{ c.title }}</a></td>
+                            <td><a href="http://hg.genesyslab.com/hgweb.cgi/iwd8/rev/{{ c.sha1 }}"><code>{{ c.sha1 }}</code></a></td>
                             <td>{{ c.created_date }}</td>
                             <td>
                                 {% if c.status == "ACTIVE" %}

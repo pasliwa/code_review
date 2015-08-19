@@ -6,7 +6,7 @@
 {% include "messages.html" %}
 
 {% if form %}
-    <form class="form-inline" role="form" method="GET" action="{{ url_for("changes_active") }}">
+    <form class="form-inline" role="form" method="GET" action="{{ url_for("changes_abandoned") }}">
         {# {{ form.hidden_tag() }}  #}
         <div class="form-group">
             <label class="sr-only" for="title">Author</label>
@@ -21,7 +21,7 @@
 {% endif %}
 
 
-<h1>Active changes</h1>
+<h1>Abandoned changes</h1>
 
     <table class="table table-hover">
         <thead>
@@ -29,7 +29,7 @@
             <th>No.</th>
             <th>Changeset</th>
             <th>Author</th>
-            <th>Created</th>
+            <th>Abandoned</th>
             <th>Bookmark</th>
             <th>Target Branch</th>
             <th>Status</th>
@@ -44,7 +44,7 @@
                     <a href="{{ url_for("review_info", review_id=r.id) }}">{{ r.title }} </a>
                 </td>
                 <td>{{ r.owner }}</td>
-                <td>{{ r.created_date }}</td>
+                <td>{{ r.abandoned_date }}</td>
                 <td>{{ r.bookmark }}</td>
                 <td>{{ r.target }}</td>
                 <td>

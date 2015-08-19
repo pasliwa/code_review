@@ -50,6 +50,7 @@
                  <li class="{% if type == "new" %}active{% endif %}"><a href="{{ url_for("changes_new") }}">New</a></li>
                  <li class="{% if type == "active" %}active{% endif %}"><a href="{{ url_for("changes_active") }}">Active</a></li>
                  <li class="{% if type == "merged" %}active{% endif %}"><a href="{{ url_for("changes_merged") }}">Merged</a></li>
+                 <li class="{% if type == "abandoned" %}active{% endif %}"><a href="{{ url_for("changes_abandoned") }}">Abandoned</a></li>
                  {% if user.is_authenticated() %}
                  <li class="{% if type == "user_preferences" %}active{% endif %}"><a href="{{ url_for("user_preferences") }}">User preferences</a></li>
                  {% endif %}

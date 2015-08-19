@@ -144,6 +144,7 @@ class Review(db.Model):
     owner_email = db.Column(db.String(120))
     created_date = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     close_date = db.Column(db.DateTime)
+    abandoned_date = db.Column(db.DateTime)
     title = db.Column(db.String(120))
     bookmark = db.Column(db.String(120))
     status = db.Column(db.String(20))   # ACTIVE, MERGED, ABANDONED
