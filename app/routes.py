@@ -22,7 +22,9 @@ from app.view import Pagination
 from app.utils import get_reviews, get_revision_status, get_heads, el
 from app.locks import repo_read, repo_write, rework_db_read, rework_db_write
 from app.perfutils import performance_monitor
-from view import SearchForm
+from app.view import SearchForm
+from app.jira import jira_integrate
+from app.crypto import encryption
 
 
 logger = logging.getLogger(__name__)
@@ -60,7 +62,6 @@ def refresh_heads():
     db.session.commit()
 
 
-#TODO: No JIRA support
 
 # /                         [GET]   -> /changes/active
 # /changes/refresh          [GET]   -> refrrer
@@ -82,6 +83,8 @@ def refresh_heads():
 # /review/<id>              [GET]
 # /changeset/<id>/merge     [POST] -> /changeset/<id>               admin
 # /changelog/<start>/<stop> [GET]
+# /user_preferences         [GET]                                   login
+# /user_preferences         [POST] -> /user_preferences             login
 
 
 @app.route('/')
@@ -329,7 +332,17 @@ def changeset_info(cs_id):
     return render_template("changeset.html", review=review, cs=cs, next=next_,
                            prev=prev)
 
-
+@app.route('/jira_register' , methods=['GET','POST'])
+def jira_register():
+    if request.method == 'GET':
+        return render_template('jira_credentials.html', user=current_user)
+    current_user.cc_login = request.form['cc_login']
+    current_user.jira_login = request.form['jira_login']
+    current_user.jira_password = encrypt_password(request.form['jira_password'])
+    db.session.commit()
+    flash('User successfully registered')
+    return redirect(url_for('/jira_register'))
+    
 @app.route('/review')
 def review_new_login_redirect():
     return redirect(url_for('changes_new'))
@@ -545,8 +558,13 @@ def merge_branch(cs_id):
             repo.hg_push()
     except HgException, ex:
         if not "no changes found" in ex.message:
-            raise
-
+            raise 
+            
+    try:
+          jira_integrate(changeset, current_user)
+    except:
+          logger.exception("Exception when integrating with JIRA regarding review %d merge", review.id)
+          
     try:
         html = subject + u"<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
             link=link, sha1=changeset.sha1, owner=changeset.owner)
@@ -597,6 +615,18 @@ def changelog(start, stop):
 
     return render_template("log.html", start=start, stop=stop, jira_list=sorted(jira_list.items()))
 
+@app.route('/user_preferences' , methods=['GET','POST'])
+@login_required
+def user_preferences():
+    if request.method == 'GET':
+        return render_template('jira_credentials.html', user=current_user)
+    current_user.cc_login = request.form['cc_login']
+    current_user.jira_login = request.form['jira_login']
+    current_user.jira_password = encryption(request.form['jira_password'])
+    db.session.commit()
+    flash('User successfully updated his preferences')
+    logger.info('User {email} successfully updated preferences.'.format(email=current_user.email))
+    return redirect(url_for('user_preferences'))
 
 @app.errorhandler(Exception)
 def internal_error(ex):

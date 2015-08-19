@@ -23,6 +23,11 @@ def db_create():
                                            cc_login="maciej")
         user_datastore.add_role_to_user(admin, admin_role)
         user_datastore.add_role_to_user(admin, user_role)
+        
+        admin = user_datastore.create_user(email="Piotr.Sliwa@genesys.com", password=encrypt_password("password"),
+                                           cc_login="piotr")
+        user_datastore.add_role_to_user(admin, admin_role)
+        user_datastore.add_role_to_user(admin, user_role)
 
         db.session.commit()
 
