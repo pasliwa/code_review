@@ -332,16 +332,6 @@ def changeset_info(cs_id):
     return render_template("changeset.html", review=review, cs=cs, next=next_,
                            prev=prev)
 
-@app.route('/jira_register' , methods=['GET','POST'])
-def jira_register():
-    if request.method == 'GET':
-        return render_template('jira_credentials.html', user=current_user)
-    current_user.cc_login = request.form['cc_login']
-    current_user.jira_login = request.form['jira_login']
-    current_user.jira_password = encrypt_password(request.form['jira_password'])
-    db.session.commit()
-    flash('User successfully registered')
-    return redirect(url_for('/jira_register'))
     
 @app.route('/review')
 def review_new_login_redirect():
@@ -620,6 +610,7 @@ def changelog(start, stop):
 def user_preferences():
     if request.method == 'GET':
         return render_template('jira_credentials.html', user=current_user)
+    current_user.name = request.form['name']
     current_user.cc_login = request.form['cc_login']
     current_user.jira_login = request.form['jira_login']
     current_user.jira_password = encryption(request.form['jira_password'])
