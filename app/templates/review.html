@@ -13,9 +13,9 @@
                 <div><span class="col-lg-2 text-right">Title</span><span><b>{{ review.title }}</b></span></div>
                 <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner }} (<a
                         href="mailto:{{ review.owner_email }}">{{ review.owner_email }}</a>)</span></div>
-                <div><span class="col-lg-2 text-right">Created</span><span>{{ review.created_date }}</span></div>
+                <div><span class="col-lg-2 text-right">Created</span><span>{{ utc_to_local(review.created_date) }}</span></div>
                 {% if review.close_date is not none %}
-                    <div><span class="col-lg-2 text-right">Closed</span><span>{{ review.close_date }}</span></div>
+                    <div><span class="col-lg-2 text-right">Closed</span><span>{{ utc_to_local(review.close_date) }}</span></div>
                 {% endif %}
                 <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ review.bookmark }} &nbsp;</span></div>
                 <div><span class="col-lg-2 text-right">Status</span>
@@ -118,7 +118,7 @@
                             <td>{{ c.id }}</td>
                             <td><a href="{{ url_for("changeset_info", cs_id=c.id) }}">{{ c.title }}</a></td>
                             <td><a href="http://hg.genesyslab.com/hgweb.cgi/iwd8/rev/{{ c.sha1 }}"><code>{{ c.sha1 }}</code></a></td>
-                            <td>{{ c.created_date }}</td>
+                            <td>{{ utc_to_local(c.created_date) }}</td>
                             <td>
                                 {% if c.status == "ACTIVE" %}
                                     <span class="label label-success">
