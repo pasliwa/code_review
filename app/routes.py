@@ -2,6 +2,7 @@ import logging
 import datetime
 import re
 import os.path
+import pytz
 from itertools import chain
 from urlparse import urlparse, urljoin
 
@@ -28,7 +29,11 @@ from app.crypto import encryption
 
 
 logger = logging.getLogger(__name__)
+local_tz = pytz.timezone('Europe/Warsaw')
 
+def utc_to_local(utc_dt):
+    local_dt = utc_dt.replace(tzinfo=pytz.utc).astimezone(local_tz)
+    return local_tz.normalize(local_dt)
 
 @app.context_processor
 def inject_user():

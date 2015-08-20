@@ -44,7 +44,7 @@
                     <a href="{{ url_for("review_info", review_id=r.id) }}">{{ r.title }} </a>
                 </td>
                 <td>{{ r.owner }}</td>
-                <td>{{ r.created_date }}</td>
+                <td>{{ utc_to_local(r.created_date) }}</td>
                 <td>{{ r.bookmark }}</td>
                 <td>{{ r.target }}</td>
                 <td>
