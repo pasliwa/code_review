@@ -6,7 +6,7 @@ import pytz
 from itertools import chain
 from urlparse import urlparse, urljoin
 
-from flask import render_template, flash, redirect, url_for
+from flask import render_template, flash, redirect, url_for, send_from_directory
 # noinspection PyUnresolvedReferences
 from flask.ext.login import current_user
 # noinspection PyUnresolvedReferences
@@ -15,6 +15,7 @@ from flask.globals import request
 # noinspection PyUnresolvedReferences
 from flask.ext.security import login_required, roles_required, user_registered
 from sqlalchemy.sql.expression import and_
+
 
 from app import app, db, repo, jenkins, mail, user_datastore
 from app.hgapi.hgapi import HgException
@@ -28,12 +29,20 @@ from app.jira import jira_integrate
 from app.crypto import encryption
 
 
+
+
+
 logger = logging.getLogger(__name__)
 local_tz = pytz.timezone('Europe/Warsaw')
 
 def utc_to_local(utc_dt):
     local_dt = utc_dt.replace(tzinfo=pytz.utc).astimezone(local_tz)
     return local_tz.normalize(local_dt)
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 @app.context_processor
 def inject_user():
