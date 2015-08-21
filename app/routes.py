@@ -86,6 +86,8 @@ def refresh_heads():
 # /changes/active/<page>    [GET]
 # /changes/merged           [GET]
 # /changes/merged/<page>    [GET]
+# /changes/abandoned        [GET]
+# /changes/abandoned/<page> [GET]
 # /changeset/<id>/inspect   [POST] -> /changeset/<id>               login
 # /changeset/<id>/build     [POST] -> /changeset/<id>               login
 # /changeset/<id>/abandon   [POST] -> /changeset/<id>               admin
@@ -99,6 +101,7 @@ def refresh_heads():
 # /changelog/<start>/<stop> [GET]
 # /user_preferences         [GET]                                   login
 # /user_preferences         [POST] -> /user_preferences             login
+
 
 
 @app.route('/')
@@ -412,6 +415,7 @@ def review_rework(review_id):
     #TODO: Multiple bookmarks
     changeset = Changeset(revision.name, revision.email, revision.title,
                           revision.node, el(revision.bookmarks), "ACTIVE")
+    review.status = "ACTIVE"
     changeset.review_id = review.id
     db.session.add(changeset)
     Head.query.filter(Head.node == revision.node).delete()
@@ -599,6 +603,10 @@ def merge_branch(cs_id):
         Head.query.filter(Head.review_id == review.id).update({'review_id': None})
         db.session.commit()
         flash("Review has been closed", "notice")
+    else:
+        review.status = "IN CONFLICT"
+        db.session.commit()
+        flash("Merge conflict", "notice")
 
     return redirect(url_for('index'))
 
