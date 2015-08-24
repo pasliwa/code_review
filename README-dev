@@ -1,0 +1,57 @@
+Preparing development environment for code_review:
+
+ 1. Create new directory for development
+	mkdir Detektyw
+ 2. Enter Detektyw directory and clone git repository
+	cd Detektyw
+	git clone ssh://<login>@pl-byd-srv01.emea.int.genesyslab.com:29418/PROTO/code_review
+ 3. Enter code_review and execute 'make dev'
+	cd code_review
+	make dev	
+ 4. Create virtualenv environment
+	mkdir ~/.virtualenv
+	virtualenv --no-site-packages ~/.virtualenv/code_review
+        . ~/.virtualenv/code_review/activate
+ 5. Download and install dependencies
+	pip install -r requirements.txt
+ 6. Open new window, enter directory Detektyw/hgweb and start ./hgweb script
+	cd Detektyw/hgweb
+	./hgweb
+ 7. In window with activated virtualenv create database and initialize repository
+	python db_create.py
+	python init_repo.py
+ 8. Download jenkins.war version 1.535 and put it in Detektyw/jenkins directory. Download link:
+	http://mirrors.jenkins-ci.org/war/1.535/
+ 9. Open new window, enter directory Detektyw/jenkins and start ./start-jenkins.sh
+	cd Detektyw/jenkins
+	./start-jenkins.sh
+10. In window with activated virtualenv start Detektyw
+	python run.py
+11. Open new window, enter directory Detektyw/work and clone repository
+	hg clone http://localhost:8000/project_1
+
+
+Starting development environment
+1. Open new window, enter directory hgweb, start ./hgweb script
+2. Open new window, enter directory jenkins, start ./start-jenkins.sh script
+3. Open new window, enter directory code_review, activate virtualenv and start Detektyw
+	. ~/.virtualenv/code_review/activate
+	python run.py
+
+
+Executing basic test
+1. Enter directory work/project_1
+2. Checkout desired version of code and create new bookmark
+	hg update v2.0
+	hg bookmark iap-49
+3. Modify the project and commit the changes
+	vim <some file>
+	hg commit -m "IAP-49: Test commit"
+4. Push changes to hgweb
+	hg push -f -B iap-49
+5. Go to Detektyw New page and click 'Refresh'
+6. Click 'Start Review'
+7. Click 'Run Jenkins build'
+8. Click 'New inspection'
+9. Click 'Merge'
+

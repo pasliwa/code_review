@@ -7,7 +7,7 @@ from app import logs
 from app.mercurial import Repo
 
 logging.getLogger().setLevel(logging.INFO)
-logging.getLogger().setHandler(logs.get_console_handler())
+logging.getLogger().addHandler(logs.get_console_handler())
 
 with app.app_context():
     url = app.config["HG_PROD"]
