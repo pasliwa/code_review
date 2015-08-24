@@ -55,3 +55,10 @@ Executing basic test
 8. Click 'New inspection'
 9. Click 'Merge'
 
+
+Important links:
+Detektyw - http://localhost:5000/
+Jenkins  - http://localhost:8110/ (username/password: jenkins/jenkins)
+hgweb    - http://localhost:8000/
+
+
