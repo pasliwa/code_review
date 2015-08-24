@@ -1,0 +1,20 @@
+#!/bin/bash
+
+if [ "$3" == "admin" ]
+then
+	if [[ "$4" == "review" && "$5" == "create" ]]
+	then
+		echo "Review #1234"
+	fi
+	if [ "$4" == "review-xml" ]
+	then
+		echo "Completed"
+	fi
+fi
+
+if [ "$3" == "addhgdiffs" ]
+then
+	echo "Changes successfully attached"
+fi
+
+exit 0

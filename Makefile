@@ -24,6 +24,8 @@ dev:
 	mkdir ../jenkins
 	cp jenkins/start-jenkins.sh.dev ../jenkins/start-jenkins.sh
 	unzip jenkins/workspace.zip -d ../jenkins
+	mkdir ../ccollab-client
+	cp ccollab-client/ccollab ../ccollab-client
 	mkdir ../repository
 	mkdir ../work
 
