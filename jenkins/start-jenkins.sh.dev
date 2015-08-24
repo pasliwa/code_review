@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export JENKINS_HOME=$PWD/workspace
+JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+$JAVA_HOME/bin/java -XX:PermSize=512M -XX:MaxPermSize=2048M -Xmn128M -Xms1024M -Xmx2048M -jar ./jenkins.war --httpPort=8110 

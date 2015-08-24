@@ -6,17 +6,26 @@ prd:
 	cp jenkins/restart-jenkins.sh.prod $(HOME)/jenkins/restart-jenkins.sh
 	cp jenkins/stop-jenkins.sh $(HOME)/jenkins/stop-jenkins.sh
 	cp config.py.prod config.py
-	rm config.pyc
+	rm -f config.pyc
 	sudo /sbin/service ci start
-	rm cron/crontab || :
+	rm -f cron/crontab
 	echo "30 1 * * * $(shell pwd)/cron/clear_kloTables" >> cron/crontab
 	echo "00 3 * * * $(HOME)/jenkins/restart-jenkins.sh" >> cron/crontab
 	crontab cron/crontab
-	rm cron/crontab
+	rm -f cron/crontab
 
 dev:
 	cp config.py.dev config.py
-	rm config.pyc
+	rm -f config.pyc
+	mkdir ../hgweb
+	cp hgweb/hgweb ../hgweb/
+	cp hgweb/webdir.conf ../hgweb
+	unzip hgweb/project_1.zip -d ../hgweb
+	mkdir ../jenkins
+	cp jenkins/start-jenkins.sh.dev ../jenkins/start-jenkins.sh
+	unzip jenkins/workspace.zip -d ../jenkins
+	mkdir ../repository
+	mkdir ../work
 
 tst:
 	sudo /sbin/service ci_test stop || :
@@ -26,11 +35,11 @@ tst:
 	cp jenkins/restart-jenkins.sh.test $(HOME)/jenkins/restart-jenkins.sh
 	cp jenkins/stop-jenkins.sh $(HOME)/jenkins/stop-jenkins.sh
 	cp config.py.test config.py
-	rm config.pyc
+	rm -f config.pyc
 	sudo /sbin/service ci_test start
-	rm cron/crontab || :
+	rm -f cron/crontab
 	echo "30 1 * * * $(shell pwd)/cron/clear_kloTables" >> cron/crontab
 	echo "00 1 * * * $(HOME)/jenkins/restart-jenkins.sh" >> cron/crontab
 	crontab cron/crontab
-	rm cron/crontab
+	rm -f cron/crontab
 
