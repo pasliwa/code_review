@@ -43,7 +43,11 @@
                 <td>
                     <a href="{{ url_for("review_info", review_id=r.id) }}">{{ r.title }} </a>
                 </td>
-                <td>{{ r.owner }}</td>
+                {% if r.owner == "None" %}
+                    <td>{{ r.owner }}</td>
+                {% else %}
+                    <td>{{ r.owner_email }}</td>
+                {% endif %}
                 <td>{{ utc_to_local(r.close_date) }}</td>
                 <td>{{ r.bookmark }}</td>
                 <td>{{ r.target }}</td>

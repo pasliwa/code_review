@@ -32,11 +32,7 @@ from app.crypto import encryption
 
 
 logger = logging.getLogger(__name__)
-local_tz = pytz.timezone('Europe/Warsaw')
 
-def utc_to_local(utc_dt):
-    local_dt = utc_dt.replace(tzinfo=pytz.utc).astimezone(local_tz)
-    return local_tz.normalize(local_dt)
 
 @app.route('/favicon.ico')
 def favicon():

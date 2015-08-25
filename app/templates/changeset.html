@@ -11,8 +11,13 @@
         </div>
         <div class="panel-body">
             <div><span class="col-lg-2 text-right">Title</span><span><b>{{ review.title }}</b></span></div>
-            <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner }} (<a
+            {% if review.owner == "None" %}
+                    <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner_mail }} (<a
                     href="mailto:{{ review.owner_email }}">{{ review.owner_email }}</a>)</span></div>
+            {% else %}
+                    <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner }} (<a
+                    href="mailto:{{ review.owner_email }}">{{ review.owner_email }}</a>)</span></div>
+            {% endif %}
             <div><span class="col-lg-2 text-right">Created</span><span>{{ utc_to_local(review.created_date) }}</span></div>
             {% if review.close_date is not none %}
                 <div><span class="col-lg-2 text-right">Closed</span><span>{{ utc_to_local(review.close_date) }}</span></div>
@@ -114,8 +119,14 @@
         </div>
         <div class="panel-body">
             <div><span class="col-lg-2 text-right">Title</span><span><b>{{ cs.title }}</b></span></div>
-            <div><span class="col-lg-2 text-right">Owner</span><span>{{ cs.owner }} (<a
+            {% if cs.owner == "None" %}
+                    <div><span class="col-lg-2 text-right">Owner</span><span>{{ cs.owner_mail }} (<a
                     href="mailto:{{ cs.owner_email }}">{{ cs.owner_email }}</a>)</span></div>
+            {% else %}
+                    <div><span class="col-lg-2 text-right">Owner</span><span>{{ cs.owner }} (<a
+                    href="mailto:{{ cs.owner_email }}">{{ cs.owner_email }}</a>)</span></div>
+            {% endif %}
+            
             <div><span class="col-lg-2 text-right">Created</span><span>{{ utc_to_local(cs.created_date) }}</span></div>
             <div><span class="col-lg-2 text-right">SHA1</span><span><a href="http://hg.genesyslab.com/hgweb.cgi/iwd8/rev/{{ cs.sha1 }}"><code>{{ cs.sha1 }}</code></a>&nbsp;</span></div>
             <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ cs.bookmark }}&nbsp;</span></div>

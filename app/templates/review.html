@@ -11,8 +11,14 @@
             </div>
             <div class="panel-body">
                 <div><span class="col-lg-2 text-right">Title</span><span><b>{{ review.title }}</b></span></div>
-                <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner }} (<a
+                {% if review.owner == "None" %}
+                    <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner_mail }} (<a
                         href="mailto:{{ review.owner_email }}">{{ review.owner_email }}</a>)</span></div>
+                {% else %}
+                    <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner }} (<a
+                        href="mailto:{{ review.owner_email }}">{{ review.owner_email }}</a>)</span></div>
+                {% endif %}
+                
                 <div><span class="col-lg-2 text-right">Created</span><span>{{ utc_to_local(review.created_date) }}</span></div>
                 {% if review.close_date is not none %}
                     <div><span class="col-lg-2 text-right">Closed</span><span>{{ utc_to_local(review.close_date) }}</span></div>
