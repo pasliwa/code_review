@@ -350,7 +350,7 @@ def changeset_info(cs_id):
         .order_by(Changeset.created_date).first()
     review = Review.query.filter(Review.id == cs.review_id).first()
     is_admin = False
-    if "admin" in current_user.role.name:
+    if "admin" in current_user.roles:
             is_admin = True
     
     return render_template("changeset.html", review=review, is_admin=is_admin, cs=cs,  next=next_,
