@@ -494,9 +494,11 @@ def review_info(review_id):
     is_admin = False
     if "admin" in current_user.roles:
             is_admin = True
-
+            
+    changeset=review.changesets[0]
+    
     link_hgweb_static = app.config["HG_PROD"] + "/"
-    return render_template("review.html", review=review, descendants=reworks, is_admin=is_admin, link_hgweb_static=link_hgweb_static)
+    return render_template("review.html", review=review, descendants=reworks, is_admin=is_admin, link_hgweb_static=link_hgweb_static, changeset=changeset)
 
 
 @app.route('/changeset/<int:cs_id>/merge')

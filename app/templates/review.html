@@ -87,15 +87,15 @@
         </div>
         <div class="panel-body">
             {# merge #}
-            {% if cs.status != "ABANDONED" and cs.review.status != "ABANDONED" %}
+            {% if changeset.status != "ABANDONED" and changeset.review.status != "ABANDONED" %}
             {# TODO: Should display popup window about irreversibility of merge. #}
                 <div>
-                    <form method="post" class="form-horizontal" action="{{ url_for("merge_branch", cs_id=cs.id) }}">
+                    <form method="post" class="form-horizontal" action="{{ url_for("merge_branch", cs_id=changeset.id) }}">
                         <div class="form-group">
                             <label class="col-sm-4 control-label">Merge this changeset with "{{ review.target }}"
                                 branch</label>
                             <button class="btn btn-danger btn-sm" type="submit"><span
-                                    class="glyphicon glyphicon-check"></span> merge
+                                    class="glyphicon glyphicon-check"></span> Merge
                             </button>
                         </div>
                     </form>
@@ -117,9 +117,9 @@
                 This changeset is abandoned.
             {% endif %}
         </div>
-    </div>
-    </div>
-    {% endif %}
+        </div>
+    {% endif %} 
+
 
         <div class="panel panel-info">
             <div class="panel-heading">
