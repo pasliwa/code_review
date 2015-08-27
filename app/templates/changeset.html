@@ -132,7 +132,7 @@
                 {% for b in cs.builds %}
                     <tr>
                         <td>{{ b.build_number }}</td>
-                        <td>{{ b.scheduled }}</td>
+                        <td>{{ utc_to_local(b.scheduled) }}</td>
                         <td><a target="_blank" href="{{ b.build_url }}">{{ b.build_url }}</a></td>
                         <td>
                             {% if b.status == "Running" %}

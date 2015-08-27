@@ -32,6 +32,8 @@ from app import utils
 from app import routes
 
 def utc_to_local(utc_dt):
+    if not type(utc_dt) is datetime:
+        utc_dt = datetime.strptime(utc_dt, '%Y-%m-%d %H:%M:%S.%f')
     local_tz = pytz.timezone('Europe/Warsaw')
     local_dt = utc_dt.replace(tzinfo=pytz.utc).astimezone(local_tz)
     return local_tz.normalize(local_dt).strftime("%Y-%m-%d %H:%M")
