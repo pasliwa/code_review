@@ -6,6 +6,7 @@ from flask.ext.security import Security, SQLAlchemyUserDatastore
 # noinspection PyUnresolvedReferences
 from flask.ext.sqlalchemy import SQLAlchemy
 import pytz
+from datetime import datetime
 
 app = Flask(__name__)
 app.config.from_object('config')
@@ -33,6 +34,6 @@ from app import routes
 def utc_to_local(utc_dt):
     local_tz = pytz.timezone('Europe/Warsaw')
     local_dt = utc_dt.replace(tzinfo=pytz.utc).astimezone(local_tz)
-    return local_tz.normalize(local_dt)
+    return local_tz.normalize(local_dt).strftime("%Y-%m-%d %H:%M")
     
 app.jinja_env.globals.update(utc_to_local=utc_to_local)
