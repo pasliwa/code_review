@@ -88,31 +88,35 @@
         <div class="panel-body">
             {# merge #}
             {% if changeset.status != "ABANDONED" and changeset.review.status != "ABANDONED" %}
-            {# TODO: Should display popup window about irreversibility of merge. #}
-                <div>
-                    <form method="post" class="form-horizontal" action="{{ url_for("merge_branch", cs_id=changeset.id) }}">
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label">Merge the active changeset with "{{ review.target }}"
-                                branch</label>
-                            <button class="btn btn-danger btn-sm" type="submit"><span
-                                    class="glyphicon glyphicon-check"></span> Merge
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                {% if changeset.review.status != "MERGED"%}
+                {# TODO: Should display popup window about irreversibility of merge. #}
+                    <div>
+                        <form method="post" class="form-horizontal" action="{{ url_for("merge_branch", cs_id=changeset.id) }}">
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Merge the active changeset with "{{ review.target }}"
+                                    branch</label>
+                                <button class="btn btn-danger btn-sm" type="submit"><span
+                                        class="glyphicon glyphicon-check"></span> Merge
+                                </button>
+                            </div>
+                        </form>
+                    </div>
 
-                <div>
-                    <form class="form-horizontal" method="post"
-                          action="{{ url_for("review_abandon", review_id=review.id) }}">
-                        <div class="form-group">
-                            <label class="col-sm-4 control-label">Abandon this review</label>
-                            <button class="btn btn-danger btn-sm confirmation-needed"
-                                    data-question="Are you sure you want to ABANDON this review?" type="submit"><span
-                                    class="glyphicon glyphicon-trash"></span> Abandon
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <div>
+                        <form class="form-horizontal" method="post"
+                              action="{{ url_for("review_abandon", review_id=review.id) }}">
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label">Abandon this review</label>
+                                <button class="btn btn-danger btn-sm confirmation-needed"
+                                        data-question="Are you sure you want to ABANDON this review?" type="submit"><span
+                                        class="glyphicon glyphicon-trash"></span> Abandon
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                {% else %}
+                This review is merged.
+                {% endif %}
             {% else %}
                 This changeset is abandoned.
             {% endif %}
