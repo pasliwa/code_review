@@ -4,6 +4,7 @@ from jira import JIRA
 import re
 import logging
 from app.crypto import decryption
+from app import app
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ def jira_comment(jira, issue_num, author, date, project, branch,
     
     comment = 'Code delivered by *{author}* on {date}.\n'.format(author=author, date=date)
     comment += 'Branch: {project}/{branch}\n'.format(project=project, branch=branch)
-    comment += 'Commit: http://hg.genesyslab.com/hgweb.cgi/iwd8/rev/{link_hgweb}\n'.format(link_hgweb=link_hgweb)
+    comment += 'Commit: {link_hgweb}\n'.format(link_hgweb=link_hgweb)
     comment += 'Inspection: http://pl-byd-srv01.emea.int.genesyslab.com/ci/review/{link_detektyw}\n'.format(link_detektyw=link_detektyw)
     comment += 'Commit message:\n{noformat}'
     comment += '\n{commit_msg}\n'.format(commit_msg=commit_msg)
@@ -43,10 +44,11 @@ def jira_integrate(changeset, user):
     """ Add comment to all relevant JIRA tickets """
     
     jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(user.jira_login, decryption(user.jira_password)))
-    
+    link_hgweb_static = app.config[HG_PROD] + "/"
     for token in token_search(changeset.title):
+        link_hgweb += link_hgweb_static + changeset.sha1
         jira_comment(jira, token, changeset.owner, changeset.created_date, 'IWD', 
-                        changeset.review.target, changeset.sha1, changeset.review_id, changeset.title)
+                        changeset.review.target, link_hgweb, changeset.review_id, changeset.title)
 
 def integrate_all_old(jira_login, enc_jira_password):
     """ Add comment to all relevant historical JIRA tickets """

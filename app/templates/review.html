@@ -77,6 +77,50 @@
             </div>
         </div>
 
+{# Shown only to admin #}
+        {% if is_admin %}  
+        <div class="panel panel-danger">
+            
+        <div class="panel-heading">
+          
+            <h3 class="panel-title">Administrative operations</h3>
+        </div>
+        <div class="panel-body">
+            {# merge #}
+            {% if cs.status != "ABANDONED" and cs.review.status != "ABANDONED" %}
+            {# TODO: Should display popup window about irreversibility of merge. #}
+                <div>
+                    <form method="post" class="form-horizontal" action="{{ url_for("merge_branch", cs_id=cs.id) }}">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Merge this changeset with "{{ review.target }}"
+                                branch</label>
+                            <button class="btn btn-danger btn-sm" type="submit"><span
+                                    class="glyphicon glyphicon-check"></span> merge
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div>
+                    <form class="form-horizontal" method="post"
+                          action="{{ url_for("review_abandon", review_id=review.id) }}">
+                        <div class="form-group">
+                            <label class="col-sm-4 control-label">Abandon this review</label>
+                            <button class="btn btn-danger btn-sm confirmation-needed"
+                                    data-question="Are you sure you want to ABANDON this review?" type="submit"><span
+                                    class="glyphicon glyphicon-trash"></span> Abandon
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            {% else %}
+                This changeset is abandoned.
+            {% endif %}
+        </div>
+    </div>
+    </div>
+    {% endif %}
+
         <div class="panel panel-info">
             <div class="panel-heading">
                 <h3 class="panel-title">Changesets
@@ -123,7 +167,7 @@
                         <tr>
                             <td>{{ c.id }}</td>
                             <td><a href="{{ url_for("changeset_info", cs_id=c.id) }}">{{ c.title }}</a></td>
-                            <td><a href="http://hg.genesyslab.com/hgweb.cgi/iwd8/rev/{{ c.sha1 }}"><code>{{ c.sha1 }}</code></a></td>
+                            <td><a href="{{ link_hgweb_static }}{{ c.sha1 }}"><code>{{ c.sha1 }}</code></a></td>
                             <td>{{ utc_to_local(c.created_date) }}</td>
                             <td>
                                 {% if c.status == "ACTIVE" %}

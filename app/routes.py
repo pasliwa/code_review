@@ -349,12 +349,10 @@ def changeset_info(cs_id):
                                         Changeset.review_id == cs.review_id))\
         .order_by(Changeset.created_date).first()
     review = Review.query.filter(Review.id == cs.review_id).first()
-    is_admin = False
-    if "admin" in current_user.roles:
-            is_admin = True
-    
-    return render_template("changeset.html", review=review, is_admin=is_admin, cs=cs,  next=next_,
-                           prev=prev)
+
+    link_hgweb_static = app.config[HG_PROD] + "/"
+    return render_template("changeset.html", review=review, cs=cs,  next=next_,
+                           prev=prev, link_hgweb_static=link_hgweb_static)
 
     
 @app.route('/review')
@@ -492,7 +490,13 @@ def review_info(review_id):
         logger.error("Review %d doesn't exist", review_id)
         return redirect(url_for("index"))
     reworks = Head.query.filter(Head.review_id == review.id).all()
-    return render_template("review.html", review=review, descendants=reworks)
+    
+    is_admin = False
+    if "admin" in current_user.roles:
+            is_admin = True
+
+    link_hgweb_static = app.config[HG_PROD] + "/"
+    return render_template("review.html", review=review, descendants=reworks, is_admin=is_admin, link_hgweb_static=link_hgweb_static)
 
 
 @app.route('/changeset/<int:cs_id>/merge')
