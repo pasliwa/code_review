@@ -495,7 +495,10 @@ def review_info(review_id):
     if "admin" in current_user.roles:
             is_admin = True
             
-    changeset=review.changesets[0]
+    for changeset in review.changesets:
+        if changeset.is_active():
+            break
+            
     
     link_hgweb_static = app.config["HG_PROD"] + "/"
     return render_template("review.html", review=review, descendants=reworks, is_admin=is_admin, link_hgweb_static=link_hgweb_static, changeset=changeset)
