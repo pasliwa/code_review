@@ -350,7 +350,7 @@ def changeset_info(cs_id):
         .order_by(Changeset.created_date).first()
     review = Review.query.filter(Review.id == cs.review_id).first()
 
-    link_hgweb_static = app.config["HG_PROD"] + "/"
+    link_hgweb_static = app.config["HG_PROD"] + "/rev/"
     return render_template("changeset.html", review=review, cs=cs,  next=next_,
                            prev=prev, link_hgweb_static=link_hgweb_static)
 
@@ -500,7 +500,7 @@ def review_info(review_id):
             break
             
     
-    link_hgweb_static = app.config["HG_PROD"] + "/"
+    link_hgweb_static = app.config["HG_PROD"] + "/rev/"
     return render_template("review.html", review=review, descendants=reworks, is_admin=is_admin, link_hgweb_static=link_hgweb_static, changeset=changeset)
 
 

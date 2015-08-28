@@ -44,7 +44,7 @@ def jira_integrate(changeset, user):
     """ Add comment to all relevant JIRA tickets """
     
     jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(user.jira_login, decryption(user.jira_password)))
-    link_hgweb_static = app.config[HG_PROD] + "/"
+    link_hgweb_static = app.config[HG_PROD] + "/rev/"
     for token in token_search(changeset.title):
         link_hgweb += link_hgweb_static + changeset.sha1
         jira_comment(jira, token, changeset.owner, changeset.created_date, 'IWD', 
@@ -54,7 +54,7 @@ def integrate_all_old(jira_login, enc_jira_password):
     """ Add comment to all relevant historical JIRA tickets """
     
     jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(jira_login, decryption(enc_jira_password)))
-    link_hgweb_static = app.config[HG_PROD] + "/"
+    link_hgweb_static = app.config[HG_PROD] + "/rev/"
     for changeset in Changeset.query.filter(Changeset.Review.status == "MERGED").order_by(Changeset.created_date.asc()):
         for token in token_search(changeset.title):
             issue = jira.issue(token)
