@@ -29,12 +29,12 @@ def jira_comment(jira, issue_num, author, date, project, branch,
     
     issue = jira.issue(issue_num)
     
-    comment = 'Code delivered by *{author}* on {date}.\n'.format(author=author, date=date)
-    comment += 'Branch: {project}/{branch}\n'.format(project=project, branch=branch)
+    comment = 'Code delivered by *{author}* on {date}.\n'.format(author=author.encode('utf8'), date=date)
+    comment += 'Branch: {project}/{branch}\n'.format(project=project.encode('utf8'), branch=branch.encode('utf8'))
     comment += 'Commit: {link_hgweb}\n'.format(link_hgweb=link_hgweb)
     comment += 'Inspection: http://pl-byd-srv01.emea.int.genesyslab.com/ci/review/{link_detektyw}\n'.format(link_detektyw=link_detektyw)
     comment += 'Commit message:\n{noformat}'
-    comment += '\n{commit_msg}\n'.format(commit_msg=commit_msg)
+    comment += '\n{commit_msg}\n'.format(commit_msg=commit_msg.encode('utf8'))
     comment += '{noformat}\n'
     
     jira.add_comment(issue, comment)
@@ -44,9 +44,9 @@ def jira_integrate(changeset, user):
     """ Add comment to all relevant JIRA tickets """
     
     jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(user.jira_login, decryption(user.jira_password)))
-    link_hgweb_static = app.config[HG_PROD] + "/rev/"
+    link_hgweb_static = app.config["HG_PROD"] + "/rev/"
     for token in token_search(changeset.title):
-        link_hgweb += link_hgweb_static + changeset.sha1
+        link_hgweb = link_hgweb_static + changeset.sha1
         jira_comment(jira, token, changeset.owner, changeset.created_date, 'IWD', 
                         changeset.review.target, link_hgweb, changeset.review_id, changeset.title)
 
@@ -54,12 +54,12 @@ def integrate_all_old(jira_login, enc_jira_password):
     """ Add comment to all relevant historical JIRA tickets """
     
     jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(jira_login, decryption(enc_jira_password)))
-    link_hgweb_static = app.config[HG_PROD] + "/rev/"
+    link_hgweb_static = app.config["HG_PROD"] + "/rev/"
     for changeset in Changeset.query.filter(Changeset.Review.status == "MERGED").order_by(Changeset.created_date.asc()):
         for token in token_search(changeset.title):
             issue = jira.issue(token)
             if not comment_added(changeset.sha1, issue.fields.comment.comments):
-                link_hgweb += link_hgweb_static + changeset.sha1
+                link_hgweb = link_hgweb_static + changeset.sha1
                 jira_comment(jira, token, changeset.owner, changeset.created_date, 'IWD', 
                                 changeset.review.target, link_hgweb, changeset.review_id, changeset.title)
 
