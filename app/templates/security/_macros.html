@@ -1,9 +1,4 @@
 {% macro render_field_with_errors(field) %}
-    {% if field.errors %}
-      {% for error in field.errors %}
-        <div class="alert alert-danger">{{ error }}</div>
-      {% endfor %}
-    {% endif %}
    <div class="form-group">
     {{ field.label(class_='col-sm-2 control-label') }} <div class="col-sm-4">{{ field(class_='form-control', **kwargs)|safe }}</div>
   </div>
