@@ -6,7 +6,7 @@
 {% include "security/_messages.html" %}
 
 {% with errors = get_flashed_messages(category_filter=["error"]) %}
-    {% if login_user_form.email,errors or login_user_form.password.errors %}
+    {% if login_user_form.email.errors or login_user_form.password.errors %}
     <div class="alert alert-danger"> Invalid email/password </div>
     {% endif %}
 {% endwith %}
