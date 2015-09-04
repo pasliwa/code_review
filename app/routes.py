@@ -26,7 +26,7 @@ from app.locks import repo_read, repo_write, rework_db_read, rework_db_write
 from app.perfutils import performance_monitor
 from app.view import SearchForm
 from app.jira import jira_integrate
-from app.crypto import encryption
+from app.crypto import encryption, decryption
 
 
 
@@ -651,7 +651,10 @@ def changelog(start, stop):
 @login_required
 def user_preferences():
     if request.method == 'GET':
-        return render_template('preferences.html', user=current_user)
+        if current_user.jira_password is None:
+            return render_template('preferences.html', user=current_user, password = "")
+        else:
+            return render_template('preferences.html', user=current_user, password = decryption(current_user.jira_password))
     current_user.name = request.form['name']
     current_user.cc_login = request.form['cc_login']
     current_user.jira_login = request.form['jira_login']

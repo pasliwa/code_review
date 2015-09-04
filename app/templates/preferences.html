@@ -8,29 +8,27 @@
         <div style="margin-top:30px;margin-bottom:10px" class="form-group">
             <label> Name and Surname: </label><br/>
           <input type="text" style="width: 250px" align="left" id="name" name="name" class="form-control"
-             value="{{ user.name }}{{ request.form.name }}"
+             value="{{ user.name or "" }}{{ request.form.name }}"
             required>
         </div>
     <br/>
         <div style="margin-bottom:10px" class="form-group">
             <label> Code Collaborator Login: </label><br/>
           <input type="text" style="width: 250px" align="left" id="cc_login" name="cc_login" class="form-control"
-             value="{{ user.cc_login }}{{ request.form.cc_login }}"
+             value="{{ user.cc_login or "" }}{{ request.form.cc_login }}"
             required>
         </div>
     <br/>
         <div style="margin-bottom:10px" class="form-group">
             <label> Jira Login: </label><br/>
           <input type="text" style="width: 250px" align="left" id="jira_login" name="jira_login" class="form-control"
-             value="{{ user.jira_login }}{{ request.form.jira_login }}"
-            required>
+             value="{{ user.jira_login or "" }}{{ request.form.jira_login }}">
         </div>
     <br/>
         <div style="margin-bottom:10px" class="form-group">
             <label> Jira Password: </label><br/>
           <input type="password" style="width: 250px" align="left" id="jira_password" name="jira_password" class="form-control"
-            placeholder="Password" value="{{ request.form.jira_password }}"
-            required>
+             value="{{ password }}{{ request.form.jira_password }}">
         </div>
     
         <div class="control-group">
