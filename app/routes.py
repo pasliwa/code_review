@@ -562,6 +562,9 @@ def merge_branch(cs_id):
         logger.error("Conflict when trying descendant merge of review {review} - unexpected conflict".format(
             review=review.id))
         error = True
+    if ("local changed" in output) and ("which remote deleted" in output):
+        flash("There is merge conflict.", "error")
+        error = True
     if "use 'hg resolve' to retry unresolved" in output:
         flash("There is merge conflict. Merge with bookmark " + bookmark +
               " and try again.", "error")
@@ -614,7 +617,7 @@ def merge_branch(cs_id):
     else:
         review.status = "IN CONFLICT"
         db.session.commit()
-        flash("Merge conflict", "notice")
+        flash("Merge conflict", "error")
 
     return redirect(url_for('index'))
 
