@@ -366,6 +366,11 @@ def review_new_login_redirect():
 @rework_db_write
 @performance_monitor("Request /review [POST]")
 def review_new():
+    
+    if current_user.name == "":
+        flash("No username specified. To start a review username is required.", "error")
+        return redirect(url_for('user_preferences'))
+        
     logger.info("Requested URL /review [POST]")
     refresh_heads()
     revision = repo.revision(request.form['node'])
@@ -498,8 +503,7 @@ def review_info(review_id):
     for changeset in review.changesets:
         if changeset.is_active():
             break
-            
-    
+        
     link_hgweb_static = app.config["HG_PROD"] + "/rev/"
     return render_template("review.html", review=review, descendants=reworks, is_admin=is_admin, link_hgweb_static=link_hgweb_static, changeset=changeset)
 
