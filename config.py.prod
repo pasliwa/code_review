@@ -60,4 +60,4 @@ SECURITY_RECOVERABLE = True
 SECURITY_CHANGEABLE = True
 
 # Session cookie path
-SESSION_COOKIE_PATH = "/ci_test"
+SESSION_COOKIE_PATH = "/ci"
