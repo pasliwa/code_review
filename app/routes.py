@@ -178,7 +178,7 @@ def changes_new(page):
 @app.route('/changes/active/<int:page>')
 def changes_active(page):
     form = SearchForm()
-    data = get_reviews("ACTIVE", page, request)
+    data = get_reviews("ACTIVEandCONFLICT", page, request)
     return render_template('active.html', reviews=data["r"],
                            form=form, pagination=data["p"])
 
