@@ -593,7 +593,8 @@ def merge_branch(cs_id):
             raise 
             
     try:
-          jira_integrate(changeset, current_user)
+        if not error:
+            jira_integrate(changeset, current_user)
     except:
           logger.exception("Exception when integrating with JIRA regarding review %d merge", review.id)
           
@@ -619,9 +620,8 @@ def merge_branch(cs_id):
         db.session.commit()
         flash("Review has been closed", "notice")
     else:
-        review.status = "IN CONFLICT"
+        review.status = "CONFLICT"
         db.session.commit()
-        flash("Merge conflict", "error")
 
     return redirect(url_for('index'))
 
