@@ -39,20 +39,20 @@ class Repo(hgapi.Repo):
 
             Raise on error.
         """
-        with open(os.devnull, 'r') as DEVNULL:
-            proc = Popen(["hg", "--cwd", path, "--encoding", "UTF-8"] + list(args),
-                         stdout=PIPE, stderr=PIPE, stdin = DEVNULL, env=env)
+        #with open(os.devnull, 'r') as DEVNULL:
+        proc = Popen(["hg", "--cwd", path, "--encoding", "UTF-8"] + list(args),
+                         stdout=PIPE, stderr=PIPE, env=env)
                          
-            out, err = [x.decode("utf-8") for x in proc.communicate()]
+        out, err = [x.decode("utf-8") for x in proc.communicate()]
 
-            if proc.returncode:
-                cmd = (" ".join(["hg", "--cwd", path] + list(args)))
-                raise HgException("Error running %s:\n\" + "
-                                  "tErr: %s\n\t"
-                                  "Out: %s\n\t"
-                                  "Exit: %s"
-                                  % (cmd, err, out, proc.returncode),
-                                  exit_code=proc.returncode)
+        if proc.returncode:
+            cmd = (" ".join(["hg", "--cwd", path] + list(args)))
+            raise HgException("Error running %s:\n\" + "
+                                "tErr: %s\n\t"
+                                "Out: %s\n\t"
+                                "Exit: %s"
+                                % (cmd, err, out, proc.returncode),
+                                exit_code=proc.returncode)
 
         return out
     
@@ -100,7 +100,7 @@ class Repo(hgapi.Repo):
         if preview:
             return hgapi.Repo.hg_merge(reference, True)
         try:
-            return self.hg_command("merge", "--tool", "internal:merge", "interactive=1", reference)
+            return self.hg_command("--config", "ui.interactive=1", "merge", "--tool", "internal:merge", reference)
         except hgapi.HgException, ex:
             if "use 'hg resolve' to retry" in ex.message:
                 raise MergeConflictException(ex)

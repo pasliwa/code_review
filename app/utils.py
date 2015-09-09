@@ -98,11 +98,11 @@ def get_reviews(status, page, request):
 
 
 def get_active_changesets():
-    reviews = Review.query.filter(Review.status == "ACTIVE")
+    reviews = Review.query.filter((Review.status == "ACTIVE") | (Review.status == "CONFLICT"))
     changesets = []
     for review in reviews:
         for changeset in review.changesets:
-            if changeset.status == "ACTIVE":
+            if changeset.status == "ACTIVE" or changeset.status == "CONFLICT":
                 changesets.append(changeset)
                 break
     return changesets
