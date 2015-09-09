@@ -32,6 +32,30 @@ hgapi.Revision = Revision
 
 class Repo(hgapi.Repo):
 
+    @classmethod
+    def command(cls, path, env, *args):
+        """
+            Run a hg command in path and return the result.
+
+            Raise on error.
+        """
+        with open(os.devnull, 'r') as DEVNULL:
+            proc = Popen(["hg", "--cwd", path, "--encoding", "UTF-8"] + list(args),
+                         stdout=PIPE, stderr=PIPE, stdin = DEVNULL, env=env)
+                         
+            out, err = [x.decode("utf-8") for x in proc.communicate()]
+
+            if proc.returncode:
+                cmd = (" ".join(["hg", "--cwd", path] + list(args)))
+                raise HgException("Error running %s:\n\" + "
+                                  "tErr: %s\n\t"
+                                  "Out: %s\n\t"
+                                  "Exit: %s"
+                                  % (cmd, err, out, proc.returncode),
+                                  exit_code=proc.returncode)
+
+        return out
+    
     def hg_bookmarks(self):
         output = self.hg_command("bookmarks")
         res = {}
@@ -76,7 +100,7 @@ class Repo(hgapi.Repo):
         if preview:
             return hgapi.Repo.hg_merge(reference, True)
         try:
-            return self.hg_command("merge", "--tool", "internal:merge", reference)
+            return self.hg_command("merge", "--tool", "internal:merge", "interactive=1", reference)
         except hgapi.HgException, ex:
             if "use 'hg resolve' to retry" in ex.message:
                 raise MergeConflictException(ex)

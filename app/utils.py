@@ -78,7 +78,7 @@ def known_build_numbers(job_name):
 
 def get_reviews(status, page, request):
     if status == "ACTIVEandCONFLICT":
-        f = Review.query.filter((Review.status == "ACTIVE") or (Review.status == "CONFLICT"))
+        f = Review.query.filter((Review.status == "ACTIVE") | (Review.status == "CONFLICT"))
     else:
         f = Review.query.filter(Review.status == status)
     author = request.args.get('author', None)
