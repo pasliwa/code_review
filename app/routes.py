@@ -366,10 +366,6 @@ def review_new_login_redirect():
 @rework_db_write
 @performance_monitor("Request /review [POST]")
 def review_new():
-    print "!!!"
-    print current_user.name
-    print "!!!"
-    print type(current_user.name)
     
     if (current_user.name == "") or (current_user.name == "None") or (current_user.name is None):
         flash("No username specified. To start a review username is required.", "error")
