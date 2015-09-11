@@ -235,6 +235,7 @@ def inspect_diff(cs_id):
         msg = "Code Inspection is scheduled for processing"
         ci = CodeInspection(current_user.cc_login, cs.review)
         db.session.add(ci)
+        db.session.commit()
         logger.info("CodeInspection record %d has been created for review %d",
                     ci.id, cs.review.id)
     else:
@@ -247,6 +248,7 @@ def inspect_diff(cs_id):
     root = repo.hg_ancestor(cs.sha1, cs.review.target)
     diff = Diff(cs, root)
     db.session.add(diff)
+    db.session.commit()
     logger.info("Diff record %d has been created for changeset %d",
                 diff.id, cs.id)
     db.session.commit()
