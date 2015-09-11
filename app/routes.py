@@ -577,7 +577,6 @@ def merge_branch(cs_id):
         repo.hg_update(changeset.sha1)
         result = repo.hg_bookmark(bookmark, force=True)
         logger.info(result)
-        flash("Changeset has been merged", "notice")
     else:
         repo.hg_commit("Merged with {target}".format(target=review.target))
 
@@ -617,7 +616,7 @@ def merge_branch(cs_id):
         review.close_date = datetime.datetime.utcnow()
         Head.query.filter(Head.review_id == review.id).update({'review_id': None})
         db.session.commit()
-        flash("Review has been closed", "notice")
+        flash("Changeset has been merged. Review has been closed.", "notice")
     else:
         review.status = "CONFLICT"
         db.session.commit()

@@ -102,7 +102,7 @@ def get_active_changesets():
     changesets = []
     for review in reviews:
         for changeset in review.changesets:
-            if changeset.status == "ACTIVE" or changeset.status == "CONFLICT":
+            if changeset.status == "ACTIVE":
                 changesets.append(changeset)
                 break
     return changesets

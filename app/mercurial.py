@@ -2,6 +2,7 @@ import os
 import re
 import logging
 import dateutil.parser
+from subprocess import Popen, PIPE
 
 from hgapi import hgapi
 from app.perfutils import PerformanceMonitor
@@ -39,22 +40,25 @@ class Repo(hgapi.Repo):
 
             Raise on error.
         """
-        #with open(os.devnull, 'r') as DEVNULL:
-        proc = Popen(["hg", "--cwd", path, "--encoding", "UTF-8"] + list(args),
-                         stdout=PIPE, stderr=PIPE, env=env)
+        with open(os.devnull, 'r') as DEVNULL:
+            proc = Popen(["hg", "--cwd", path, "--encoding", "UTF-8"] + list(args),
+                         stdin=DEVNULL, stdout=PIPE, stderr=PIPE, env=env)
                          
-        out, err = [x.decode("utf-8") for x in proc.communicate()]
+            out, err = [x.decode("utf-8") for x in proc.communicate()]
 
         if proc.returncode:
             cmd = (" ".join(["hg", "--cwd", path] + list(args)))
-            raise HgException("Error running %s:\n\" + "
-                                "tErr: %s\n\t"
-                                "Out: %s\n\t"
-                                "Exit: %s"
-                                % (cmd, err, out, proc.returncode),
-                                exit_code=proc.returncode)
+            raise hgapi.HgException("Error running %s:\n\" + "
+                                    "tErr: %s\n\t"
+                                    "Out: %s\n\t"
+                                    "Exit: %s"
+                                    % (cmd, err, out, proc.returncode),
+                                    exit_code=proc.returncode)
 
         return out
+
+    def hg_command(self, *args):
+        return Repo.command(self.path, self._env, *args)
     
     def hg_bookmarks(self):
         output = self.hg_command("bookmarks")
