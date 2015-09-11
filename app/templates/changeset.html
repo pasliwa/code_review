@@ -26,10 +26,12 @@
             <div><span class="col-lg-2 text-right">Status</span>
                 {% if review.status == "ACTIVE" %}
                     <span class="label label-success">
-                {% elif review.status == "ABANDONED" %}
-                    <span class="label label-danger">
                 {% elif review.status == "MERGED" %}
                     <span class="label label-default">
+                {% elif review.status == "ABANDONED" %}
+                    <span class="label label-danger">
+                {% elif review.status == "CONFLICT" %}
+                    <span class="label label-danger">
                 {% else %}
                     <span class="label label-info">
                 {% endif %}

@@ -61,6 +61,8 @@
                         <span class="label label-default">
                     {% elif review.status == "ABANDONED" %}
                         <span class="label label-danger">
+                    {% elif review.status == "CONFLICT" %}
+                        <span class="label label-danger">
                     {% else %}
                         <span class="label label-info">
                     {% endif %}
