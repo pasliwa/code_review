@@ -568,7 +568,7 @@ def merge_branch(cs_id):
         logger.error("Conflict when trying descendant merge of review {review} - unexpected conflict".format(
             review=review.id))
         error = True
-    if ("use 'hg resolve' to retry unresolved" in output) or (("local changed" in output) and ("which remote deleted" in output)):
+    if ("use 'hg resolve' to retry unresolved" in output) or (("local changed" in output) and ("which remote deleted" in output)) or (("remote changed" in output) and ("which local deleted" in output)):
         flash("There is merge conflict. Merge with bookmark " + bookmark +
               " and try again.", "error")
         subject = u"Merge conflict - can't merge '{name}' with {dest}".format(name=review.title, dest=review.target)
