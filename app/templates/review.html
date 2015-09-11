@@ -12,11 +12,10 @@
             
             <div class="panel-body">
                 {# Shown only to admin #}
-            {% if is_admin %}
+            {% if is_admin and changeset.status != "ABANDONED" and changeset.review.status != "ABANDONED" and changeset.review.status != "MERGED" %}
                 <div class = "col-lg-2 pull-right" style="display:inline">
                     {# merge #}
-                {% if changeset.status != "ABANDONED" and changeset.review.status != "ABANDONED" %}
-                    {% if changeset.review.status != "MERGED"%}
+                    
                         <div>
                             <form method="post" class="form-horizontal" action="{{ url_for("merge_branch", cs_id=changeset.id) }}">
                                 <div class="form-group">
@@ -39,18 +38,8 @@
                                 </div>
                             </form>
                         </div>
-                    {% else %}
-                    <div class="alert alert-info text-center" role="alert">
-                        Merged
-                    </div>
-                    {% endif %}
-                {% else %}
-                <div class="alert alert-info text-center" role="alert">
-                        Abandoned
-                    </div>
+                </div>
             {% endif %}
-        </div>
-        {% endif %}
                 <div><span class="col-lg-2 text-right">Title</span><span><b>{{ review.title }}</b></span></div>
                 {% if review.owner == "None" %}
                     <div><span class="col-lg-2 text-right">Owner</span><span>{{ review.owner_mail }} (<a
