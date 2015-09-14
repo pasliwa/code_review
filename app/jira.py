@@ -6,7 +6,9 @@ import logging
 from app.crypto import decryption
 from app import app
 
+
 logger = logging.getLogger(__name__)
+#logger.captureWarnings(True)
 
 def token_search(commit):
     """ Search for tokens (IWD-XXXX, EVO-XXXX, IAP-XXXX) in commit """
@@ -43,7 +45,7 @@ def jira_comment(jira, issue_num, author, date, project, branch,
 def jira_integrate(changeset, user):
     """ Add comment to all relevant JIRA tickets """
     
-    jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(user.jira_login, decryption(user.jira_password)))
+    jira = JIRA(options={'server': 'https://jira.genesys.com'}, basic_auth=(user.jira_login, decryption(user.jira_password)))
     link_hgweb_static = app.config["HG_PROD"] + "/rev/"
     for token in token_search(changeset.title):
         link_hgweb = link_hgweb_static + changeset.sha1
@@ -53,7 +55,7 @@ def jira_integrate(changeset, user):
 def integrate_all_old(jira_login, enc_jira_password):
     """ Add comment to all relevant historical JIRA tickets """
     
-    jira = JIRA({'server': 'https://jira.genesys.com'}, basic_auth=(jira_login, decryption(enc_jira_password)))
+    jira = JIRA(options={'server': 'https://jira.genesys.com'}, basic_auth=(jira_login, decryption(enc_jira_password)))
     link_hgweb_static = app.config["HG_PROD"] + "/rev/"
     for changeset in Changeset.query.filter(Changeset.Review.status == "MERGED").order_by(Changeset.created_date.asc()):
         for token in token_search(changeset.title):

@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import logging
 import datetime
 import re
@@ -5,6 +7,7 @@ import os.path
 import pytz
 from itertools import chain
 from urlparse import urlparse, urljoin
+from jira import JIRAError
 
 from flask import render_template, flash, redirect, url_for, send_from_directory
 # noinspection PyUnresolvedReferences
@@ -368,7 +371,6 @@ def review_new_login_redirect():
 @rework_db_write
 @performance_monitor("Request /review [POST]")
 def review_new():
-    
     if (current_user.name == "") or (current_user.name == "None") or (current_user.name is None):
         flash("No username specified. To start a review username is required.", "error")
         return redirect(url_for('user_preferences'))
@@ -592,9 +594,18 @@ def merge_branch(cs_id):
             
     try:
         if not error:
-            jira_integrate(changeset, current_user)
-    except:
-          logger.exception("Exception when integrating with JIRA regarding review %d merge", review.id)
+            if (current_user.jira_login == "") or (current_user.jira_login == "None") or (current_user.jira_login is None):
+                flash("JIRA credentials are not set. Note cannot be added.", "error")
+            else:
+                jira_integrate(changeset, current_user)
+    except JIRAError as e:
+        if e.status_code == 401:
+            logger.error("Unauthorized (401) to access JIRA")
+            flash("JIRA: Unauthorized (401). Adding note failed. Check JIRA login/password.", "error")
+        else:
+            flash("Adding JIRA note failed.", "error")
+            logger.error("Exception when integrating with JIRA regarding review %d merge", review.id)
+            
           
     try:
         html = subject + u"<br/><br/>Review link: <a href=\"{link}\">{link}</a><br/>Owner: {owner}<br/>SHA1: {sha1} ".format(
