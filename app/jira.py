@@ -3,12 +3,13 @@ from __future__ import absolute_import
 from jira import JIRA
 import re
 import logging
+import warnings
 from app.crypto import decryption
 from app import app
 
 
 logger = logging.getLogger(__name__)
-#logger.captureWarnings(True)
+warnings.filterwarnings("ignore", "A true SSLContext object is not available.")
 
 def token_search(commit):
     """ Search for tokens (IWD-XXXX, EVO-XXXX, IAP-XXXX) in commit """
