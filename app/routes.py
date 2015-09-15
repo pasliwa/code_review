@@ -284,6 +284,10 @@ def jenkins_build(cs_id):
     if build_info is None:
         flash("Scheduling Jenkins build failed", "error")
         return redirect(url_for("changeset_info", cs_id=cs_id))
+        
+    if build_info == "DISABLED":
+        flash("Project is disabled in Jenkins. Try again when it is enabled.", "notice")
+        return redirect(url_for("changeset_info", cs_id=cs_id))
 
     build = Build(changeset_id=changeset.id, status=build_info["status"],
                   job_name=job_name, build_url=build_info["build_url"])

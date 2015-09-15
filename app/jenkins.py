@@ -21,7 +21,7 @@ class Jenkins(object):
 
         if not job.is_enabled():
             logger.error("Project %s is disabled.", job_name)
-            return None
+            return "DISABLED"
             
         uuid = str(uuid4())
         parameters = {"BRANCH": node, "REQUEST_ID": uuid}
