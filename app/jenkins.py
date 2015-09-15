@@ -19,6 +19,10 @@ class Jenkins(object):
             return None
         job = self.api.get_job(job_name)
 
+        if not job.is_enabled():
+            logger.error("Project %s is disabled.", job_name)
+            return None
+            
         uuid = str(uuid4())
         parameters = {"BRANCH": node, "REQUEST_ID": uuid}
 
