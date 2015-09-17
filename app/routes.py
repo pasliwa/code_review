@@ -327,6 +327,11 @@ def changeset_abandon(cs_id):
         flash("Not active changeset cannot be abandoned", "error")
         logger.error("Changeset %d is not active and cannot be abandoned", cs_id)
         return redirect(url_for('changeset_info', cs_id=cs_id))
+    if not (changeset.diff is None):
+        flash("Changeset with diff attached to it cannot be abandoned", "error")
+        logger.error("Changeset %d has a diff attached to it and cannot be abandoned", cs_id)
+        return redirect(url_for('changeset_info', cs_id=cs_id))
+        
     changeset.status = "ABANDONED"
     db.session.commit()
     repo.hg_sync()
