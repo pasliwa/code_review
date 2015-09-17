@@ -1,0 +1,5 @@
+[ui]
+username = Detektyw Test <ci_test@pl-byd-srv01.emea.int.genesyslab.com>
+
+[extensions]
+purge=
