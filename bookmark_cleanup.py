@@ -18,5 +18,11 @@ merged_reviews = Review.query.filter(Review.status == "MERGED").all()
 
 for merged_review in merged_reviews:
     repo.hg_bookmark(bookmark=merged_review.bookmark, delete=True)
+    
+abandoned_reviews = Review.query.filter(Review.status == "ABANDONED").all()
+
+for abandoned_review in abandoned_reviews:
+    repo.hg_bookmark(bookmark=abandoned_review.bookmark, delete=True)
+    
 
 repo.hg_push()
