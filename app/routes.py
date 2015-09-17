@@ -311,7 +311,6 @@ def changeset_abandon_login_redirect(cs_id):
 
 @app.route("/changeset/<int:cs_id>/abandon", methods=["POST"])
 @login_required
-@roles_required('admin')
 @repo_write
 @performance_monitor("Request /changeset/<cs_id>/abandon [POST]")
 #TODO: If inspection scheduled, cannot abandon changeset
@@ -588,6 +587,7 @@ def merge_branch(cs_id):
 
     repo.hg_update("null", clean=True)
     repo.hg_purge()
+    repo.hg_bookmark(bookmark=review.bookmark, delete=True)
 
     try:
         if not error:
