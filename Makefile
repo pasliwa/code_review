@@ -13,6 +13,7 @@ prd:
 	echo "00 3 * * * $(HOME)/jenkins/restart-jenkins.sh" >> cron/crontab
 	crontab cron/crontab
 	rm -f cron/crontab
+	cp .hgrc.prod $(HOME)
 
 dev:
 	cp config.py.dev config.py
@@ -29,6 +30,7 @@ dev:
 	mkdir ../repository
 	mkdir ../work
 
+
 tst:
 	sudo /sbin/service ci_test stop || :
 	sudo cp init.d/jenkins_test /etc/init.d/jenkins_test
@@ -44,4 +46,5 @@ tst:
 	echo "00 1 * * * $(HOME)/jenkins/restart-jenkins.sh" >> cron/crontab
 	crontab cron/crontab
 	rm -f cron/crontab
+	cp .hgrc.prod $(HOME)
 
