@@ -331,7 +331,9 @@ def changeset_abandon(cs_id):
         flash("Changeset with diff attached to it cannot be abandoned", "error")
         logger.error("Changeset %d has a diff attached to it and cannot be abandoned", cs_id)
         return redirect(url_for('changeset_info', cs_id=cs_id))
-        
+    
+    review = Review.query.filter(Review.id == changeset.review_id).first()
+      
     changeset.status = "ABANDONED"
     db.session.commit()
     repo.hg_sync()
@@ -462,6 +464,8 @@ def review_abandon(review_id):
     Head.query.filter(Head.review_id == review.id).update({'review_id': None})
     db.session.commit()
     repo.hg_sync()
+    repo.hg_bookmark(bookmark=review.bookmark, delete=True)
+    repo.hg_push()
     heads = repo.hg_heads()
     for c in review.changesets:
         if c.sha1 in heads:
