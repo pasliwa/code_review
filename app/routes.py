@@ -337,6 +337,13 @@ def changeset_abandon(cs_id):
     changeset.status = "ABANDONED"
     db.session.commit()
     repo.hg_sync()
+    repo.hg_bookmark(bookmark=changeset.bookmark, delete=True)
+    if review.active_changeset is None:
+        review_abandon(review.id)
+    else:
+        repo.hg_command("update", review.active_changeset.id)
+        repo.hg_command("bookmark", changeset.bookmark)
+        
     if changeset.sha1 in repo.hg_heads():
         repo.hg_close_branch(changeset.sha1)
     flash("Changeset '{title}' (SHA1: {sha1}) has been abandoned".format(title=changeset.title,
