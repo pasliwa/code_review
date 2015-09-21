@@ -10,7 +10,7 @@ db.create_all()
 
 from app.mercurial import Repo
 
-repo = Repo(app.config["REPO_PATH"])
+repo = Repo("../repository/project_1")
 
 from app.model import Changeset, Review, User
 
