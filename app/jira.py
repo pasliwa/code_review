@@ -22,8 +22,8 @@ def token_search(commit):
 def comment_added(sha1, comments):
     """ Search for sha1 in comments """
     for comment in comments:
-        comment = str(comment)
-        if (sha1 in comment) and ('Code delivered by' in comment) and ('Branch: ' in comment):
+        comment = comment.body
+        if (sha1 in comment) and ('Code delivered by' in comment) and ('Branch:' in comment):
             return True
     return False
 
