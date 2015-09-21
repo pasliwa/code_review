@@ -1,5 +1,8 @@
 [ui]
 username = Detektyw Test <ci_test@pl-byd-srv01.emea.int.genesyslab.com>
 
+[paths]
+default = http://localhost:8000/project_1
+
 [extensions]
 purge=

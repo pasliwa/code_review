@@ -20,14 +20,16 @@ Preparing development environment for code_review:
  7. In window with activated virtualenv create database and initialize repository
 	python db_create.py
 	python init_repo.py
- 8. Download jenkins.war version 1.535 and put it in Detektyw/jenkins directory. Download link:
+ 8. Enter Detektyw and copy Detektyw/code_review/.hgrc.dev into Detektyw/repository/project_1/.hg/hgrc
+	cp code_review/.hgrc.dev repository/project_1/.hg/hgrc
+ 9. Download jenkins.war version 1.535 and put it in Detektyw/jenkins directory. Download link:
 	http://mirrors.jenkins-ci.org/war/1.535/
- 9. Open new window, enter directory Detektyw/jenkins and start ./start-jenkins.sh
+10. Open new window, enter directory Detektyw/jenkins and start ./start-jenkins.sh
 	cd Detektyw/jenkins
 	./start-jenkins.sh
-10. In window with activated virtualenv start Detektyw
+11. In window with activated virtualenv start Detektyw
 	python run.py
-11. Open new window, enter directory Detektyw/work and clone repository
+12. Open new window, enter directory Detektyw/work and clone repository
 	hg clone http://localhost:8000/project_1
 
 
