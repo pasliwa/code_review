@@ -341,13 +341,14 @@ def changeset_abandon(cs_id):
     if review.active_changeset is None:
         review_abandon(review.id)
     else:
-        repo.hg_command("update", review.active_changeset.id)
+        repo.hg_update(review.active_changeset.sha1)
         repo.hg_command("bookmark", changeset.bookmark)
-        
+    
     if changeset.sha1 in repo.hg_heads():
         repo.hg_close_branch(changeset.sha1)
     flash("Changeset '{title}' (SHA1: {sha1}) has been abandoned".format(title=changeset.title,
                                                                          sha1=changeset.sha1), "notice")
+    repo.hg_push()                                                                     
     return redirect(url_for("review_info", review_id=changeset.review_id))
 
 
