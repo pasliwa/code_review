@@ -6,6 +6,7 @@ import logging
 import warnings
 from app.crypto import decryption
 from app import app
+from app.model import Changeset, Review, User
 
 
 logger = logging.getLogger(__name__)
@@ -58,7 +59,8 @@ def integrate_all_old(jira_login, enc_jira_password):
     
     jira = JIRA(options={'server': 'https://jira.genesys.com'}, basic_auth=(jira_login, decryption(enc_jira_password)))
     link_hgweb_static = app.config["HG_PROD"] + "/rev/"
-    for changeset in Changeset.query.filter(Changeset.Review.status == "MERGED").order_by(Changeset.created_date.asc()):
+    
+    for changeset in Changeset.query.filter(Changeset.review.status == "MERGED").all().order_by(Changeset.created_date.asc()):
         for token in token_search(changeset.title):
             issue = jira.issue(token)
             if not comment_added(changeset.sha1, issue.fields.comment.comments):
