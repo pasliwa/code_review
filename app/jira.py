@@ -1,6 +1,6 @@
 from __future__ import absolute_import
 
-from jira import JIRA
+from jira import JIRA, JIRAError
 import re
 import logging
 import warnings
@@ -22,6 +22,7 @@ def token_search(commit):
 def comment_added(sha1, comments):
     """ Search for sha1 in comments """
     for comment in comments:
+        comment = str(comment)
         if (sha1 in comment) and ('Code delivered by' in comment) and ('Branch: ' in comment):
             return True
     return False
@@ -60,12 +61,18 @@ def integrate_all_old(jira_login, enc_jira_password):
     jira = JIRA(options={'server': 'https://jira.genesys.com'}, basic_auth=(jira_login, decryption(enc_jira_password)))
     link_hgweb_static = app.config["HG_PROD"] + "/rev/"
     
-    for changeset in Changeset.query.filter(Changeset.review.status == "MERGED").all().order_by(Changeset.created_date.asc()):
+    reviews = Review.query.filter(Review.status == "MERGED").all()
+    
+    
+    for review in reviews:
+        changeset = review.changesets[0]
         for token in token_search(changeset.title):
-            issue = jira.issue(token)
-            if not comment_added(changeset.sha1, issue.fields.comment.comments):
-                link_hgweb = link_hgweb_static + changeset.sha1
-                jira_comment(jira, token, changeset.owner, changeset.created_date, 'IWD', 
-                                changeset.review.target, link_hgweb, changeset.review_id, changeset.title)
-
-            
+            try:
+                issue = jira.issue(token)
+                if not comment_added(changeset.sha1, issue.fields.comment.comments):
+                    link_hgweb = link_hgweb_static + changeset.sha1
+                    jira_comment(jira, token, changeset.owner, changeset.created_date, 'IWD', 
+                                    changeset.review.target, link_hgweb, changeset.review_id, changeset.title)
+            except JIRAError as e:
+                if e.status_code == 404:
+                    print "Issue does not exist (url: {url})".format(url=e.url)
