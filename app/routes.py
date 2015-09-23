@@ -472,8 +472,8 @@ def review_abandon(review_id):
     Head.query.filter(Head.review_id == review.id).update({'review_id': None})
     db.session.commit()
     repo.hg_sync()
-    repo.hg_bookmark(bookmark=review.bookmark, delete=True)
-    repo.hg_push()
+    #repo.hg_bookmark(bookmark=review.bookmark, delete=True)
+    #repo.hg_push()
     heads = repo.hg_heads()
     for c in review.changesets:
         if c.sha1 in heads:
