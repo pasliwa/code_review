@@ -55,13 +55,13 @@
                 {% endif %}
                 <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ review.bookmark }} &nbsp;</span></div>
                 <div><span class="col-lg-2 text-right">Status</span>
-                    {% if review.status == "ACTIVE" %}
+                    {% if review.status|trim == "ACTIVE" %}
                         <span class="label label-success">
-                    {% elif review.status == "MERGED" %}
+                    {% elif review.status|trim == "MERGED" %}
                         <span class="label label-default">
-                    {% elif review.status == "ABANDONED" %}
+                    {% elif review.status|trim == "ABANDONED" %}
                         <span class="label label-danger">
-                    {% elif review.status == "CONFLICT" %}
+                    {% elif review.status|trim == "CONFLICT" %}
                         <span class="label label-danger">
                     {% else %}
                         <span class="label label-info">
@@ -72,9 +72,9 @@
                 <div><span class="col-lg-2 text-right">Inspection</span>
                     {% if review.inspection == None %}
                         <span class="label label-default">None</span>
-                    {% elif review.inspection.status == "Completed" %}
+                    {% elif review.inspection.status|trim == "Completed" %}
                         <span class="label label-success">{{ review.inspection.status }}</span>
-                    {% elif review.inspection.status == "SCHEDULED" or review.inspection.status == "NEW" %}
+                    {% elif review.inspection.status|trim == "SCHEDULED" or review.inspection.status|trim == "NEW" %}
                         <span class="label label-default">{{ review.inspection.status }}</span>
                     {% else %}
                         <span class="label label-warning">{{ review.inspection.status }}</span>
@@ -161,9 +161,9 @@
                             <td><a href="{{ link_hgweb_static }}{{ c.sha1 }}"><code>{{ c.sha1 }}</code></a></td>
                             <td>{{ utc_to_local(c.created_date) }}</td>
                             <td>
-                                {% if c.status == "ACTIVE" %}
+                                {% if c.status|trim == "ACTIVE" %}
                                     <span class="label label-success">
-                                {% elif c.status == "ABANDONED" %}
+                                {% elif c.status|trim == "ABANDONED" %}
                                     <span class="label label-danger">
                                 {% else %}
                                     <span class="label label-info">
@@ -172,13 +172,13 @@
                                 </span>
                             </td>
                             <td>{% if c.builds|length > 0 %}
-                                    {% if c.builds[-1].status == "Running" %}
+                                    {% if c.builds[-1].status|trim == "Running" %}
                                         <span class="label label-info">
-                                    {% elif c.builds[-1].status == "SUCCESS" %}
+                                    {% elif c.builds[-1].status|trim == "SUCCESS" %}
                                         <span class="label label-success">
-                                    {% elif c.builds[-1].status == "UNSTABLE" %}
+                                    {% elif c.builds[-1].status|trim == "UNSTABLE" %}
                                         <span class="label label-warning">
-                                    {% elif c.builds[-1].status == "FAILURE" %}
+                                    {% elif c.builds[-1].status|trim == "FAILURE" %}
                                         <span class="label label-danger">
                                     {% else %}
                                         <span class="label label-default">

@@ -24,13 +24,13 @@
             {% endif %}
             <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ review.bookmark }} &nbsp;</span></div>
             <div><span class="col-lg-2 text-right">Status</span>
-                {% if review.status == "ACTIVE" %}
+                {% if review.status|trim == "ACTIVE" %}
                     <span class="label label-success">
-                {% elif review.status == "MERGED" %}
+                {% elif review.status|trim == "MERGED" %}
                     <span class="label label-default">
-                {% elif review.status == "ABANDONED" %}
+                {% elif review.status|trim == "ABANDONED" %}
                     <span class="label label-danger">
-                {% elif review.status == "CONFLICT" %}
+                {% elif review.status|trim == "CONFLICT" %}
                     <span class="label label-danger">
                 {% else %}
                     <span class="label label-info">
@@ -41,9 +41,9 @@
             <div><span class="col-lg-2 text-right">Inspection</span>
                 {% if review.inspection == None %}
                     <span class="label label-default">None</span>
-                {% elif review.inspection.status == "Completed" %}
+                {% elif review.inspection.status|trim == "Completed" %}
                     <span class="label label-success">{{ review.inspection.status }}</span>
-                {% elif review.inspection.status == "SCHEDULED" or review.inspection.status == "NEW" %}
+                {% elif review.inspection.status|trim == "SCHEDULED" or review.inspection.status|trim == "NEW" %}
                     <span class="label label-default">{{ review.inspection.status }}</span>
                 {% else %}
                     <span class="label label-warning">{{ review.inspection.status }}</span>
@@ -76,7 +76,7 @@
                     class="glyphicon glyphicon-home"></span> back to review</a></h3>
         </div>
         <div class="panel-body">
-            {% if cs.status == "ACTIVE" and not(cs.diff is none) %}
+            {% if cs.status|trim == "ACTIVE" and not(cs.diff is none) %}
                 <div class = "col-lg-2 pull-right" style="display:inline">
 
                         <div>
@@ -107,9 +107,9 @@
             <div><span class="col-lg-2 text-right">Bookmark</span><span>{{ cs.bookmark }}&nbsp;</span></div>
             <div><span class="col-lg-2 text-right">Status</span>
 
-                {% if cs.status == "ACTIVE" %}
+                {% if cs.status|trim == "ACTIVE" %}
                     <span class="label label-success">
-                {% elif cs.status == "ABANDONED" %}
+                {% elif cs.status|trim == "ABANDONED" %}
                     <span class="label label-danger">
                 {% else %}
                     <span class="label label-info">
@@ -154,13 +154,13 @@
                         <td>{{ utc_to_local(b.scheduled) }}</td>
                         <td><a target="_blank" href="{{ b.build_url }}">{{ b.build_url }}</a></td>
                         <td>
-                            {% if b.status == "Running" %}
+                            {% if b.status|trim == "Running" %}
                                 <span class="label label-info">
-                            {% elif b.status == "SUCCESS" %}
+                            {% elif b.status|trim == "SUCCESS" %}
                                 <span class="label label-success">
-                            {% elif b.status == "UNSTABLE" %}
+                            {% elif b.status|trim == "UNSTABLE" %}
                                 <span class="label label-warning">
-                            {% elif b.status == "FAILURE" %}
+                            {% elif b.status|trim == "FAILURE" %}
                                 <span class="label label-danger">
                             {% else %}
                                 <span class="label label-default">
@@ -209,7 +209,7 @@
                             </a>
                         </td>
                         <td>
-                            {% if cs.diff.status == "UPLOADED" %}
+                            {% if cs.diff.status|trim == "UPLOADED" %}
                                 <span class="label label-success">
                             {% else %}
                                 <span class="label label-default">

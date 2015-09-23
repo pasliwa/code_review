@@ -52,7 +52,32 @@
                 <td>{{ r.bookmark }}</td>
                 <td>{{ r.target }}</td>
                 <td>
-                    <span class="label label-danger">ABANDONED</span>
+                    {% if r.active_changeset != None and r.active_changeset.builds|length > 0 %}
+                            {% set build = r.active_changeset.builds[-1] %}
+                            {% if build.status|trim == "Running" %}
+                                <span class="label label-info">{{ build.status }}</span>
+                            {% elif build.status|trim == "SUCCESS" %}
+                                <span class="label label-success">{{ build.status }}</span>
+                            {% elif build.status|trim == "UNSTABLE" %}
+                                <span class="label label-warning">{{ build.status }}</span>
+                            {% elif build.status|trim == "FAILURE" %}
+                                <span class="label label-danger">{{ build.status }}</span>
+                            {% else %}
+                                <span class="label label-default">{{ build.status }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="label label-default">None</span>
+                        {% endif %}
+                        <br/>
+                        {% if r.inspection == None %}
+                            <span class="label label-default">None</span>
+                        {% elif r.inspection.status|trim == "Completed" %}
+                            <span class="label label-success">{{ r.inspection.status }}</span>
+                        {% elif r.inspection.status|trim == "SCHEDULED" or r.inspection.status|trim == "NEW" %}
+                            <span class="label label-default">{{ r.inspection.status }}</span>
+                        {% else %}
+                            <span class="label label-warning">{{ r.inspection.status }}</span>
+                        {% endif %}
                 </td>
             </tr>
         {% endfor %}
